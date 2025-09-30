@@ -10,6 +10,7 @@ interface RegistroFormData {
   email: string;
   nombre: string;
   password: string;
+  name: string;
 }
 
 interface RegistroFormProps {

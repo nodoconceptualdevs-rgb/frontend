@@ -1,26 +1,46 @@
 "use client";
+
 import React, { useState } from "react";
 import RegistroForm from "./RegistroForm";
-
-interface RegistroFormData {
-  email: string;
-  nombre: string;
-  password: string;
-}
 import styles from "../login/loginPage.module.css";
-
+import { register, updateUserName } from "@/services/auth";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 export default function RegistroPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
+
+  interface RegistroFormData {
+    email: string;
+    nombre: string;
+    password: string;
+  }
 
   const handleRegistro = async (data: RegistroFormData) => {
-    setLoading(true);
+    // setLoading(true);
+    console.log(data);
     setError("");
-    // Aquí iría la lógica real de registro (API call)
-    setTimeout(() => {
+    try {
+      const res = await register({
+        username: data.email + data.nombre,
+        email: data.email,
+        password: data.password,
+      });
+
+      // Actualizar el campo nombre en la tabla users
+      const userId = (res as any)?.user?.id;
+      const jwt = (res as any)?.jwt;
+      if (userId && jwt) {
+        await updateUserName(userId, data.nombre, jwt);
+      }
+      toast.success("¡Registro exitoso!");
+      router.push("/login");
+    } catch (err: any) {
+      setError(err?.response?.data?.error?.message || "Error al registrar");
+    } finally {
       setLoading(false);
-      // setError("Error en el registro");
-    }, 1200);
+    }
   };
 
   return (
