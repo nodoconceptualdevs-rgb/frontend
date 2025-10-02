@@ -20,16 +20,12 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await login({
+      await login({
         identifier: data.email,
         password: data.password,
       });
-      console.log("Login response:", res?.redirectTo);
-      if (res?.redirectTo) {
-        router.push(res.redirectTo);
-      } else {
-        setError("No se pudo determinar la ruta de redirección");
-      }
+
+      router.push("/dashboard/mis-cursos");
     } catch (err: any) {
       setError(
         err?.response?.data?.error?.message || "Error al iniciar sesión"

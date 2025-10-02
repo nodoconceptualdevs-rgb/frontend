@@ -18,50 +18,26 @@ export function middleware(req: NextRequest) {
     const cookieToken = req.cookies.get("token")?.value;
     if (cookieToken) {
       // already logged in -> redirect to dashboard
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/dashboard/mis-cursos", req.url));
     }
     return NextResponse.next();
   }
 
-  // Only protect dashboard routes
-  if (pathname.startsWith("/dashboard")) {
+  // Proteger solo rutas de usuario autenticado con token
+  if (
+    pathname === "/dashboard/mi-perfil" ||
+    pathname === "/dashboard/mis-cursos" ||
+    pathname === "/dashboard/mis-pagos"
+  ) {
     const cookieToken = req.cookies.get("token")?.value;
-    const role = req.cookies.get("role")?.value;
-    if (!cookieToken || !role) {
-      // No token o no role: redirect to login
+    if (!cookieToken) {
+      // No token: redirect to login
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
     }
-
-    const isAdmin =
-      role.toLowerCase() === "admin" || role.toLowerCase() === "administrador";
-    const isCliente =
-      role.toLowerCase() === "cliente" || role.toLowerCase() === "client";
-
-    // Si es ruta de admin, solo admin puede entrar
-    if (pathname.startsWith("/dashboard/admin")) {
-      if (!isAdmin) {
-        // Si no es admin, redirigir a la ruta principal de cliente
-        return NextResponse.redirect(new URL("/dashboard/mis-cursos", req.url));
-      }
-    } else if (pathname.startsWith("/dashboard/mis-cursos")) {
-      // Si es ruta de cliente, solo cliente puede entrar
-      if (!isCliente) {
-        // Si no es cliente, redirigir a la ruta principal de admin
-        return NextResponse.redirect(new URL("/dashboard/admin", req.url));
-      }
-    } else {
-      // Cualquier otra ruta privada no encontrada: redirigir a la principal de su rol
-      if (isAdmin) {
-        return NextResponse.redirect(new URL("/dashboard/admin", req.url));
-      } else if (isCliente) {
-        return NextResponse.redirect(new URL("/dashboard/mis-cursos", req.url));
-      } else {
-        // fallback: acceso denegado
-        return NextResponse.redirect(new URL("/not-authorized", req.url));
-      }
-    }
+    // Si tiene token, puede acceder
+    return NextResponse.next();
   }
 
   return NextResponse.next();

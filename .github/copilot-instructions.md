@@ -43,7 +43,7 @@ Rutas admin (bajo `/dashboard/admin`):
 
 ### Esquema de datos tablas de strapi.
 
-### Tabla: `Usuarios`
+### Tabla: `User`
 
 Esta tabla es el corazón del sistema, ya que gestiona a los administradores y a los clientes. Como no quieres guardar muchos datos, nos centraremos en lo mínimo y esencial.
 
@@ -53,7 +53,7 @@ Esta tabla es el corazón del sistema, ya que gestiona a los administradores y a
 - `password`: La contraseña del usuario, pero guardada de forma segura (encriptada). **Nunca** guardes contraseñas en texto plano.
 - `role`: Un campo de texto que indicará si el usuario es `Administrador` o `Cliente`. Esto es crucial para la lógica de permisos.
 
-### Tabla: `Course`
+### Tabla: `Cursos`
 
 Aquí guardaremos toda la información de cada curso que se vende en tu sitio.
 
@@ -65,7 +65,7 @@ Aquí guardaremos toda la información de cada curso que se vende en tu sitio.
 - `cover`: La dirección web de la imagen de portada del curso.
 - `isActive`: Para verificar si el curso esta activo o no.
 
-### Tabla: `Transaction`
+### Tabla: `Transacciones`
 
 Esta tabla es fundamental para registrar cada transacción y vincular a un usuario con los cursos que ha comprado. Como solo es una compra única, esta tabla nos servirá perfectamente para el historial de pagos.
 
@@ -75,7 +75,7 @@ Esta tabla es fundamental para registrar cada transacción y vincular a un usuar
 - `amount` Monto de la compra.
 - `payment_method` Metodo de pago.
 
-### Tabla: `Content_course`
+### Tabla: `Contenidos`
 
 Para que el cliente tenga el curso "de por vida en su perfil", necesitas una forma de guardar y organizar el material del curso (los videos, los PDFs, etc.). Esta tabla te ayudará a estructurar cada curso en módulos o lecciones.
 

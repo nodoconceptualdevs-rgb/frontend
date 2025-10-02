@@ -42,46 +42,18 @@ export async function login(data: LoginPayload) {
   const res = await api.post("/auth/local", data);
   const responseData = res.data as { jwt?: string; [key: string]: any };
   const token = responseData.jwt;
-  if (token) setAuthToken(token);
 
-  // Obtener datos del usuario para el rol usando /users/:id?populate=role
-  let roleName = "";
-  let userId = responseData.user?.id;
-  if (token && userId) {
-    try {
-      const userRes = await api.get(`/users/${userId}?populate=role`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      roleName = (userRes as any)?.data?.role?.name;
-    } catch (e) {
-      console.error("Error fetching user data:", e);
-    }
-  }
-
-  // Setear cookies httpOnly (server action)
   const cookieStore = await cookies();
   if (token) {
+    setAuthToken(token);
     cookieStore.set("token", token, {
       path: "/",
       httpOnly: true,
       sameSite: "strict",
     });
   }
-  if (roleName) {
-    cookieStore.set("role", roleName, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-    });
-  }
-  console.log("Set cookies: token and role", { token, roleName });
-  // Redirección según rol
-  let redirectTo = "/dashboard";
-  if (roleName === "Admin") {
-    redirectTo = "/dashboard/admin";
-  }
 
-  return { ...responseData, role: roleName, redirectTo };
+  return { ...responseData };
 }
 
 export async function getSession() {
