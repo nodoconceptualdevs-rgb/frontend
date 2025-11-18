@@ -12,7 +12,12 @@ export interface Transaccion {
 interface TransaccionesTableProps {
   data: Transaccion[];
   loading?: boolean;
-  pagination?: any;
+  pagination?: {
+    current: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number, pageSize: number) => void;
+  };
 }
 
 const columns = [

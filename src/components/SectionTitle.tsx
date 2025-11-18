@@ -25,8 +25,8 @@ export default function SectionTitle({
 }: SectionTitleProps) {
   const words = text.trim().split(" ");
 
-  let normal = words.slice(0, -highlightLast).join(" ");
-  let highlight = words.slice(-highlightLast).join(" ");
+  const normal = words.slice(0, -highlightLast).join(" ");
+  const highlight = words.slice(-highlightLast).join(" ");
 
   const renderButton = () => {
     if (buttonType === "redIcon") {

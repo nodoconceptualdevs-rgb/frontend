@@ -20,7 +20,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   title,
   description,
   lessons,
-  tests,
   rating,
   onBuy,
 }) => {

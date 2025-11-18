@@ -32,8 +32,6 @@ export default function Project3DCard({
   title,
   subtitle,
   description,
-  cta,
-  icon,
   model,
   bgGray = false,
   flip = false,

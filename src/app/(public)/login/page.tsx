@@ -26,10 +26,11 @@ export default function LoginPage() {
       });
       localStorage.setItem("name", name);
       router.push("/dashboard/mis-cursos");
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.error?.message || "Error al iniciar sesión"
-      );
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'response' in err 
+        ? (err.response as { data?: { error?: { message?: string } } })?.data?.error?.message 
+        : undefined;
+      setError(errorMessage || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }

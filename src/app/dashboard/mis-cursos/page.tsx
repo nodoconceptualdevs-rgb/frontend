@@ -3,8 +3,19 @@ import React, { useEffect, useState } from "react";
 import CourseCard from "@/components/CourseCard";
 import { getCursosCompradosByUsuario } from "@/services/compras";
 
+interface Curso {
+  id: number;
+  image: string;
+  price: string;
+  title: string;
+  description: string;
+  lessons: number;
+  tests: number;
+  rating: number;
+}
+
 export default function MisCursosPage() {
-  const [cursos, setCursos] = useState<any[]>([]);
+  const [cursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     setLoading(true);

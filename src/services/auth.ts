@@ -40,7 +40,7 @@ export async function updateUserName(
 export async function login(data: LoginPayload) {
   // Strapi default: POST /auth/local
   const res = await api.post("/auth/local", data);
-  const responseData = res.data as { jwt?: string; [key: string]: any };
+  const responseData = res.data as { jwt?: string; user: { id: string; name: string } };
   const token = responseData.jwt;
   const idUser = responseData.user.id;
   const name = responseData.user.name;
@@ -66,7 +66,7 @@ export async function getSession() {
   try {
     const res = await api.get("/users/me");
     return res.data;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

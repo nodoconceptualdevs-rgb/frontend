@@ -29,15 +29,19 @@ export default function RegistroPage() {
       });
 
       // Actualizar el campo nombre en la tabla users
-      const userId = (res as any)?.user?.id;
-      const jwt = (res as any)?.jwt;
+      const registerResponse = res as { user?: { id: number }; jwt?: string };
+      const userId = registerResponse?.user?.id;
+      const jwt = registerResponse?.jwt;
       if (userId && jwt) {
         await updateUserName(userId, data.nombre, jwt);
       }
       toast.success("¡Registro exitoso!");
       router.push("/login");
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.message || "Error al registrar");
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'response' in err 
+        ? (err.response as { data?: { error?: { message?: string } } })?.data?.error?.message 
+        : undefined;
+      setError(errorMessage || "Error al registrar");
     } finally {
       setLoading(false);
     }

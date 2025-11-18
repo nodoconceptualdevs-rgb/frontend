@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 export async function getTransaccionesByUsuario(
   page: number = 1,
   pageSize: number = 10
-) {
+): Promise<{ data: unknown[]; meta?: { pagination?: { total: number } } }> {
   const cookieStore = await cookies();
   const usuarioId = cookieStore.get("userId")?.value;
   const token = cookieStore.get("token")?.value;
@@ -18,14 +18,14 @@ export async function getTransaccionesByUsuario(
       },
     }
   );
-  return res.data;
+  return res.data as { data: unknown[]; meta?: { pagination?: { total: number } } };
 }
 
 // Traer todas las transacciones del usuario con el curso y su contenido
 export async function getCursosCompradosByUsuario(
   page: number = 1,
   pageSize: number = 20
-) {
+): Promise<{ data: unknown[] }> {
   const cookieStore = await cookies();
   const usuarioId = cookieStore.get("userId")?.value;
   const token = cookieStore.get("token")?.value;
@@ -39,5 +39,5 @@ export async function getCursosCompradosByUsuario(
       },
     }
   );
-  return res.data;
+  return res.data as { data: unknown[] };
 }

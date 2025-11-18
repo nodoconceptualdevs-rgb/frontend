@@ -19,16 +19,15 @@ export default function MisPagosPage() {
     getTransaccionesByUsuario(page, pageSize)
       .then((res) => {
         console.log("getTransaccionesByUsuario", res);
-        const arr = res?.data || [];
-        const transacciones = Array.isArray(arr)
-          ? arr.map((t: any) => ({
-              id: t.id,
-              purchase_date: t.purchase_date,
-              amount: t.amount,
-              payment_method: t.payment_method,
-              course: t.course,
-            }))
-          : [];
+        type TransactionResponse = { id: number; purchase_date: string; amount: number; payment_method: string; course: { title: string } };
+        const arr = (res?.data || []) as TransactionResponse[];
+        const transacciones = arr.map((t) => ({
+          id: t.id,
+          purchase_date: t.purchase_date,
+          amount: t.amount,
+          payment_method: t.payment_method,
+          course: t.course,
+        }));
         setData(transacciones);
         setTotal(res?.meta?.pagination?.total || 0);
       })
