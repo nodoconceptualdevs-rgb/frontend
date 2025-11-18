@@ -1,5 +1,5 @@
 "use server";
-import api, { setAuthToken } from "@/lib/api";
+import api from "@/lib/api";
 import { cookies } from "next/headers";
 
 type RegisterPayload = {
@@ -19,7 +19,7 @@ export async function logout() {
   // Borra cookies httpOnly desde el servidor
   const cookieStore = await cookies();
   cookieStore.delete("token");
-  cookieStore.delete("role");
+  cookieStore.delete("userId");
 }
 export async function updateUserName(
   userId: number,
@@ -42,18 +42,23 @@ export async function login(data: LoginPayload) {
   const res = await api.post("/auth/local", data);
   const responseData = res.data as { jwt?: string; [key: string]: any };
   const token = responseData.jwt;
-
+  const idUser = responseData.user.id;
+  const name = responseData.user.name;
   const cookieStore = await cookies();
   if (token) {
-    setAuthToken(token);
     cookieStore.set("token", token, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "strict",
+    });
+    cookieStore.set("userId", idUser, {
       path: "/",
       httpOnly: true,
       sameSite: "strict",
     });
   }
 
-  return { ...responseData };
+  return { ...responseData, name };
 }
 
 export async function getSession() {

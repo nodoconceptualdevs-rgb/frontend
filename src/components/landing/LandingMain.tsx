@@ -12,6 +12,7 @@ import CoursesCarousel from "@/components/landing/CoursesCarousel";
 import ServiciosSelector from "./ServiciosSelector";
 import RenderCarousel from "./RenderCarousel";
 import TeamCarousel from "./TeamCarousel";
+import { RedButtonWithIcon } from "../CustomButtons";
 import styles from "./LandingMain.module.css";
 
 export default function LandingMain() {
@@ -19,54 +20,71 @@ export default function LandingMain() {
   return (
     <>
       <Menu />
-      <div className="px-20">
+      <div className={styles.containerPadding}>
         <Carousel />
-        <BarStats />
+        <div className={styles.carouselButtonWrapper}>
+          <RedButtonWithIcon onClick={() => router.push("/portafolio")}>
+            Ver portafolio
+          </RedButtonWithIcon>
+        </div>
+        <div className={styles.desktopBarStats}>
+          <BarStats />
+        </div>
       </div>
       <div className={styles.backgroundWhite}>
-        <SectionTitle
-          text="Nuestros servicios"
-          highlightLast={1}
-          buttonType="redOutlineBlack"
-          buttonText="Mira como lo hacemos"
-          onButtonClick={() => router.push("/portafolio")}
-        />
-
+        <div className={styles.containerPadding}>
+          <div className={styles.mobileBarStats}>
+            <BarStats />
+          </div>
+          <SectionTitle
+            text="Nuestros servicios"
+            highlightLast={1}
+            buttonType="redOutlineBlack"
+            buttonText="Mira como lo hacemos"
+            onButtonClick={() => router.push("/portafolio")}
+            hideButtonOnMobile={true}
+          />
+        </div>
         <ServiciosSelector />
       </div>
-      <div className="px-20 mt-20 mb-20">
+      <div className={styles.containerPadding}>
         <SectionTitle
           text="Proyectos Destacados"
           buttonType="redIcon"
           buttonText="Ver portafolio"
           onButtonClick={() => router.push("/portafolio")}
+          hideButtonOnMobile={true}
         />
         <RenderCarousel />
       </div>
       {/* Carrusel de equipo */}
-      <div className="mt-20 mb-20" id="quienes-somos">
-        <SectionTitle text="Quiénes Somos" alignRight={true} />
-        <div className={styles.quienesSomosRight}>
-          <Typography.Paragraph
-            style={{ textAlign: "right", maxWidth: 700, marginRight: 50 }}
-          >
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            Pellentesque euismod, urna eu tincidunt consectetur, nisi nisl
-            turpis egestas.
-          </Typography.Paragraph>
+      <div className={styles.sectionSpacing} id="quienes-somos">
+        <div className={styles.containerPadding}>
+          <SectionTitle text="Quiénes Somos" alignRight={true} />
+          <div className={styles.quienesSomosRight}>
+            <Typography.Paragraph className={styles.quienesSomosText}>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+              Pellentesque euismod, urna eu tincidunt consectetur, nisi nisl
+              turpis egestas.
+            </Typography.Paragraph>
+          </div>
         </div>
         <TeamCarousel />
       </div>
 
-      <SectionTitle text="Nuestros Cursos" alignRight={false} />
+      <div className={styles.containerPadding}>
+        <SectionTitle text="Nuestros Cursos" alignRight={false} />
+      </div>
       <CoursesCarousel />
 
       <div className={styles.backgroundWhite}>
-        <SectionTitle
-          text="Experiencia de nuestros clientes"
-          highlightLast={2}
-          alignRight={false}
-        />
+        <div className={styles.containerPadding}>
+          <SectionTitle
+            text="Experiencia de nuestros clientes"
+            highlightLast={2}
+            alignRight={false}
+          />
+        </div>
         <TestimonialsCarousel />
       </div>
       <FooterCta />

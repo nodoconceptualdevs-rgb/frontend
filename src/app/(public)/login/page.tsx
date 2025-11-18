@@ -20,11 +20,11 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await login({
+      const { name } = await login({
         identifier: data.email,
         password: data.password,
       });
-
+      localStorage.setItem("name", name);
       router.push("/dashboard/mis-cursos");
     } catch (err: any) {
       setError(

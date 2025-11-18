@@ -65,9 +65,11 @@ export default function Carousel() {
               <div className={styles.slideContent}>
                 <h2 className={styles.slideTitle}>{slide.title}</h2>
                 <p className={styles.slideText}>{slide.content}</p>
-                <RedButtonWithIcon onClick={() => router.push("/portafolio")}>
-                  Ver portafolio
-                </RedButtonWithIcon>
+                <div className={styles.desktopButton}>
+                  <RedButtonWithIcon onClick={() => router.push("/portafolio")}>
+                    Ver portafolio
+                  </RedButtonWithIcon>
+                </div>
               </div>
             </div>
           </SwiperSlide>

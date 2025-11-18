@@ -2,22 +2,24 @@
   display: flex;
   align-items: center;
   width: 100%;
-  margin: 30px 0;
-  font-size: 2.5rem;
+  margin: clamp(1.5rem, 4vw, 30px) 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
   font-weight: 400;
   color: #292929;
   font-family: inherit;
-  gap: 1.5rem;
+  gap: clamp(0.8rem, 2vw, 1.5rem);
   text-align: left;
 }
 .sectionTitleRow {
   display: flex;
   align-items: center;
-  gap: 2rem;
-  padding: 0 40px;
+  gap: clamp(1rem, 3vw, 2rem);
+  padding: 0 clamp(0rem, 2vw, 40px);
+  flex-wrap: nowrap;
 }
 .sectionTitleRow > .buttonWrapper {
   margin-left: auto;
+  flex-shrink: 0;
 }
 .sectionTitle.right {
   flex-direction: row-reverse;
@@ -25,7 +27,8 @@
 .textBlock {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: clamp(0.3rem, 1vw, 0.5rem);
+  flex-wrap: wrap;
 }
 
 .redText {
@@ -43,4 +46,39 @@
 }
 .sectionTitle.right .dash {
   order: 0;
+}
+
+.topDash {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .topDash {
+    display: block;
+    width: 100%;
+    border-bottom: 2px dashed #29292944;
+    margin-bottom: 1.5rem;
+  }
+  
+  .sectionTitleRow {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 0;
+    flex-wrap: wrap;
+  }
+  
+  .sectionTitleRow > .buttonWrapper {
+    margin-left: 0;
+    width: auto;
+    flex-shrink: 1;
+  }
+  
+  .hideOnMobile {
+    display: none !important;
+  }
+  
+  .dash {
+    display: none;
+  }
 }

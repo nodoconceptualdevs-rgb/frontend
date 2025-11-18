@@ -1,12 +1,81 @@
+/* Sistema de padding responsive */
+.containerPadding {
+  padding-left: clamp(1rem, 5vw, 5rem);
+  padding-right: clamp(1rem, 5vw, 5rem);
+}
+
+.carouselButtonWrapper {
+  display: none;
+  justify-content: center;
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  margin-bottom: clamp(1rem, 3vw, 2rem);
+}
+
+.desktopBarStats {
+  display: block;
+}
+
+.mobileBarStats {
+  display: none;
+}
+
+.sectionSpacing {
+  margin-top: clamp(3rem, 6vw, 5rem);
+  margin-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.backgroundWhite {
+  border-radius: clamp(2rem, 8vw, 6rem);
+  background: #fff;
+  box-shadow:
+    0 8px 24px -8px rgba(112, 112, 112, 0.75),
+    0 -8px 24px -8px rgba(112, 112, 112, 0.75);
+  padding: clamp(2rem, 4vw, 5em) 0 clamp(3rem, 6vw, 7rem) 0;
+}
+
 .quienesSomosRight {
   display: flex;
   justify-content: flex-end;
+  margin-bottom: clamp(1rem, 3vw, 2rem);
 }
-.backgroundWhite {
-  border-radius: 6rem;
-  background: #fff;
-  box-shadow:
-    0 8px 24px -8px rgba(112, 112, 112, 0.75), /* sombra inferior */
-    0 -8px 24px -8px rgba(112, 112, 112, 0.75); /* sombra superior */
-  padding: 5em 5vw 7rem 5vw;
+
+.quienesSomosText {
+  text-align: right;
+  max-width: 700px;
+  margin-right: clamp(0rem, 3vw, 3rem);
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+}
+
+@media (max-width: 640px) {
+  .carouselButtonWrapper {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .desktopBarStats {
+    display: none;
+  }
+  
+  .mobileBarStats {
+    display: block;
+    margin-bottom: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .quienesSomosRight {
+    justify-content: center;
+  }
+  
+  .quienesSomosText {
+    text-align: center;
+    margin-right: 0;
+    padding: 0 1rem;
+  }
+
+  .backgroundWhite {
+    border-radius: 0;
+    box-shadow: none;
+    padding-top: clamp(2rem, 4vw, 3rem);
+  }
 }

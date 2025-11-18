@@ -64,10 +64,10 @@ export default function CursosPage() {
     },
   ];
   return (
-    <main className="px-20">
+    <main style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
       <h2
         className="font-serif text-gray-700 mb-1"
-        style={{ fontSize: "2.5rem" }}
+        style={{ fontSize: "clamp(1.8rem, 4vw, 2.5rem)" }}
       >
         Cursos y Formaciones
       </h2>

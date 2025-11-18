@@ -21,11 +21,11 @@ export default function PortafolioPage() {
     },
   ];
   return (
-    <main className="px-20 flex flex-col gap-4">
+    <main className="flex flex-col gap-4" style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
       <div>
         <h2
           className="font-serif text-gray-700 mb-1"
-          style={{ fontSize: "2.5rem" }}
+          style={{ fontSize: "clamp(1.8rem, 4vw, 2.5rem)" }}
         >
           Nuestro portafolio
         </h2>

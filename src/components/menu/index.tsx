@@ -23,7 +23,7 @@ export default function Menu() {
   };
 
   return (
-    <div className="px-20">
+    <div style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
       <nav className={styles.menuContainer}>
         <div className={styles.menuContent}>
           <div

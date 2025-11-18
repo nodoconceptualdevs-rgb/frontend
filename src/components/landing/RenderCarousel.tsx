@@ -94,14 +94,14 @@ export default function RenderCarousel() {
           type="button"
           aria-label="Anterior"
         >
-          <FaArrowLeft color="#ffffff" size={32} />
+          <FaArrowLeft color="#ffffff" className={styles.arrowIcon} />
         </button>
         <button
           className="swiper-button-next"
           type="button"
           aria-label="Siguiente"
         >
-          <FaArrowRight color="#ffffff" />
+          <FaArrowRight color="#ffffff" className={styles.arrowIcon} />
         </button>
       </Swiper>
     </div>

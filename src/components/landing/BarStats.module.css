@@ -1,50 +1,94 @@
 .barStatsContainer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
   background: #292929;
-  border-radius: 2.5em;
-  padding: 1em 2em;
+  border-radius: clamp(1.5rem, 4vw, 2.5rem);
   width: 100%;
-  margin: 5rem 0;
-  padding: 3rem 0;
+  margin: clamp(2rem, 5vw, 5rem) 0;
+  padding: clamp(2rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem);
 }
 
 .statBox {
-  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
   min-width: 0;
+  text-align: center;
 }
 
 .statValue {
-  font-size: 3rem;
+  font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 700;
   color: #fff;
+  line-height: 1.1;
 }
 
-
-.statPlus{
-    color: #FFD64D;
+.statPlus {
+  color: #FFD64D;
 }
 
 .statLabel {
   color: #fff;
-  font-size: 1.1rem;
+  font-size: clamp(0.8rem, 1.8vw, 1.1rem);
   font-weight: 400;
   opacity: 0.85;
+  margin-top: 0.5rem;
 }
 
 .divider {
   position: absolute;
   right: 0;
-  height: 180%;
+  height: 80%;
   width: 1px;
   background: #fff;
+  opacity: 0.3;
 }
 
 .statBox:last-child .divider {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .barStatsContainer {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    padding: 1.5rem 0.5rem;
+    margin: 0;
+    border-radius: 1.5rem;
+  }
+  
+  .statBox {
+    padding: 0 0.4rem;
+    position: relative;
+  }
+  
+  .statValue {
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+  
+  .statPlus {
+    font-size: 1.4rem;
+  }
+  
+  .statLabel {
+    font-size: 0.6rem;
+    margin-top: 0.25rem;
+    line-height: 1.15;
+    opacity: 0.85;
+    font-weight: 400;
+  }
+  
+  .divider {
+    display: block;
+    width: 1px;
+    height: 60%;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }

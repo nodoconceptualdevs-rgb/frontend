@@ -1,18 +1,20 @@
 .container {
   display: flex;
-  gap: 2.5rem;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
   width: 100%;
-  height: 40vh;
+  min-height: 40vh;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 4rem;
+  margin-bottom: clamp(2rem, 5vw, 4rem);
+  padding: 0 clamp(1rem, 5vw, 5rem);
 }
 
 .left {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: clamp(1rem, 2.5vw, 2rem);
   width: 50%;
+  flex-shrink: 0;
 }
 
 .right {
@@ -21,6 +23,7 @@
   gap: 2rem;
   height: 100%;
   width: 50%;
+  flex-shrink: 0;
 }
 
 .mainImageWrapper {
@@ -35,13 +38,13 @@
   align-items: center;
   background: #ededed;
   border: none;
-  border-radius: 2rem;
-  padding: 1.2rem 2.5rem 1.2rem 1.2rem;
-  font-size: 2.2rem;
+  border-radius: clamp(1.2rem, 3vw, 2rem);
+  padding: clamp(0.8rem, 2vw, 1.2rem) clamp(1.5rem, 3vw, 2.5rem) clamp(0.8rem, 2vw, 1.2rem) clamp(0.8rem, 2vw, 1.2rem);
+  font-size: clamp(1.1rem, 3vw, 2.2rem);
   font-weight: 500;
   color: #444;
   cursor: pointer;
-  gap: 1.5rem;
+  gap: clamp(0.8rem, 2vw, 1.5rem);
   transition: background 0.2s, color 0.2s;
   box-shadow: none;
   outline: none;
@@ -65,16 +68,17 @@
 }
 .iconBox {
   background: #ab2731;
-  border-radius: 1rem;
-  padding: 0.7rem;
+  border-radius: clamp(0.6rem, 1.5vw, 1rem);
+  padding: clamp(0.5rem, 1.2vw, 0.7rem);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 1.2rem;
+  margin-right: clamp(0.5rem, 1.5vw, 1.2rem);
+  flex-shrink: 0;
 }
 .icon {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: clamp(1.8rem, 4vw, 2.5rem);
+  height: clamp(1.8rem, 4vw, 2.5rem);
   object-fit: contain;
 }
 .label {
@@ -82,10 +86,11 @@
   text-align: left;
 }
 .arrow {
-  font-size: 2.2rem;
-  margin-left: 1.2rem;
+  font-size: clamp(1.3rem, 3vw, 2.2rem);
+  margin-left: auto;
   color: #ab2731;
   transition: color 0.2s;
+  flex-shrink: 0;
 }
 .servicioBtn.dark .arrow {
   color: #fff;
@@ -100,38 +105,39 @@
 }
 .ctaBox {
   background: #fff;
-  border-radius: 2rem;
+  border-radius: clamp(1.2rem, 3vw, 2rem);
   box-shadow: 0px 0px 9px 0px rgba(112, 112, 112, 0.75);
-  padding: 1.2rem 2rem 2rem 2rem;
-  min-width: 420px;
-  margin-top: -4.5rem;
+  padding: clamp(1rem, 2.5vw, 1.2rem) clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 3vw, 2rem);
+  min-width: min(420px, 90vw);
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: clamp(0.8rem, 2vw, 1.2rem);
   align-items: flex-start;
   position: absolute;
-  bottom: 60px;
-  right: -60px;
-  
+  bottom: clamp(1rem, 5vw, 3.75rem);
+  right: clamp(-1rem, -3vw, -3.75rem);
 }
 .ctaText {
-  font-size: 1.2rem;
+  font-size: clamp(0.95rem, 2vw, 1.2rem);
   color: #444;
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
 }
 .ctaBtn {
   background: #232323;
   color: #fff;
   border: none;
-  border-radius: 2rem;
-  padding: 1.1rem 2.2rem;
-  font-size: 1.2rem;
+  border-radius: clamp(1.2rem, 3vw, 2rem);
+  padding: clamp(0.8rem, 2vw, 1.1rem) clamp(1.5rem, 3vw, 2.2rem);
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  gap: clamp(0.8rem, 2vw, 1.2rem);
   cursor: pointer;
   transition: background 0.2s;
+  width: 100%;
+  justify-content: center;
 }
 .ctaBtn:hover {
   background: #ab2731;
@@ -148,37 +154,41 @@
   color: #fff;
   font-size: 1.3rem;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .container {
     flex-direction: column;
     gap: 2rem;
+    padding: 0 clamp(1rem, 3vw, 2rem);
   }
+  
+  .left,
   .right {
-    align-items: stretch;
+    width: 100%;
   }
+  
   .mainImage {
     width: 100%;
     height: 300px;
   }
+  
   .ctaBox {
-    min-width: unset;
-    width: 100%;
+    display: none;
   }
 }
-@media (max-width: 700px) {
+
+@media (max-width: 640px) {
   .container {
-    flex-direction: column;
-    gap: 1.2rem;
+    gap: 1.5rem;
+    padding: 0 1rem;
+    min-height: auto;
   }
+  
+  .mainImageWrapper {
+    min-height: 250px;
+  }
+  
   .mainImage {
-    width: 100%;
-    height: 180px;
-  }
-  .ctaBox {
-    padding: 1rem;
-    border-radius: 1rem;
-  }
-  .left {
-    max-width: 100%;
+    height: 250px;
+    border-radius: 1.5rem;
   }
 }

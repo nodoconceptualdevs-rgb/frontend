@@ -11,6 +11,7 @@ interface SectionTitleProps {
   buttonType?: "redIcon" | "redOutlineBlack";
   buttonText?: string;
   onButtonClick?: () => void;
+  hideButtonOnMobile?: boolean; // si true, oculta el botón en móvil
 }
 
 export default function SectionTitle({
@@ -20,6 +21,7 @@ export default function SectionTitle({
   buttonType,
   buttonText,
   onButtonClick,
+  hideButtonOnMobile = false,
 }: SectionTitleProps) {
   const words = text.trim().split(" ");
 
@@ -45,21 +47,26 @@ export default function SectionTitle({
   };
 
   return (
-    <div className={styles.sectionTitleRow}>
-      <h2
-        className={
-          alignRight
-            ? `${styles.sectionTitle} ${styles.right}`
-            : styles.sectionTitle
-        }
-      >
-        <span className={styles.textBlock}>
-          {normal && <span>{normal} </span>}
-          <span className={styles.redText}>{highlight}</span>
+    <>
+      {alignRight && <div className={styles.topDash} aria-hidden />}
+      <div className={styles.sectionTitleRow}>
+        <h2
+          className={
+            alignRight
+              ? `${styles.sectionTitle} ${styles.right}`
+              : styles.sectionTitle
+          }
+        >
+          <span className={styles.textBlock}>
+            {normal && <span>{normal} </span>}
+            <span className={styles.redText}>{highlight}</span>
+          </span>
+          <span className={styles.dash} aria-hidden />
+        </h2>
+        <span className={`${styles.buttonWrapper} ${hideButtonOnMobile ? styles.hideOnMobile : ''}`}>
+          {renderButton()}
         </span>
-        <span className={styles.dash} aria-hidden />
-      </h2>
-      <span className={styles.buttonWrapper}>{renderButton()}</span>
-    </div>
+      </div>
+    </>
   );
 }
