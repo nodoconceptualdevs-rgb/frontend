@@ -17,9 +17,9 @@ export default function CursosClientePage() {
 
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
-    return courses.filter((course: any) =>
+    return courses.filter((course: { title: string; description?: string }) =>
       course.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchText.toLowerCase())
+      (course.description && course.description.toLowerCase().includes(searchText.toLowerCase()))
     );
   }, [courses, searchText]);
 
@@ -117,9 +117,11 @@ export default function CursosClientePage() {
                         {course.description}
                       </p>
                       <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "#666" }}>
-                        {course.number_lessons && (
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(course as any).number_lessons && (
                           <span>
-                            <CheckCircleOutlined /> {course.number_lessons} lecciones
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            <CheckCircleOutlined /> {(course as any).number_lessons} lecciones
                           </span>
                         )}
                       </div>

@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(JSON.parse(storedUser));
           setToken(storedToken);
         }
-      } catch (error) {
+      } catch {
         // Si hay error, limpiar storage silenciosamente
         localStorage.removeItem('user');
         localStorage.removeItem('token');
@@ -84,12 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('token', response.jwt);
       localStorage.setItem('name', response.user.name || response.user.username);
       
-      // Guardar rol en cookie para middleware (se hace en el server action)
-      // La cookie se guarda en services/auth.ts
-      
       // Redireccionar según rol
       redirectByRole(response.user.role.type);
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   };
@@ -101,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Primero limpiar cookies del servidor
       await logoutService();
-    } catch (error) {
+    } catch {
       // Ignorar errores de logout silenciosamente
     } finally {
       // Limpiar estado

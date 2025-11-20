@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import HitoEditor from "@/components/admin/HitoEditor";
 import AdminHeader from "@/components/admin/AdminHeader";
 
@@ -17,7 +17,6 @@ const HITOS_INICIALES = [
 
 export default function EditarProyectoPage() {
   const params = useParams();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState("info");
   const [selectedHito, setSelectedHito] = useState<number | null>(null);
   

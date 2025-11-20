@@ -7,7 +7,7 @@ import { updateUserProfile } from "@/services/auth";
 export default function MiPerfilPage() {
   const { user } = useAuth();
 
-  const handleUpdate = async (values: any) => {
+  const handleUpdate = async (values: { name: string }) => {
     await updateUserProfile(values.name);
     // Recargar la página para actualizar el contexto
     window.location.reload();
@@ -31,7 +31,7 @@ export default function MiPerfilPage() {
       </div>
 
       {/* Componente de perfil reutilizable */}
-      <ProfileForm user={user} onUpdate={handleUpdate} showFullInfo={true} />
+      {user && <ProfileForm user={user} onUpdate={handleUpdate} showFullInfo={true} />}
     </div>
   );
 }

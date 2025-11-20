@@ -18,7 +18,7 @@ export default function AdminHeader({
   tokenNFC,
 }: AdminHeaderProps) {
   const router = useRouter();
-  const { user, isAdmin, isGerente, isCliente } = useAuth();
+  const { isAdmin, isGerente, isCliente } = useAuth();
 
   // Determinar el texto del panel según el rol
   const getPanelText = () => {

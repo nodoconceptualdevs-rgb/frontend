@@ -15,6 +15,7 @@ export default function MisPagosPage() {
     if (user?.id) {
       loadTransactions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadTransactions = async () => {
@@ -22,7 +23,7 @@ export default function MisPagosPage() {
     
     try {
       setLoading(true);
-      const response: any = await getTransactionsByUser(user.id);
+      const response = await getTransactionsByUser(user.id) as { data: Transaction[] };
       setTransactions(response.data || []);
     } catch (error) {
       console.error("Error loading transactions:", error);

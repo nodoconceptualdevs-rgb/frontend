@@ -30,10 +30,9 @@ interface CommentSectionProps {
 }
 
 export default function CommentSection({
-  proyectoId,
   comentarios,
   gerenteInfo,
-}: CommentSectionProps) {
+}: Omit<CommentSectionProps, 'proyectoId'>) {
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());

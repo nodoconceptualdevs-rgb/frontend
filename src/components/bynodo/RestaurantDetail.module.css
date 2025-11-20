@@ -1,7 +1,10 @@
+/* Importar variables CSS */
+@import url('../../app/(public)/bynodo/bynodo-variables.css');
+
 .detailContainer {
   width: 100%;
   min-height: 100vh;
-  background: #3a3a3a;
+  background: var(--bynodo-bg-primary);
 }
 
 /* Hero Section with Logo */
@@ -40,7 +43,6 @@
 .titleSection {
   position: relative;
   padding: clamp(2rem, 4vw, 3rem) clamp(1rem, 5vw, 5rem);
-  background: #3a3a3a;
 }
 
 .backButton {
@@ -50,7 +52,7 @@
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: #ffffff;
+  color: var(--bynodo-text-primary);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0.5rem;
@@ -59,7 +61,7 @@
 }
 
 .backButton:hover {
-  color: #d4af6a;
+  color: var(--bynodo-accent);
 }
 
 .titleContainer {
@@ -68,7 +70,7 @@
 }
 
 .restaurantName {
-  color: #ffffff;
+  color: var(--bynodo-text-primary);
   font-size: clamp(1.5rem, 2.5vw, 2rem);
   font-weight: 300;
   letter-spacing: 0.05em;
@@ -105,15 +107,16 @@
 }
 
 .sectionTitle {
-  color: #d4af6a;
+  color: var(--bynodo-accent);
   font-size: clamp(1.4rem, 2vw, 1.8rem);
   font-weight: 400;
   letter-spacing: 0.02em;
   margin: 0 0 1.5rem 0;
+  text-align: center;
 }
 
 .sectionContent {
-  color: #c0c0c0;
+  color: var(--bynodo-text-muted);
   font-size: clamp(0.9rem, 1.2vw, 1.05rem);
   line-height: 1.8;
   margin: 0;
@@ -124,11 +127,11 @@
 .espaciosSection {
   width: 100%;
   padding: clamp(2rem, 4vw, 4rem) 0;
-  background: #3a3a3a;
+  background: var(--bynodo-bg-primary); /* Mismo color que el fondo */
 }
 
 .espaciosWrapper {
-  max-width: 1200px;
+  max-width: 100vw;
   margin: 0 auto;
   padding: 0 clamp(1rem, 5vw, 5rem);
   margin-bottom: 2rem;
@@ -175,7 +178,7 @@
 /* Contact Section */
 .contactSection {
   width: 100%;
-  background: #424242;
+  background: var(--bynodo-bg-secondary); /* Único con bg secundario para destacar */
   padding: clamp(3rem, 5vw, 5rem) clamp(1rem, 5vw, 5rem);
 }
 
@@ -185,7 +188,7 @@
 }
 
 .contactTitle {
-  color: #ffffff;
+  color: var(--bynodo-text-primary);
   font-size: clamp(1.5rem, 2.5vw, 2rem);
   font-weight: 300;
   text-align: center;
@@ -206,21 +209,21 @@
 }
 
 .contactIcon {
-  color: #d4af6a;
+  color: var(--bynodo-accent);
   font-size: 1.2rem;
   flex-shrink: 0;
   margin-top: 0.25rem;
 }
 
 .contactLabel {
-  color: #808080;
+  color: var(--bynodo-text-label);
   font-size: 0.85rem;
   margin: 0 0 0.25rem 0;
   letter-spacing: 0.03em;
 }
 
 .contactText {
-  color: #e0e0e0;
+  color: var(--bynodo-text-secondary);
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0;

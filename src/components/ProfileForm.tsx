@@ -4,9 +4,23 @@ import { useState, useEffect } from "react";
 import { Card, Form, Input, Button, message, Descriptions, Tag } from "antd";
 import { UserOutlined, MailOutlined, IdcardOutlined } from "@ant-design/icons";
 
+interface User {
+  name?: string;
+  username: string;
+  email: string;
+  role?: { type: string };
+  confirmed?: boolean;
+}
+
+interface FormValues {
+  name: string;
+  username: string;
+  email: string;
+}
+
 interface ProfileFormProps {
-  user: any;
-  onUpdate?: (values: any) => Promise<void>;
+  user: User;
+  onUpdate?: (values: FormValues) => Promise<void>;
   showFullInfo?: boolean;
 }
 
@@ -24,7 +38,7 @@ export default function ProfileForm({ user, onUpdate, showFullInfo = true }: Pro
     }
   }, [user, form]);
 
-  const handleUpdate = async (values: any) => {
+  const handleUpdate = async (values: FormValues) => {
     try {
       setLoading(true);
       if (onUpdate) {

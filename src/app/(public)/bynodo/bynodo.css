@@ -1,0 +1,13 @@
+/* Aplicar tema oscuro inmediatamente para evitar flash */
+.bynodo-layout {
+  min-height: 100vh;
+  background: var(--bynodo-bg-primary);
+}
+
+/* Asegurar que el body tenga el fondo oscuro cuando estamos en BYNODO */
+body:has(.bynodo-layout) {
+  background: var(--bynodo-bg-primary) !important;
+  color: var(--bynodo-text-primary);
+  margin: 0;
+  padding: 0;
+}

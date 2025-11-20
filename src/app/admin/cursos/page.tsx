@@ -25,7 +25,7 @@ export default function CursosPage() {
   const loadCourses = async () => {
     try {
       setLoading(true);
-      const response: any = await getCourses();
+      const response = await getCourses() as { data: Course[] };
       setCourses(response.data || []);
     } catch (error) {
       console.error("Error loading courses:", error);
@@ -38,11 +38,12 @@ export default function CursosPage() {
   const handleDelete = async (id: number) => {
     try {
       await deleteCourse(id);
-      message.success("Curso eliminado correctamente");
+      message.success("Curso eliminado exitosamente");
       loadCourses();
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error("Error deleting course:", error);
-      message.error("Error al eliminar el curso");
+      message.error(error.message || "Error al eliminar el curso");
     }
   };
 
@@ -92,13 +93,13 @@ export default function CursosPage() {
         { text: "Activo", value: true },
         { text: "Inactivo", value: false },
       ],
-      onFilter: (value: any, record: Course) => record.isActive === value,
+      onFilter: (value: unknown, record: Course) => record.isActive === value,
     },
     {
       title: "Acciones",
       key: "actions",
       align: "center" as const,
-      render: (_: any, record: Course) => (
+      render: (_: unknown, record: Course) => (
         <Space size="small">
           <Button
             type="link"

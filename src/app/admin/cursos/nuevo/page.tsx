@@ -13,7 +13,7 @@ export default function NuevoCursoPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { title: string; description: string; price: number; isActive?: boolean; number_lessons?: number }) => {
     try {
       setLoading(true);
       const payload = {

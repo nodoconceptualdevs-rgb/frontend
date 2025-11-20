@@ -2,6 +2,27 @@
 import api from "@/lib/api";
 import { cookies } from "next/headers";
 
+interface Usuario {
+  id: number;
+  username: string;
+  email: string;
+  name?: string;
+}
+
+interface Hito {
+  id: number;
+  titulo: string;
+  descripcion?: string;
+  estado: string;
+  fecha?: string;
+}
+
+interface Comentario {
+  id: number;
+  contenido: string;
+  createdAt: string;
+}
+
 export interface Proyecto {
   id: number;
   nombre_proyecto: string;
@@ -9,10 +30,10 @@ export interface Proyecto {
   estado_general: "En Planificación" | "En Ejecución" | "Completado";
   fecha_inicio: string;
   ultimo_avance?: string;
-  cliente?: any;
-  gerente_proyecto?: any;
-  hitos?: any[];
-  comentarios?: any[];
+  cliente?: Usuario;
+  gerente_proyecto?: Usuario;
+  hitos?: Hito[];
+  comentarios?: Comentario[];
   createdAt: string;
   updatedAt: string;
 }
@@ -35,12 +56,13 @@ export async function getMisProyectos() {
  * Obtener un proyecto por su token NFC
  */
 export async function getProyectoByToken(tokenNfc: string) {
-  const res: any = await api.get(`/proyectos?filters[token_nfc][$eq]=${tokenNfc}&populate[hitos][populate]=*&populate[gerente_proyecto]=*&populate[comentarios][populate]=*`, {
+  const res = await api.get(`/proyectos?filters[token_nfc][$eq]=${tokenNfc}&populate[hitos][populate]=*&populate[gerente_proyecto]=*&populate[comentarios][populate]=*`, {
     headers: {},
   });
   
-  if (res.data && res.data.data && res.data.data.length > 0) {
-    return res.data.data[0];
+  const data = res.data as { data: Proyecto[] };
+  if (data && data.data && data.data.length > 0) {
+    return data.data[0];
   }
   
   throw new Error("Proyecto no encontrado");

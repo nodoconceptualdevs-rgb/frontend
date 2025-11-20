@@ -23,7 +23,7 @@ export default function MiProyectoPage() {
   const loadProyectos = async () => {
     try {
       setLoading(true);
-      const response: any = await getMisProyectos();
+      const response = await getMisProyectos() as { data: Proyecto[] };
       setProyectos(response.data || []);
     } catch (error) {
       console.error("Error loading projects:", error);
@@ -48,6 +48,7 @@ export default function MiProyectoPage() {
 
   const calcularProgreso = (proyecto: Proyecto) => {
     if (!proyecto.hitos || proyecto.hitos.length === 0) return 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const completados = proyecto.hitos.filter((h: any) => h.estado_completado).length;
     return Math.round((completados / proyecto.hitos.length) * 100);
   };
@@ -172,6 +173,7 @@ export default function MiProyectoPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666" }}>
                           <RocketOutlined />
                           <span>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {proyecto.hitos.filter((h: any) => h.estado_completado).length} de {proyecto.hitos.length} hitos completados
                           </span>
                         </div>
@@ -201,7 +203,7 @@ export default function MiProyectoPage() {
                 ¿Cómo funciona el seguimiento?
               </h3>
               <p style={{ margin: 0, color: "#1e40af" }}>
-                Haz clic en "Ver Detalles Completos" para acceder a la vista completa de tu proyecto
+                Haz clic en &quot;Ver Detalles Completos&quot; para acceder a la vista completa de tu proyecto
                 con el timeline de hitos, multimedia, tours 360° y la sección de comentarios donde
                 puedes comunicarte directamente con tu gerente de proyecto.
               </p>

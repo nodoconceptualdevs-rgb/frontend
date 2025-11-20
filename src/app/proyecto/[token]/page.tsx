@@ -219,7 +219,7 @@ export default function ProyectoPage() {
         }
         
         setProyecto(MOCK_PROYECTO);
-      } catch (err) {
+      } catch {
         setError("Error al cargar el proyecto. Intenta nuevamente.");
       } finally {
         setLoading(false);
@@ -283,7 +283,6 @@ export default function ProyectoPage() {
         {/* Sección de Comentarios */}
         <section>
           <CommentSection
-            proyectoId={proyecto.id}
             comentarios={proyecto.comentarios}
             gerenteInfo={proyecto.gerente_asignado}
           />

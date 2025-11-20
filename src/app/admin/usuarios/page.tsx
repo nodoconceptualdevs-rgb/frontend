@@ -17,7 +17,7 @@ export default function UsuariosPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response: any = await getUsers();
+      const response = await getUsers() as User[];
       setUsers(response || []);
     } catch (error) {
       console.error("Error loading users:", error);
@@ -70,7 +70,7 @@ export default function UsuariosPage() {
       title: "Rol",
       dataIndex: ["role", "name"],
       key: "role",
-      render: (_: any, record: User) => {
+      render: (_: unknown, record: User) => {
         const roleType = record.role?.type || "public";
         const colors: Record<string, string> = {
           admin: "red",
@@ -79,9 +79,10 @@ export default function UsuariosPage() {
           client: "green",
           public: "default",
         };
+        const roleName = record.role?.name || "Público";
         return (
           <Tag color={colors[roleType]}>
-            {record.role?.name || "Público"}
+            {roleName}
           </Tag>
         );
       },
@@ -90,7 +91,7 @@ export default function UsuariosPage() {
         { text: "Gerente de Proyecto", value: "gerente_de_proyecto" },
         { text: "Cliente", value: "authenticated" },
       ],
-      onFilter: (value: any, record: User) => record.role?.type === value,
+      onFilter: (value: unknown, record: User) => record.role?.type === value,
     },
     {
       title: "Confirmado",
@@ -106,7 +107,7 @@ export default function UsuariosPage() {
         { text: "Confirmado", value: true },
         { text: "No confirmado", value: false },
       ],
-      onFilter: (value: any, record: User) => record.confirmed === value,
+      onFilter: (value: unknown, record: User) => record.confirmed === value,
     },
     {
       title: "Estado",

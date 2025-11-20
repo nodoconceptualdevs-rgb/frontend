@@ -4,29 +4,29 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import styles from './RestaurantsSection.module.css';
 
-const restaurants = [
+const restaurantData = [
   {
-    id: 'origen',
+    id: 1,
     name: 'Origen',
-    logo: '/restaurant-logos/origen.png',
-    image: '/Restaurante1.png',
-    description: 'Una experiencia gastronómica única que combina la tradición culinaria con técnicas modernas, ofreciendo platos que deleitan todos los sentidos.',
+    logo: '/bynodo.svg',
+    image: '/restaurante1.png',
+    description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam.',
     slug: 'origen'
   },
   {
-    id: 'daniels-food',
-    name: "Daniel's Food",
-    logo: '/restaurant-logos/daniels.png',
-    image: '/Restaurante2.png',
-    description: 'Sabores auténticos en un ambiente acogedor. Cada plato cuenta una historia de pasión y dedicación a la excelencia culinaria.',
-    slug: 'daniels-food'
+    id: 2,
+    name: 'Daniels',
+    logo: '/isologo.svg',
+    image: '/restaurante2.png',
+    description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam.',
+    slug: 'daniels'
   },
   {
-    id: 'world-burger',
+    id: 3,
     name: 'World Burger',
-    logo: '/restaurant-logos/world-burger.png',
-    image: '/Restaurante3.png',
-    description: 'Las mejores hamburguesas artesanales del mundo, con ingredientes premium y combinaciones únicas que transforman cada bocado en una experiencia.',
+    logo: '/logo.svg',
+    image: '/restaurante3.png',
+    description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam.',
     slug: 'world-burger'
   }
 ];
@@ -41,7 +41,7 @@ export default function RestaurantsSection() {
       </div>
       
       <div className={styles.restaurantsGrid}>
-        {restaurants.map((restaurant, index) => (
+        {restaurantData.map((restaurant, index) => (
           <article
             key={restaurant.id}
             className={`${styles.restaurantCard} ${index % 2 === 0 ? styles.leftAlign : styles.rightAlign}`}

@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
 
-interface UseDataFetchOptions {
-  onSuccess?: (data: any) => void;
+interface UseDataFetchOptions<T> {
+  onSuccess?: (data: T) => void;
   onError?: (error: Error) => void;
   showErrorMessage?: boolean;
 }
 
-export function useDataFetch<T = any>(
+export function useDataFetch<T = unknown>(
   fetchFunction: () => Promise<T>,
-  dependencies: any[] = [],
-  options: UseDataFetchOptions = {}
+  dependencies: unknown[] = [],
+  options: UseDataFetchOptions<T> = {}
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,8 @@ export function useDataFetch<T = any>(
 
   useEffect(() => {
     fetchData();
-  }, dependencies);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchData, ...dependencies]);
 
   const refetch = useCallback(() => {
     fetchData();

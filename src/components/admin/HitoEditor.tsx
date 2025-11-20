@@ -47,7 +47,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
     alert("Hito actualizado correctamente!");
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, tipo: string) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -155,7 +155,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
                   type="file"
                   multiple
                   accept="image/*"
-                  onChange={(e) => handleFileUpload(e, "fotos")}
+                  onChange={(e) => handleFileUpload(e)}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer"
                 />
               </div>
@@ -173,7 +173,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
                 <input
                   type="file"
                   accept="video/*"
-                  onChange={(e) => handleFileUpload(e, "videos")}
+                  onChange={(e) => handleFileUpload(e)}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer"
                 />
               </div>
@@ -192,7 +192,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
                   type="file"
                   multiple
                   accept=".pdf,.doc,.docx"
-                  onChange={(e) => handleFileUpload(e, "documentos")}
+                  onChange={(e) => handleFileUpload(e)}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer"
                 />
               </div>

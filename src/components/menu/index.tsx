@@ -13,7 +13,7 @@ import { FaSync } from "react-icons/fa";
 export default function Menu() {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, isTransitioning, setIsTransitioning } = useTheme();
+  const { theme, setIsTransitioning } = useTheme();
   const [open, setOpen] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   

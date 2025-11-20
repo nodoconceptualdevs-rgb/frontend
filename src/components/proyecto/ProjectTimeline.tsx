@@ -67,7 +67,7 @@ export default function ProjectTimeline({ hitos }: ProjectTimelineProps) {
 
         {/* Hitos */}
         <div className="space-y-8">
-          {hitos.map((hito, index) => (
+          {hitos.map((hito) => (
             <div key={hito.id} className="relative pl-20">
               {/* Círculo indicador */}
               <div

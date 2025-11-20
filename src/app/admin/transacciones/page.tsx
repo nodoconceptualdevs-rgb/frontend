@@ -17,7 +17,7 @@ export default function TransaccionesPage() {
   const loadTransactions = async () => {
     try {
       setLoading(true);
-      const response: any = await getTransactions();
+      const response = await getTransactions() as { data: Transaction[] };
       setTransactions(response.data || []);
     } catch (error) {
       console.error("Error loading transactions:", error);
@@ -51,7 +51,7 @@ export default function TransaccionesPage() {
       title: "Usuario",
       dataIndex: ["user", "username"],
       key: "user",
-      render: (_: any, record: Transaction) => record.user?.username || record.user?.email || "N/A",
+      render: (_: unknown, record: Transaction) => record.user?.username || record.user?.email || "N/A",
     },
     {
       title: "Curso",
@@ -84,7 +84,7 @@ export default function TransaccionesPage() {
         { text: "Stripe", value: "Stripe" },
         { text: "Pago móvil", value: "Pago movil" },
       ],
-      onFilter: (value: any, record: Transaction) => record.payment_method === value,
+      onFilter: (value: unknown, record: Transaction) => record.payment_method === value,
     },
   ];
 

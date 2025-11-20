@@ -44,39 +44,42 @@ export default function CursoDetallePage() {
 
   useEffect(() => {
     loadCourseData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
   const loadCourseData = async () => {
     try {
       setLoading(true);
-      const [courseResponse, lessonsResponse]: any[] = await Promise.all([
+      const [courseResponse, lessonsResponse] = await Promise.all([
         getCourseById(courseId),
         getContentCourses(courseId),
-      ]);
+      ]) as [{ data: Course }, { data: ContentCourse[] }];
       setCourse(courseResponse.data);
       setLessons(lessonsResponse.data || []);
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error("Error loading course:", error);
-      message.error("Error al cargar el curso");
+      message.error(error.message || "Error al cargar el curso");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateLesson = async (values: any) => {
+  const handleCreateLesson = async (values: Partial<ContentCourse>) => {
     try {
       await createContentCourse({
-        lesson_title: values.lesson_title,
-        order: values.order,
+        lesson_title: values.lesson_title || '',
+        order: values.order || 1,
         course: courseId,
       });
       message.success("Lección creada correctamente");
       setModalVisible(false);
       form.resetFields();
       loadCourseData();
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error("Error creating lesson:", error);
-      message.error("Error al crear la lección");
+      message.error(error.message || "Error al crear la lección");
     }
   };
 
@@ -85,9 +88,10 @@ export default function CursoDetallePage() {
       await deleteContentCourse(lessonId);
       message.success("Lección eliminada correctamente");
       loadCourseData();
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error("Error deleting lesson:", error);
-      message.error("Error al eliminar la lección");
+      message.error(error.message || "Error al eliminar la lección");
     }
   };
 
@@ -108,7 +112,7 @@ export default function CursoDetallePage() {
       title: "Video",
       dataIndex: "video_lesson_url",
       key: "video_lesson_url",
-      render: (video: any) => (
+      render: (video: { id: number; url: string } | null) => (
         <Tag color={video ? "green" : "default"}>
           {video ? "Subido" : "Pendiente"}
         </Tag>
@@ -118,7 +122,7 @@ export default function CursoDetallePage() {
       title: "Acciones",
       key: "actions",
       align: "center" as const,
-      render: (_: any, record: ContentCourse) => (
+      render: (_: unknown, record: ContentCourse) => (
         <Space>
           <Button
             type="link"

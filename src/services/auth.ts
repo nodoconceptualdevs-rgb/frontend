@@ -137,14 +137,15 @@ export async function login(data: LoginPayload): Promise<LoginResponse> {
       jwt: token,
       user: user
     };
-  } catch (error: any) {
+  } catch (error) {
     // Extraer mensaje de error específico de Strapi
-    const errorMessage = error?.response?.data?.error?.message || 
+    const err = error as { response?: { data?: { error?: { message?: string } } } };
+    const errorMessage = err?.response?.data?.error?.message || 
                         'Credenciales incorrectas. Verifica tu correo y contraseña.';
     
     // Lanzar error con mensaje específico
-    const customError = new Error(errorMessage);
-    (customError as any).response = error?.response;
+    const customError = new Error(errorMessage) as Error & { response?: unknown };
+    customError.response = err?.response;
     throw customError;
   }
 }

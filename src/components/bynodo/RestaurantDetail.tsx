@@ -13,59 +13,69 @@ interface RestaurantDetailProps {
   slug: string;
 }
 
-const restaurantData: { [key: string]: any } = {
+interface RestaurantData {
+  name: string;
+  logo: string;
+  hero: string;
+  description: string;
+  sections: {
+    origen: { title: string; content: string };
+    espacios: { title: string; images: string[] };
+    contacto: { title: string; phone: string; email: string; address: string; hours: string };
+  };
+}
+
+const restaurantData: { [key: string]: RestaurantData } = {
   'origen': {
     name: 'Origen',
-    logo: '/restaurant-logos/origen.png',
-    hero: '/Restaurante1.png',
-    description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam. Morbi faucibus duis sed mus diam amet egestas. Integer sit consequat et erat.',
-    sections: {
-      origen: {
-        title: 'Origen',
-        content: `Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam. Morbi faucibus duis sed mus diam amet egestas. Integer sit consequat et erat. Proin ultrices eget auctor pellentesque molestie. Cursus ut vulputate vitae vestibulum. Ut nunc netus habitasse nunc. Facilisis imperdiet habitant vitae ultricies facilisis mauris ipsum. Molestie ornare facilisi integer venenatis tellus. Phasellus mauris sit turpis purus adipisicing quis netus. Nunc faucibus tempor tincidunt sed id sed porta vitae. Viverra nulla ac malesuada molestie dolor facilisi porta. Cursus id curabitur convallis integer a neque at porta. Nibh arcu sed amet ornare ultrices mauris habitant.
-
-Netus eu nunc cursus euismod ac elit lorem. Cursus ut vulputate vitae vestibulum. Ut nunc netus habitasse nunc. Facilisis imperdiet habitant vitae ultricies facilisis mauris ipsum. Molestie ornare facilisi integer venenatis.`
-      },
-      espacios: {
-        title: 'Espacios',
-        images: ['/Restaurante1.png', '/Restaurante2.png', '/Restaurante3.png', '/Restaurante4.png']
-      },
-      contacto: {
-        title: 'Información de contacto',
-        phone: '+58 424 123 45 67',
-        email: 'Instagram: @restorangen',
-        address: 'Av. Lorem Ipsum, Calle Gran Roble Sabana Grande',
-        hours: 'Viernes a domingo - 9:00 a 18:00 - 10:00 a 17:00'
-      }
-    }
-  },
-  'daniels-food': {
-    name: "Daniel's Food",
-    logo: '/restaurant-logos/daniels.png',
-    hero: '/Restaurante2.png',
+    logo: '/bynodo.svg',
+    hero: '/restaurante1.png',
     description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam.',
     sections: {
       origen: {
         title: 'Origen',
-        content: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam. Morbi faucibus duis sed mus diam amet egestas.'
+        content: `Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam. Morbi faucibus duis sed mus diam amet egestas.`
       },
       espacios: {
         title: 'Espacios',
-        images: ['/Restaurante2.png', '/Restaurante1.png', '/Restaurante3.png', '/Restaurante4.png']
+        images: ['/restaurante1.png', '/restaurante2.png', '/restaurante3.png', '/restaurante4.png', '/restaurante5.png']
       },
       contacto: {
         title: 'Información de contacto',
         phone: '+58 424 123 45 67',
-        email: 'Instagram: @danielsfood',
-        address: 'Av. Lorem Ipsum, Calle Gran Roble',
-        hours: 'Lunes a domingo - 9:00 a 22:00'
+        email: 'Instagram: @origen',
+        address: 'Av. Lorem Ipsum, Calle Principal',
+        hours: 'Martes a domingo - 11:00 a 23:00'
+      }
+    }
+  },
+  'daniels': {
+    name: 'Daniels',
+    logo: '/isologo.svg',
+    hero: '/restaurante2.png',
+    description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam.',
+    sections: {
+      origen: {
+        title: 'Origen',
+        content: `Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam. Morbi faucibus duis sed mus diam amet egestas.`
+      },
+      espacios: {
+        title: 'Espacios',
+        images: ['/restaurante2.png', '/restaurante1.png', '/restaurante3.png', '/restaurante4.png', '/restaurante5.png']
+      },
+      contacto: {
+        title: 'Información de contacto',
+        phone: '+58 424 123 45 67',
+        email: 'Instagram: @daniels',
+        address: 'Av. Lorem Ipsum, Calle Principal',
+        hours: 'Martes a domingo - 11:00 a 23:00'
       }
     }
   },
   'world-burger': {
     name: 'World Burger',
-    logo: '/restaurant-logos/world-burger.png',
-    hero: '/Restaurante3.png',
+    logo: '/logo.svg',
+    hero: '/restaurante3.png',
     description: 'Lorem Ipsum dolor sit amet consectetur. Nunc integer est ridiculus arcu sit adipisicing tempor sed diam.',
     sections: {
       origen: {
@@ -74,7 +84,7 @@ Netus eu nunc cursus euismod ac elit lorem. Cursus ut vulputate vitae vestibulum
       },
       espacios: {
         title: 'Espacios',
-        images: ['/Restaurante3.png', '/Restaurante1.png', '/Restaurante2.png', '/Restaurante4.png']
+        images: ['/restaurante3.png', '/restaurante1.png', '/restaurante2.png', '/restaurante4.png', '/restaurante5.png']
       },
       contacto: {
         title: 'Información de contacto',

@@ -28,7 +28,6 @@
   padding: 0.5em 0;
   display: flex;
   justify-content: center;
-  box-shadow: 0px 0px 9px 0px rgba(112, 112, 112, 0.75);
   height: 10vh;
   position: relative;
 }
@@ -179,7 +178,6 @@
 /* Dark Theme Styles */
 .darkTheme {
   background: #2a2a2a;
-  box-shadow: 0px 0px 12px 0px rgba(0, 0, 0, 0.75);
 }
 
 .darkTheme .menuLinks button {
@@ -217,9 +215,9 @@
   }
 }
 
-/* BYNODO Menu Styles */
+/* BYNODO Menu Styles - hereda background de .darkTheme */
 .bynodoMenu {
-  background: #2a2a2a;
+  background: #424242 ;
   justify-content: center;
 }
 
@@ -247,26 +245,7 @@
   }
 }
 
-/* Theme Toggle para BYNODO - idéntico al menú normal */
+/* Theme Toggle para BYNODO - hereda de .darkTheme */
 .bynodoMenu .themeToggle {
-  background: transparent;
-  border: none;
-  cursor: pointer;
   color: #e0e0e0;
-  transition: all 0.3s ease;
-  padding: 0.5rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bynodoMenu .themeToggle:hover {
-  background: rgba(212, 175, 106, 0.1);
-  transform: rotate(180deg);
-}
-
-.bynodoMenu .themeToggle svg {
-  width: 24px;
-  height: 24px;
 }

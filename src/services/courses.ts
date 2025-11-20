@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 export interface ContentCourse {
   id: number;
   lesson_title: string;
-  video_lesson_url?: any;
+  video_lesson_url?: { id: number; url: string } | null;
   order: number;
 }
 
@@ -14,7 +14,7 @@ export interface Course {
   title: string;
   description: string;
   price: number;
-  cover?: any;
+  cover?: { id: number; url: string } | null;
   isActive: boolean;
   number_lessons?: number;
   content_courses?: ContentCourse[];
