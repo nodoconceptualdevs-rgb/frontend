@@ -8,13 +8,20 @@ interface CustomInputProps extends InputProps {
 }
 
 const CustomInput = React.forwardRef<InputRef, CustomInputProps>(
-  ({ label, error, ...props }, ref) => {
+  ({ label, error, type, ...props }, ref) => {
+    const InputComponent = type === "password" ? Input.Password : Input;
+    
+    // No pasar el prop 'type' a Input.Password ya que no lo necesita
+    const inputProps = type === "password" 
+      ? { ...props } 
+      : { type, ...props };
+    
     return (
       <div className={styles.inputWrapper}>
         <label className={styles.label}>{label}</label>
-        <Input
+        <InputComponent
           ref={ref}
-          {...props}
+          {...inputProps}
           className={styles.input + (error ? " " + styles.error : "")}
         />
         {error && <span className={styles.errorMsg}>{error}</span>}

@@ -1,0 +1,31 @@
+.titleSection {
+  margin-bottom: clamp(1.5rem, 3vw, 2rem);
+  padding: 0;
+  color: aqua;
+}
+
+.title {
+  color: #ffffff;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding-bottom: 1rem;
+  position: relative;
+}
+
+.title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    to right,
+    #666666 0px,
+    #666666 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}

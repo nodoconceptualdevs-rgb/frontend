@@ -1,0 +1,281 @@
+.detailContainer {
+  width: 100%;
+  min-height: 100vh;
+  background: #3a3a3a;
+}
+
+/* Hero Section with Logo */
+.heroSection {
+  position: relative;
+  width: 100%;
+  height: clamp(250px, 30vw, 350px);
+  overflow: hidden;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heroLogo {
+  width: clamp(80px, 10vw, 120px);
+  height: auto;
+  filter: brightness(1.1);
+}
+
+/* Title Section with Back Button */
+.titleSection {
+  position: relative;
+  padding: clamp(2rem, 4vw, 3rem) clamp(1rem, 5vw, 5rem);
+  background: #3a3a3a;
+}
+
+.backButton {
+  position: absolute;
+  left: clamp(1rem, 5vw, 5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
+  z-index: 10;
+}
+
+.backButton:hover {
+  color: #d4af6a;
+}
+
+.titleContainer {
+  text-align: left;
+  padding-left: clamp(3rem, 8vw, 5rem);
+}
+
+.restaurantName {
+  color: #ffffff;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding-bottom: 1rem;
+  position: relative;
+}
+
+.restaurantName::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    to right,
+    #666666 0px,
+    #666666 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+/* Content Wrapper */
+.contentWrapper {
+  padding: clamp(2rem, 4vw, 4rem) 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section {
+  margin-bottom: clamp(3rem, 5vw, 5rem);
+}
+
+.sectionTitle {
+  color: #d4af6a;
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  margin: 0 0 1.5rem 0;
+}
+
+.sectionContent {
+  color: #c0c0c0;
+  font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+  line-height: 1.8;
+  margin: 0;
+  white-space: pre-line;
+}
+
+/* Espacios Section */
+.espaciosSection {
+  width: 100%;
+  padding: clamp(2rem, 4vw, 4rem) 0;
+  background: #3a3a3a;
+}
+
+.espaciosWrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 5vw, 5rem);
+  margin-bottom: 2rem;
+}
+
+/* Carousel Container */
+.carouselContainer {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.swiper {
+  width: 100%;
+  padding: 1rem 0 2rem;
+  overflow: visible;
+}
+
+.carouselSlide {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.carouselSlide:hover {
+  transform: translateY(-8px);
+}
+
+.slideImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Ocultar botones de navegación */
+.swiper :global(.swiper-button-next),
+.swiper :global(.swiper-button-prev) {
+  display: none;
+}
+
+/* Contact Section */
+.contactSection {
+  width: 100%;
+  background: #424242;
+  padding: clamp(3rem, 5vw, 5rem) clamp(1rem, 5vw, 5rem);
+}
+
+.contactWrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.contactTitle {
+  color: #ffffff;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 300;
+  text-align: center;
+  margin: 0 0 4rem 0;
+  letter-spacing: 0.05em;
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 2.5rem;
+}
+
+.contactItem {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.contactIcon {
+  color: #d4af6a;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.contactLabel {
+  color: #808080;
+  font-size: 0.85rem;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: 0.03em;
+}
+
+.contactText {
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .heroSection {
+    height: 200px;
+  }
+
+  .titleSection {
+    padding: 1.5rem 1rem;
+  }
+
+  .backButton {
+    left: 1rem;
+    font-size: 1.2rem;
+  }
+
+  .titleContainer {
+    padding-left: 3rem;
+  }
+
+  .restaurantName {
+    font-size: 1.3rem;
+  }
+
+  .contentWrapper {
+    padding: 1.5rem 1rem;
+  }
+
+  .espaciosSection {
+    padding: 2rem 0;
+  }
+
+  .espaciosWrapper {
+    padding: 0 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .swiper {
+    padding: 0.5rem 0 1.5rem;
+  }
+
+  .contactSection {
+    padding: 2rem 1rem;
+  }
+
+  .contactGrid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .contactItem {
+    flex-direction: row;
+  }
+}

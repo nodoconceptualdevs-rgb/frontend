@@ -4,6 +4,8 @@ import "./globals.css";
 import { AntdProvider } from "./AntdProvider";
 import "@ant-design/v5-patch-for-react-19";
 import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +33,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AntdProvider>{children}</AntdProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <AntdProvider>{children}</AntdProvider>
+          </ThemeProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

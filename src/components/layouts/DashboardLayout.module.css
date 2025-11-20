@@ -1,0 +1,146 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: #fafafa;
+  border-right: 1px solid #eee;
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: width 0.2s, padding 0.2s;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+  padding: 16px 0;
+}
+
+.sidebarContent {
+  flex: 1;
+}
+
+.header {
+  padding: 0 24px 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.collapsed .header {
+  padding: 0 0 24px;
+  justify-content: center;
+  gap: 8px;
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.collapsed .logoWrapper {
+  width: 48px;
+}
+
+.logo {
+  object-fit: contain;
+  display: block;
+  margin: auto;
+}
+
+.toggleButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 8px;
+  font-size: 22px;
+  color: #ab2731;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  width: 48px;
+  transition: transform 0.2s;
+}
+
+.toggleButton:hover {
+  transform: scale(1.1);
+}
+
+.collapsed .toggleButton {
+  margin-left: 0;
+}
+
+.menu {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+}
+
+.footer {
+  padding: 24px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.collapsed .footer {
+  padding: 0 0 24px;
+}
+
+.logoutButton {
+  width: 100%;
+  background: #ab2731;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 0;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.logoutButton:hover {
+  background: #8a1f28;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(171, 39, 49, 0.3);
+}
+
+.logoutButton.logoutCollapsed {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.logoutIcon {
+  font-size: 22px;
+}
+
+.logoutButton span {
+  margin-left: 8px;
+}
+
+.main {
+  flex: 1;
+  padding: 32px;
+}

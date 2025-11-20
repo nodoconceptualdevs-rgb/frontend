@@ -12,6 +12,7 @@ import CoursesCarousel from "@/components/landing/CoursesCarousel";
 import ServiciosSelector from "./ServiciosSelector";
 import RenderCarousel from "./RenderCarousel";
 import TeamCarousel from "./TeamCarousel";
+import ByNodoSection from "./ByNodoSection";
 import { RedButtonWithIcon } from "../CustomButtons";
 import styles from "./LandingMain.module.css";
 
@@ -57,6 +58,8 @@ export default function LandingMain() {
         />
         <RenderCarousel />
       </div>
+      {/* Sección ByNodo */}
+      <ByNodoSection />
       {/* Carrusel de equipo */}
       <div className={styles.sectionSpacing} id="quienes-somos">
         <div className={styles.containerPadding}>
@@ -77,7 +80,7 @@ export default function LandingMain() {
       </div>
       <CoursesCarousel />
 
-      <div className={styles.backgroundWhite}>
+      <div className={styles.backgroundWhite} style={{ marginBottom: '6rem' }}>
         <div className={styles.containerPadding}>
           <SectionTitle
             text="Experiencia de nuestros clientes"

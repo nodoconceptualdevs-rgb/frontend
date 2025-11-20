@@ -1,59 +1,154 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import TransaccionesTable, {
-  Transaccion,
-} from "@/components/TransaccionesTable";
-import { getTransaccionesByUsuario } from "@/services/compras";
+
+import { useState, useEffect } from "react";
+import { Table, Tag, Empty, Card, Statistic, Row, Col, message } from "antd";
+import { DollarOutlined, ShoppingOutlined } from "@ant-design/icons";
+import { getTransactionsByUser, Transaction } from "@/services/transactions";
+import { useAuth } from "@/context/AuthContext";
 
 export default function MisPagosPage() {
-  const [data, setData] = useState<Transaccion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [total, setTotal] = useState(0);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("Fetching transactions for page", page, "pageSize", pageSize);
+    if (user?.id) {
+      loadTransactions();
+    }
+  }, [user]);
 
-    setLoading(true);
-    getTransaccionesByUsuario(page, pageSize)
-      .then((res) => {
-        console.log("getTransaccionesByUsuario", res);
-        type TransactionResponse = { id: number; purchase_date: string; amount: number; payment_method: string; course: { title: string } };
-        const arr = (res?.data || []) as TransactionResponse[];
-        const transacciones = arr.map((t) => ({
-          id: t.id,
-          purchase_date: t.purchase_date,
-          amount: t.amount,
-          payment_method: t.payment_method,
-          course: t.course,
-        }));
-        setData(transacciones);
-        setTotal(res?.meta?.pagination?.total || 0);
-      })
-      .finally(() => setLoading(false));
-  }, [page, pageSize]);
+  const loadTransactions = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const response: any = await getTransactionsByUser(user.id);
+      setTransactions(response.data || []);
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+      message.error("Error al cargar tus pagos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = [
+    {
+      title: "Fecha",
+      dataIndex: "purchase_date",
+      key: "purchase_date",
+      render: (date: string) => new Date(date).toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      sorter: (a: Transaction, b: Transaction) =>
+        new Date(a.purchase_date).getTime() - new Date(b.purchase_date).getTime(),
+    },
+    {
+      title: "Curso",
+      dataIndex: ["course", "title"],
+      key: "course",
+      ellipsis: true,
+    },
+    {
+      title: "Monto",
+      dataIndex: "amount",
+      key: "amount",
+      render: (amount: number) => (
+        <span style={{ fontWeight: 600, color: "#f5b940", fontSize: "16px" }}>
+          ${amount.toFixed(2)}
+        </span>
+      ),
+      sorter: (a: Transaction, b: Transaction) => a.amount - b.amount,
+    },
+    {
+      title: "Método de Pago",
+      dataIndex: "payment_method",
+      key: "payment_method",
+      align: "center" as const,
+      render: (method: string) => {
+        const colors: Record<string, string> = {
+          "Paypal": "blue",
+          "Stripe": "purple",
+          "Pago movil": "green",
+        };
+        return <Tag color={colors[method] || "default"}>{method}</Tag>;
+      },
+    },
+  ];
+
+  const totalGastado = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalCompras = transactions.length;
 
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-bold">Mis Pagos — Privado</h1>
-      <p>Ruta: /dashboard/mis-pagos</p>
-      <p>Listado de pagos realizados por el usuario.</p>
-      <div className="mt-8">
-        <TransaccionesTable
-          data={data}
+    <div>
+      {/* Header */}
+      <div style={{
+        background: "#1f2937",
+        padding: "32px",
+        borderRadius: "8px",
+        marginBottom: "24px",
+      }}>
+        <h1 style={{ color: "#fff", fontSize: "28px", fontWeight: 600, margin: 0 }}>
+          Mis Pagos
+        </h1>
+        <p style={{ color: "#d1d5db", margin: "8px 0 0 0" }}>
+          Historial completo de tus compras
+        </p>
+      </div>
+
+      {/* Estadísticas */}
+      <Row gutter={16} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="Total Gastado"
+              value={totalGastado}
+              precision={2}
+              prefix={<DollarOutlined />}
+              suffix="USD"
+              valueStyle={{ color: "#f5b940" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="Total de Compras"
+              value={totalCompras}
+              prefix={<ShoppingOutlined />}
+              valueStyle={{ color: "#3f8600" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Tabla de Transacciones */}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "60px 0" }}>
+          <div className="animate-spin" style={{ fontSize: "40px" }}>⏳</div>
+          <p style={{ marginTop: "16px", color: "#666" }}>Cargando pagos...</p>
+        </div>
+      ) : transactions.length === 0 ? (
+        <Empty
+          description="No tienes pagos registrados"
+          style={{ padding: "60px 0" }}
+        />
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={transactions}
+          rowKey="id"
           loading={loading}
           pagination={{
-            current: page,
-            pageSize,
-            total,
-            onChange: (p, ps) => {
-              setPage(p);
-              setPageSize(ps);
-            },
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} pagos`,
           }}
+          bordered
         />
-      </div>
-    </main>
+      )}
+    </div>
   );
 }

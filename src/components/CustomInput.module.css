@@ -29,6 +29,17 @@
   box-shadow: 0 0 0 2px rgba(245,185,64,0.15);
 }
 
+/* Estilos para el ícono de mostrar/ocultar contraseña */
+.input :global(.ant-input-password-icon) {
+  color: #7a7a7a;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.input :global(.ant-input-password-icon):hover {
+  color: #f5b940;
+}
+
 .error {
   border-color: #ff4d4f !important;
 }

@@ -3,13 +3,12 @@
 import React, { useState } from "react";
 import LoginForm from "../../../components/LoginForm";
 import styles from "./loginPage.module.css";
-import { login } from "@/services/auth";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
+  const { login } = useAuth();
 
   interface LoginFormData {
     email: string;
@@ -20,17 +19,14 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const { name } = await login({
-        identifier: data.email,
-        password: data.password,
-      });
-      localStorage.setItem("name", name);
-      router.push("/dashboard/mis-cursos");
+      await login(data.email, data.password);
+      // La redirección se maneja automáticamente en AuthContext según el rol
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'response' in err 
-        ? (err.response as { data?: { error?: { message?: string } } })?.data?.error?.message 
-        : undefined;
-      setError(errorMessage || "Error al iniciar sesión");
+      // El error ya viene formateado desde auth.ts
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : "Error al iniciar sesión. Por favor, intenta nuevamente.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

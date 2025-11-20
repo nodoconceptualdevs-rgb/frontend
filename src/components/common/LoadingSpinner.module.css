@@ -1,0 +1,10 @@
+.container {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.text {
+  margin-top: 16px;
+  color: #666;
+  font-size: 16px;
+}

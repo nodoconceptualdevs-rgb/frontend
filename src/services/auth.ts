@@ -8,7 +8,31 @@ type RegisterPayload = {
   password: string;
   name?: string;
 };
-type LoginPayload = { identifier: string; password: string };
+
+type LoginPayload = { 
+  identifier: string; 
+  password: string 
+};
+
+type UserResponse = {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  confirmed?: boolean;
+  blocked?: boolean;
+  role: {
+    id: number;
+    name: string;
+    type: string;
+    description?: string;
+  };
+};
+
+type LoginResponse = {
+  jwt: string;
+  user: UserResponse;
+};
 
 export async function register(data: RegisterPayload) {
   const res = await api.post("/auth/local/register", data);
@@ -20,7 +44,9 @@ export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete("token");
   cookieStore.delete("userId");
+  cookieStore.delete("role");
 }
+
 export async function updateUserName(
   userId: number,
   name: string,
@@ -37,28 +63,90 @@ export async function updateUserName(
   );
 }
 
-export async function login(data: LoginPayload) {
-  // Strapi default: POST /auth/local
-  const res = await api.post("/auth/local", data);
-  const responseData = res.data as { jwt?: string; user: { id: string; name: string } };
-  const token = responseData.jwt;
-  const idUser = responseData.user.id;
-  const name = responseData.user.name;
+/**
+ * Actualizar perfil del usuario (server-side)
+ */
+export async function updateUserProfile(name: string) {
+  "use server";
   const cookieStore = await cookies();
-  if (token) {
-    cookieStore.set("token", token, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-    });
-    cookieStore.set("userId", idUser, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-    });
+  const token = cookieStore.get("token")?.value;
+  const userId = cookieStore.get("userId")?.value;
+
+  if (!token || !userId) {
+    throw new Error("No autenticado");
   }
 
-  return { ...responseData, name };
+  const res = await api.put(
+    `/users/${userId}`,
+    { name },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  
+  return res.data;
+}
+
+export async function login(data: LoginPayload): Promise<LoginResponse> {
+  // Strapi default: POST /auth/local
+  
+  try {
+    const res = await api.post("/auth/local", data);
+    const responseData = res.data as LoginResponse;
+
+  
+    const token = responseData.jwt;
+    
+    // Obtener usuario completo con rol usando el token
+    const userRes = await api.get("/users/me?populate=role", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const user = userRes.data as UserResponse;
+    
+    const cookieStore = await cookies();
+  
+    if (token) {
+      // Guardar token
+      cookieStore.set("token", token, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "strict",
+      });
+      
+      // Guardar user ID (convertir a string)
+      cookieStore.set("userId", String(user.id), {
+        path: "/",
+        httpOnly: true,
+        sameSite: "strict",
+      });
+      
+      // Guardar rol del usuario
+      cookieStore.set("role", user.role.type, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "strict",
+      });
+    }
+
+    // Retornar jwt con el usuario completo (con rol poblado)
+    return {
+      jwt: token,
+      user: user
+    };
+  } catch (error: any) {
+    // Extraer mensaje de error específico de Strapi
+    const errorMessage = error?.response?.data?.error?.message || 
+                        'Credenciales incorrectas. Verifica tu correo y contraseña.';
+    
+    // Lanzar error con mensaje específico
+    const customError = new Error(errorMessage);
+    (customError as any).response = error?.response;
+    throw customError;
+  }
 }
 
 export async function getSession() {
