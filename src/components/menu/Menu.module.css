@@ -1,23 +1,39 @@
-@media (max-width: 1024px) {
+/* Ocultar botón Contáctanos y menú en tablets y móviles */
+@media (max-width: 1200px) {
   .buttonSection {
     display: none !important;
   }
+  
+  .menuLinks {
+    gap: 2em;
+  }
 }
-@media (max-width: 900px) {
+
+/* Ajustes para móviles */
+@media (max-width: 768px) {
   .logoSection img {
     width: 120px !important;
     height: auto !important;
   }
-  .buttonSection button {
-    font-size: 0.95rem !important;
-    padding: 0.4em 1.2em !important;
-    min-width: unset !important;
-    border-radius: 1.5em !important;
-  }
+  
   .menuContainer {
     height: auto;
     min-height: 60px;
     padding: 0.5em 0.2em;
+    margin: 1em auto;
+  }
+  
+  .menuLinks {
+    padding: 1em 1.5em;
+  }
+  
+  .themeToggle {
+    margin-left: 0.5rem;
+  }
+  
+  .themeToggle svg {
+    width: 20px;
+    height: 20px;
   }
 }
 .menuContainer {
@@ -107,7 +123,8 @@
   transition: 0.3s;
 }
 
-@media (max-width: 900px) {
+/* Activar menú hamburguesa en tablets */
+@media (max-width: 1100px) {
   .menuContainer {
     border-radius: 1.5rem;
     height: auto;
@@ -205,16 +222,7 @@
   background-color: #e0e0e0;
 }
 
-@media (max-width: 768px) {
-  .themeToggle {
-    margin-left: 0.5rem;
-  }
-  
-  .themeToggle svg {
-    width: 20px;
-    height: 20px;
-  }
-}
+/* Ya incluido en el media query principal de 768px arriba */
 
 /* BYNODO Menu Styles - hereda background de .darkTheme */
 .bynodoMenu {

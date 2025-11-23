@@ -104,6 +104,7 @@
 
 .section {
   margin-bottom: clamp(3rem, 5vw, 5rem);
+  padding: 0 clamp(1rem, 5vw, 3rem);
 }
 
 .sectionTitle {
@@ -119,8 +120,10 @@
   color: var(--bynodo-text-muted);
   font-size: clamp(0.9rem, 1.2vw, 1.05rem);
   line-height: 1.8;
-  margin: 0;
+  margin: 0 auto;
   white-space: pre-line;
+  text-align: center;
+  max-width: 900px;
 }
 
 /* Espacios Section */
@@ -274,9 +277,14 @@
   .contactGrid {
     grid-template-columns: 1fr;
     gap: 2rem;
+    justify-items: center;
+    max-width: 500px;
+    margin: 0 auto;
   }
 
   .contactItem {
     flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
   }
 }

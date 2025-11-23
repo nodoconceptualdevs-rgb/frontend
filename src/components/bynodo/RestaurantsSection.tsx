@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import styles from './RestaurantsSection.module.css';
 
@@ -33,6 +35,7 @@ const restaurantData = [
 
 export default function RestaurantsSection() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   return (
     <section className={styles.restaurantsSection}>
@@ -53,6 +56,7 @@ export default function RestaurantsSection() {
                 width={600}
                 height={400}
                 className={styles.restaurantImage}
+                priority={index === 0}
               />
               <div className={styles.overlay}></div>
             </div>
@@ -62,8 +66,8 @@ export default function RestaurantsSection() {
                 <Image
                   src={restaurant.logo}
                   alt={`${restaurant.name} logo`}
-                  width={70}
-                  height={70}
+                  width={203}
+                  height={120}
                   className={styles.restaurantLogo}
                 />
               </div>
@@ -71,12 +75,13 @@ export default function RestaurantsSection() {
               <h2 className={styles.restaurantName}>{restaurant.name}</h2>
               <p className={styles.description}>{restaurant.description}</p>
               
-              <button
+              <Link 
+                href={`/bynodo/${restaurant.slug}`}
+                prefetch={true}
                 className={styles.verMasBtn}
-                onClick={() => router.push(`/bynodo/${restaurant.slug}`)}
               >
                 Ver más
-              </button>
+              </Link>
             </div>
           </article>
         ))}

@@ -86,3 +86,9 @@
   justify-content: center;
 }
 
+/* Responsive - Ocultar botón Contáctanos en móvil */
+@media (max-width: 768px) {
+  .redButton {
+    display: none;
+  }
+}
