@@ -3,13 +3,15 @@ import axios from "axios";
 // Determinar la URL base para la API
 const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
 
-// Crear instancia de axios con configuración básica
+// Crear instancia de axios con configuración mejorada para producción
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 20000, // Aumentar timeout para producción
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Origin": typeof window !== 'undefined' ? window.location.origin : '',
   },
 });
 
