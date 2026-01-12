@@ -1,12 +1,20 @@
 import axios from "axios";
 
+// Determinar la URL base para la API
+const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
+
+// Crear instancia de axios con configuración básica
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337/api",
+  baseURL: API_URL,
+  timeout: 15000,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+// Log para desarrollo que muestra la URL base utilizada
+console.info(`🔌 API conectada a: ${API_URL}`);
 
 // Rutas públicas que NO requieren autenticación
 const PUBLIC_ROUTES = [
