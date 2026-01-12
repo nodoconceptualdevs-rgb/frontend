@@ -1,98 +1,394 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import HitoEditor from "@/components/admin/HitoEditor";
 import AdminHeader from "@/components/admin/AdminHeader";
+import ProyectoInfoForm from "@/components/proyectos/ProyectoInfoForm";
+import TokenNFCCard from "@/components/proyectos/TokenNFCCard";
+import SortableHitoItem from "@/components/proyectos/SortableHitoItem";
+import { getProyectoById, updateProyecto, regenerarTokenNFC } from "@/services/proyectos";
+import { getClientes, getGerentes } from "@/services/usuarios";
+import { createHito, updateHito, deleteHito, reordenarHitos } from "@/services/hitos";
+import { alerts } from "@/lib/alerts";
+import { Toaster } from "react-hot-toast";
+import { useAuthToken } from "@/hooks/useAuthToken";
+import type { Hito, Usuario, Proyecto, RegenerarTokenResponse } from "@/types/proyecto.types";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
-const HITOS_INICIALES = [
-  { id: 1, nombre: "Conceptualización (Diseño)", orden: 1 },
-  { id: 2, nombre: "Planificación (Técnico)", orden: 2 },
-  { id: 3, nombre: "Visualización 3D", orden: 3 },
-  { id: 4, nombre: "Adquisición de Materiales", orden: 4 },
-  { id: 5, nombre: "Ejecución (Obra Gris)", orden: 5 },
-  { id: 6, nombre: "Acabados y Decoración", orden: 6 },
-  { id: 7, nombre: "Entrega Final", orden: 7 },
-];
+// Tipos importados desde @/types/proyecto.types
+
+// Helper para ordenar hitos por el campo 'orden'
+const sortHitosByOrden = (hitos: Hito[]): Hito[] => {
+  return [...hitos].sort((a, b) => a.orden - b.orden);
+};
 
 export default function EditarProyectoPage() {
   const params = useParams();
+  const router = useRouter();
+  const authToken = useAuthToken() as string | null;
   const [activeTab, setActiveTab] = useState("info");
   const [selectedHito, setSelectedHito] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [saving, setSaving] = useState(false);
   
-  const [proyecto, setProyecto] = useState({
-    id: params.id,
-    nombre_proyecto: "Remodelación Apartamento Las Mercedes",
-    cliente_nombre: "María González",
-    cliente_email: "maria@email.com",
-    estado_general: "En Ejecución",
-    fecha_inicio: "2025-01-15",
-    token_nfc: "demo-token-123",
-    ultimo_avance: "Instalación de pisos completada",
-  });
+  const [proyecto, setProyecto] = useState<Proyecto | null>(null);
+  const [hitos, setHitos] = useState<Hito[]>([]);
+  const [clientes, setClientes] = useState<Usuario[]>([]);
+  const [gerentes, setGerentes] = useState<Usuario[]>([]);
 
-  const [hitos, setHitos] = useState(
-    HITOS_INICIALES.map((h) => ({
-      ...h,
-      estado_completado: h.orden <= 5,
-      fecha_actualizacion: h.orden <= 5 ? new Date().toISOString() : null,
-      descripcion_avance: "",
-      enlace_tour_360: "",
-    }))
-  );
+  // Cargar datos del proyecto
+  useEffect(() => {
+    async function cargarProyecto() {
+      try {
+        setLoading(true);
+        const data = await getProyectoById(Number(params.id));
+        
+        if (!data || !data.data) {
+          alerts.error('Proyecto no encontrado');
+          router.push('/admin/proyectos');
+          return;
+        }
 
-  const handleUpdateProyecto = (field: string, value: string) => {
-    setProyecto({ ...proyecto, [field]: value });
+        setProyecto(data.data);
+        // Ordenar hitos por el campo 'orden' al cargar
+        setHitos(sortHitosByOrden(data.data.hitos || []));
+        console.log('Proyecto cargado:', data.data);
+      } catch (error) {
+        console.error('Error cargando proyecto:', error);
+        alerts.error('Error al cargar el proyecto');
+        router.push('/admin/proyectos');
+      } finally {
+        setLoading(false);
+      }
+    }
+    cargarProyecto();
+  }, [params.id, router]);
+
+  // Cargar usuarios para selectores
+  useEffect(() => {
+    async function cargarUsuarios() {
+      try {
+        setLoadingUsers(true);
+        const [clientesData, gerentesData] = await Promise.all([
+          getClientes(),
+          getGerentes()
+        ]);
+        setClientes(Array.isArray(clientesData) ? clientesData : []);
+        setGerentes(Array.isArray(gerentesData) ? gerentesData : []);
+      } catch (error) {
+        console.error('Error cargando usuarios:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    cargarUsuarios();
+  }, []);
+
+  const handleUpdateProyecto = (field: keyof Proyecto, value: string | number | boolean | number[] | Usuario[]) => {
+    if (!proyecto) return;
+    setProyecto({ ...proyecto, [field]: value } as Proyecto);
   };
 
   const handleSaveProyecto = async () => {
-    // TODO: Llamada al backend
-    alert("Proyecto actualizado!");
-  };
+    if (!proyecto) return;
+    
+    // Validaciones antes de guardar
+    const clientesIds = Array.isArray(proyecto.clientes) 
+      ? proyecto.clientes.map(c => typeof c === 'number' ? c : c.id)
+      : [];
+    
+    const gerentesIds = Array.isArray(proyecto.gerentes)
+      ? proyecto.gerentes.map(g => typeof g === 'number' ? g : g.id)
+      : [];
 
-  const hitoSeleccionado = hitos.find((h) => h.id === selectedHito);
-
-  const handleDeleteHito = (hitoId: number) => {
-    if (hitos.length <= 1) {
-      alert("Debe haber al menos un hito en el proyecto");
+    if (clientesIds.length === 0) {
+      alerts.error('⚠️ Debes asignar al menos un cliente al proyecto');
       return;
     }
-    if (confirm("¿Estás seguro de eliminar este hito?")) {
+
+    if (gerentesIds.length === 0) {
+      alerts.error('⚠️ Debes asignar al menos un gerente al proyecto');
+      return;
+    }
+
+    if (!proyecto.nombre_proyecto || proyecto.nombre_proyecto.trim() === '') {
+      alerts.error('⚠️ El nombre del proyecto es obligatorio');
+      return;
+    }
+
+    if (!proyecto.fecha_inicio) {
+      alerts.error('⚠️ La fecha de inicio es obligatoria');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      await updateProyecto(proyecto.id, {
+        nombre_proyecto: proyecto.nombre_proyecto,
+        estado_general: proyecto.estado_general,
+        fecha_inicio: proyecto.fecha_inicio,
+        clientes: clientesIds,
+        gerentes: gerentesIds,
+        es_publico: proyecto.es_publico
+      });
+      
+      alerts.success('✅ Proyecto actualizado exitosamente');
+    } catch (error: unknown) {
+      console.error('Error actualizando proyecto:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al actualizar el proyecto';
+      alerts.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRegenerarToken = async () => {
+    if (!proyecto) return;
+    
+    if (!confirm('¿Estás seguro de regenerar el token NFC? El token actual dejará de funcionar.')) {
+      return;
+    }
+
+    try {
+      const loadingId = alerts.loading('Regenerando token...');
+      const response: RegenerarTokenResponse = await regenerarTokenNFC(proyecto.id);
+      alerts.dismiss();
+      
+      if (response && response.data) {
+        setProyecto({ ...proyecto, token_nfc: response.data.token_nfc } as Proyecto);
+        alerts.success('Token regenerado exitosamente');
+      }
+    } catch (error: unknown) {
+      console.error('Error regenerando token:', error);
+      alerts.error('Error al regenerar el token');
+    }
+  };
+
+  const handleDeleteHito = async (hitoId: number) => {
+    if (!confirm("¿Estás seguro de eliminar este hito?")) {
+      return;
+    }
+
+    try {
+      const loadingId = alerts.loading('Eliminando hito...');
+      await deleteHito(hitoId);
+      alerts.dismiss();
+      
       setHitos(hitos.filter(h => h.id !== hitoId));
       if (selectedHito === hitoId) {
         setSelectedHito(null);
       }
+      alerts.success('Hito eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando hito:', error);
+      alerts.error('Error al eliminar el hito');
     }
   };
 
-  const handleAddHito = () => {
-    const nuevoId = Math.max(...hitos.map(h => h.id)) + 1;
-    const nuevoOrden = Math.max(...hitos.map(h => h.orden)) + 1;
-    const nuevoHito = {
-      id: nuevoId,
-      nombre: `Nuevo Hito ${nuevoOrden}`,
-      orden: nuevoOrden,
-      estado_completado: false,
-      fecha_actualizacion: null,
-      descripcion_avance: "",
-      enlace_tour_360: "",
-    };
-    setHitos([...hitos, nuevoHito]);
-    setSelectedHito(nuevoId);
+  const handleAddHito = async () => {
+    if (!proyecto) return;
+    
+    const nuevoOrden = hitos.length > 0 ? Math.max(...hitos.map(h => h.orden)) + 1 : 1;
+    
+    try {
+      const loadingId = alerts.loading('Creando hito...');
+      const response = await createHito({
+        nombre: `Nuevo Hito ${nuevoOrden}`,
+        orden: nuevoOrden,
+        estado_completado: false,
+        proyecto: proyecto.id,
+      });
+      alerts.dismiss();
+      
+      if (response && response.data) {
+        // Agregar y ordenar por 'orden'
+        setHitos(sortHitosByOrden([...hitos, response.data]));
+        setSelectedHito(response.data.id);
+        alerts.success('Hito creado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error creando hito:', error);
+      alerts.error('Error al crear el hito');
+    }
   };
+
+  const handleUpdateHito = async (updatedHito: Hito) => {
+    try {
+      const response = await updateHito(updatedHito.id, updatedHito);
+      
+      if (response && response.data) {
+        // Actualizar y mantener ordenados por 'orden'
+        setHitos(sortHitosByOrden(hitos.map((h) => (h.id === updatedHito.id ? response.data : h))));
+        alerts.success('Hito actualizado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error actualizando hito:', error);
+      alerts.error('Error al actualizar el hito');
+    }
+  };
+
+  // ========== CONFIGURACIÓN DRAG AND DROP ==========
+  // Los sensores detectan las interacciones del usuario:
+  // - PointerSensor: Detecta clics y arrastres del mouse/touch
+  // - KeyboardSensor: Permite reordenar con teclado (accesibilidad)
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  /**
+   * ========== MANEJO DE DRAG AND DROP ==========
+   * Función principal que se ejecuta cuando el usuario suelta un hito después de arrastrarlo
+   * 
+   * FLUJO DEL PROCESO:
+   * 1. Se detecta el inicio del drag (usuario agarra un hito)
+   * 2. Mientras arrastra, @dnd-kit muestra feedback visual
+   * 3. Al soltar (dragEnd), esta función se ejecuta
+   * 4. Reordenamos localmente (optimistic update)
+   * 5. Enviamos al backend
+   * 6. Si falla, revertimos (rollback)
+   */
+  const handleDragEnd = async (event: DragEndEvent) => {
+    console.log('🎯 [DRAG END] Evento de drag terminado:', event);
+    
+    if (!proyecto) {
+      console.warn('⚠️ [DRAG END] No hay proyecto cargado');
+      return;
+    }
+    
+    const { active, over } = event;
+    console.log('📍 [DRAG END] Hito arrastrado (active):', active.id);
+    console.log('📍 [DRAG END] Posición de destino (over):', over?.id);
+
+    // Si no hay destino válido o soltó en la misma posición, cancelar
+    if (!over || active.id === over.id) {
+      console.log('❌ [DRAG END] Cancelado: Sin cambio de posición');
+      return;
+    }
+
+    // Encontrar índices en el array actual
+    const oldIndex = hitos.findIndex((h) => h.id === active.id);
+    const newIndex = hitos.findIndex((h) => h.id === over.id);
+    
+    console.log('📊 [DRAG END] Índice anterior:', oldIndex, '→ Índice nuevo:', newIndex);
+    console.log('📋 [DRAG END] Estado de hitos ANTES del reorden:', 
+      hitos.map(h => ({ id: h.id, nombre: h.nombre, orden: h.orden }))
+    );
+
+    // Guardar el estado anterior para rollback en caso de error
+    const previousHitos = [...hitos];
+
+    // Reordenar el array usando arrayMove de @dnd-kit/sortable
+    const reorderedHitos = arrayMove(hitos, oldIndex, newIndex);
+    
+    // Recalcular el campo 'orden' para que sea secuencial (1, 2, 3...)
+    const hitosConNuevoOrden = reorderedHitos.map((hito, index) => ({
+      ...hito,
+      orden: index + 1
+    }));
+
+    console.log('🔄 [DRAG END] Nuevo orden calculado:', 
+      hitosConNuevoOrden.map(h => ({ id: h.id, nombre: h.nombre, orden: h.orden }))
+    );
+
+    // OPTIMISTIC UPDATE: Actualizar UI inmediatamente (no esperar al backend)
+    console.log('⚡ [DRAG END] Aplicando optimistic update...');
+    setHitos(hitosConNuevoOrden);
+
+    try {
+      console.log('📤 [DRAG END] Enviando petición al backend...');
+      console.log('📦 [DRAG END] Payload:', {
+        proyectoId: proyecto.id,
+        hitos: hitosConNuevoOrden.map(h => ({ id: h.id, orden: h.orden })),
+        token: authToken ? '***' : 'null'
+      });
+      
+      // Enviar al backend el nuevo orden
+      const response = await reordenarHitos(
+        proyecto.id,
+        hitosConNuevoOrden.map(h => ({ id: h.id, orden: h.orden })),
+        authToken || undefined
+      );
+      
+      console.log('✅ [DRAG END] Respuesta del backend recibida:', response);
+      
+      // IMPORTANTE: Actualizar con la respuesta del backend
+      // El backend puede haber aplicado validaciones o cambios adicionales
+      if (response && response.data) {
+        console.log('📦 [DRAG END] Actualizando hitos con respuesta del backend:', response.data);
+        // Asegurar que estén ordenados por 'orden'
+        setHitos(sortHitosByOrden(response.data));
+        alerts.success('✅ Hitos reordenados exitosamente');
+      }
+    } catch (error) {
+      console.error('❌ [DRAG END] Error reordenando hitos:', error);
+      console.log('🔙 [DRAG END] Revertiendo cambios (rollback)...');
+      alerts.error('Error al reordenar hitos');
+      
+      // ROLLBACK: Revertir cambios en caso de error
+      setHitos(previousHitos);
+      console.log('↩️ [DRAG END] Estado revertido a:', 
+        previousHitos.map(h => ({ id: h.id, nombre: h.nombre, orden: h.orden }))
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando proyecto...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!proyecto) {
+    return null;
+  }
+
+  const hitoSeleccionado = hitos.find((h) => h.id === selectedHito);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster />
+      
       {/* Header */}
       <AdminHeader
         titulo={proyecto.nombre_proyecto}
-        subtitulo={`Cliente: ${proyecto.cliente_nombre}`}
+        subtitulo={`Clientes: ${
+          Array.isArray(proyecto.clientes) && proyecto.clientes.length > 0
+            ? proyecto.clientes.map((c: Usuario | number) => 
+                typeof c === 'object' ? (c.username || c.email) : ''
+              ).filter(Boolean).join(', ')
+            : 'Sin clientes'
+        }`}
         mostrarVolver={true}
         mostrarVistaCliente={true}
         tokenNFC={proyecto.token_nfc}
       />
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="px-8 py-8">
 
         {/* Tabs */}
         <div className="flex gap-6 mb-6 border-b border-gray-200">
@@ -119,107 +415,21 @@ export default function EditarProyectoPage() {
         </div>
         {/* Información General */}
         {activeTab === "info" && (
-          <div className="bg-white rounded-xl shadow-md p-8 max-w-3xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Información del Proyecto
-            </h2>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre del Proyecto
-                </label>
-                <input
-                  type="text"
-                  value={proyecto.nombre_proyecto}
-                  onChange={(e) =>
-                    handleUpdateProyecto("nombre_proyecto", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Cliente
-                  </label>
-                  <input
-                    type="text"
-                    value={proyecto.cliente_nombre}
-                    onChange={(e) =>
-                      handleUpdateProyecto("cliente_nombre", e.target.value)
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Estado
-                  </label>
-                  <select
-                    value={proyecto.estado_general}
-                    onChange={(e) =>
-                      handleUpdateProyecto("estado_general", e.target.value)
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                  >
-                    <option value="En Planificación">En Planificación</option>
-                    <option value="En Ejecución">En Ejecución</option>
-                    <option value="Completado">Completado</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Último Avance
-                </label>
-                <textarea
-                  value={proyecto.ultimo_avance}
-                  onChange={(e) =>
-                    handleUpdateProyecto("ultimo_avance", e.target.value)
-                  }
-                  rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition resize-none"
-                  placeholder="Describe el último avance del proyecto..."
-                />
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Token NFC del Proyecto
-                </h3>
-                <div className="flex items-center gap-3">
-                  <code className="flex-1 bg-white px-4 py-2 rounded border border-gray-300 text-sm font-mono">
-                    {proyecto.token_nfc}
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(proyecto.token_nfc);
-                      alert("Token copiado!");
-                    }}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-semibold"
-                  >
-                    Copiar
-                  </button>
-                </div>
-                <p className="text-xs text-gray-600 mt-2">
-                  URL del cliente:{" "}
-                  <span className="font-mono">
-                    /proyecto/{proyecto.token_nfc}
-                  </span>
-                </p>
-              </div>
-
-              <button
-                onClick={handleSaveProyecto}
-                className="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg"
-              >
-                Guardar Cambios
-              </button>
-            </div>
+          <div className="max-w-3xl mx-auto space-y-6">
+            <ProyectoInfoForm
+              proyecto={proyecto}
+              clientes={clientes}
+              gerentes={gerentes}
+              loadingUsers={loadingUsers}
+              onUpdate={handleUpdateProyecto}
+              onSave={handleSaveProyecto}
+              saving={saving}
+            />
+            
+            <TokenNFCCard
+              tokenNfc={proyecto.token_nfc}
+              onRegenerar={handleRegenerarToken}
+            />
           </div>
         )}
 
@@ -243,71 +453,32 @@ export default function EditarProyectoPage() {
                     </svg>
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Selecciona un hito para editarlo
+                <p className="text-sm text-gray-600 mb-3">
+                  <span className="font-semibold">💡 Tip:</span> Arrastra los hitos para reordenarlos
                 </p>
 
-                <div className="space-y-2">
-                  {hitos.map((hito) => (
-                    <button
-                      key={hito.id}
-                      onClick={() => setSelectedHito(hito.id)}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition border-2 group ${
-                        selectedHito === hito.id
-                          ? "border-red-600 bg-red-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 relative">
-                        <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            hito.estado_completado
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-300"
-                          }`}
-                        >
-                          {hito.estado_completado && (
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={3}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm text-gray-900">
-                            {hito.orden}. {hito.nombre}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {hito.estado_completado
-                              ? "Completado"
-                              : "Pendiente"}
-                          </div>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteHito(hito.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 absolute right-0 top-1/2 -translate-y-1/2 p-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition"
-                          title="Eliminar hito"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={hitos.map(h => h.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {hitos.map((hito) => (
+                        <SortableHitoItem 
+                          key={hito.id} 
+                          hito={hito}
+                          isSelected={selectedHito === hito.id}
+                          onSelect={setSelectedHito}
+                          onDelete={handleDeleteHito}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               </div>
             </div>
 
@@ -316,13 +487,7 @@ export default function EditarProyectoPage() {
               {hitoSeleccionado ? (
                 <HitoEditor
                   hito={hitoSeleccionado}
-                  onUpdate={(updatedHito) => {
-                    setHitos(
-                      hitos.map((h) =>
-                        h.id === updatedHito.id ? updatedHito : h
-                      )
-                    );
-                  }}
+                  onUpdate={handleUpdateHito}
                 />
               ) : (
                 <div className="bg-white rounded-xl shadow-md p-12 text-center">
@@ -352,15 +517,6 @@ export default function EditarProyectoPage() {
           </div>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-16">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-400">
-            © 2025 Nodo Conceptual. Todos los derechos reservados.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

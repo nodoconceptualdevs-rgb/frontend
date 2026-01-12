@@ -1,6 +1,5 @@
-"use server";
 import api from "@/lib/api";
-import { cookies } from "next/headers";
+import { getAuthHeaders } from "@/lib/getAuthToken";
 
 interface User {
   id: number;
@@ -10,6 +9,7 @@ interface User {
 
 interface Course {
   id: number;
+  documentId: string;
   title: string;
   description?: string;
   price?: number;
@@ -38,11 +38,8 @@ export interface CreateTransactionPayload {
  * Obtener todas las transacciones
  */
 export async function getTransactions() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.get("/transactions?populate=*&sort=purchase_date:desc", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -51,11 +48,8 @@ export async function getTransactions() {
  * Obtener una transacción por ID
  */
 export async function getTransactionById(id: number) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.get(`/transactions/${id}?populate=*`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -64,11 +58,8 @@ export async function getTransactionById(id: number) {
  * Crear una nueva transacción
  */
 export async function createTransaction(data: CreateTransactionPayload) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.post("/transactions", { data }, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -77,11 +68,8 @@ export async function createTransaction(data: CreateTransactionPayload) {
  * Obtener transacciones de un usuario
  */
 export async function getTransactionsByUser(userId: number) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.get(`/transactions?filters[user][id][$eq]=${userId}&populate=*&sort=purchase_date:desc`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -90,11 +78,8 @@ export async function getTransactionsByUser(userId: number) {
  * Obtener transacciones de un curso
  */
 export async function getTransactionsByCourse(courseId: number) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.get(`/transactions?filters[course][id][$eq]=${courseId}&populate=*&sort=purchase_date:desc`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -103,32 +88,35 @@ export async function getTransactionsByCourse(courseId: number) {
  * Obtener cursos comprados por el usuario logueado
  */
 export async function getMisCursosComprados() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  const userId = cookieStore.get("userId")?.value;
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+  
+  if (!userId) {
+    throw new Error('Usuario no autenticado');
+  }
 
   // Obtener todas las transacciones del usuario con los cursos poblados
-  // Usar populate=* es más simple y funciona en Strapi v4
-  const res = await api.get(`/transactions?filters[user][id][$eq]=${userId}&populate=*`, {
-    headers: { Authorization: `Bearer ${token}` },
+  // Usar populate=* es más simple y funciona en Strapi v4/v5
+  // En Strapi v5, documentId se incluye automáticamente en cada documento
+  const res = await api.get(`/transactions?filters[user][id][$eq]=${userId}&populate[course][fields][0]=id&populate[course][fields][1]=documentId&populate[course][fields][2]=title&populate[course][fields][3]=description&populate[course][fields][4]=price&populate[course][fields][5]=number_lessons`, {
+    headers: getAuthHeaders(),
   });
 
   // Extraer los cursos únicos de las transacciones
   // Strapi v4+ devuelve los datos en res.data.data
   const responseData = res.data as { data?: Transaction[] } | Transaction[];
   const transactions: Transaction[] = (responseData && 'data' in responseData) ? (responseData.data || []) : (Array.isArray(responseData) ? responseData : []);
-  const cursosMap = new Map<number, Course>();
+  const cursosMap = new Map<string, Course>();
   
   transactions.forEach((transaction) => {
-   
-    if (transaction.course && transaction.course.id) {
-      // Usar Map para eliminar duplicados por ID
-      cursosMap.set(transaction.course.id, transaction.course);
+    if (transaction.course && transaction.course.documentId && transaction.course.title) {
+      // Solo agregar cursos que tienen datos completos (no fueron eliminados)
+      // Usar documentId como clave ya que es único en Strapi v5
+      cursosMap.set(transaction.course.documentId, transaction.course);
     }
   });
 
   const cursos = Array.from(cursosMap.values());
   
-  // Convertir el Map a array de cursos
-  return cursos;
+  // Filtrar cursos que no tienen título o documentId (fueron eliminados o datos incompletos)
+  return cursos.filter(curso => curso.title && curso.title.trim() !== '' && curso.documentId);
 }

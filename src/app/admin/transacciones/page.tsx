@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Table, Tag, Input, message } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { getTransactions, Transaction } from "@/services/transactions";
+import AdminHeader from "@/components/admin/AdminHeader";
 
 export default function TransaccionesPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -91,62 +92,58 @@ export default function TransaccionesPage() {
   const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div style={{
-        background: "#1f2937",
-        padding: "32px",
-        borderRadius: "8px",
-        marginBottom: "24px",
-      }}>
-        <h1 style={{ color: "#fff", fontSize: "28px", fontWeight: 600, margin: 0 }}>
-          Transacciones
-        </h1>
-        <p style={{ color: "#d1d5db", margin: "8px 0 0 0" }}>
-          {transactions.length} transacciones • Total: ${totalAmount.toFixed(2)}
-        </p>
-      </div>
-
-      {/* Barra de búsqueda */}
-      <div style={{ marginBottom: "24px" }}>
-        <Input
-          placeholder="Buscar por usuario, curso o método de pago..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 400 }}
-          allowClear
-        />
-      </div>
-
-      {/* Tabla */}
-      <Table
-        columns={columns}
-        dataSource={filteredTransactions}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          pageSize: 15,
-          showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} transacciones`,
-        }}
-        summary={() => (
-          <Table.Summary fixed>
-            <Table.Summary.Row style={{ background: "#f5f5f5" }}>
-              <Table.Summary.Cell index={0} colSpan={3} align="right">
-                <strong>Total General:</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={1}>
-                <strong style={{ color: "#f5b940", fontSize: "16px" }}>
-                  ${totalAmount.toFixed(2)}
-                </strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={2} />
-            </Table.Summary.Row>
-          </Table.Summary>
-        )}
-        bordered
+      <AdminHeader
+        titulo="Transacciones"
+        subtitulo={`${transactions.length} transacciones • Total: $${totalAmount.toFixed(2)}`}
       />
+
+      <main className="px-8 py-8">
+        {/* Barra de búsqueda */}
+        <div style={{ marginBottom: "24px" }}>
+          <Input
+            placeholder="Buscar por usuario, curso o método de pago..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ maxWidth: 400 }}
+            allowClear
+          />
+        </div>
+
+        {/* Tabla con scroll responsive */}
+        <div style={{ overflowX: "auto" }}>
+          <Table
+            columns={columns}
+            dataSource={filteredTransactions}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 15,
+              showSizeChanger: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} transacciones`,
+            }}
+            scroll={{ x: 800 }}
+            summary={() => (
+              <Table.Summary fixed>
+                <Table.Summary.Row style={{ background: "#f5f5f5" }}>
+                  <Table.Summary.Cell index={0} colSpan={3} align="right">
+                    <strong>Total General:</strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1}>
+                    <strong style={{ color: "#f5b940", fontSize: "16px" }}>
+                      ${totalAmount.toFixed(2)}
+                    </strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} />
+                </Table.Summary.Row>
+              </Table.Summary>
+            )}
+            bordered
+          />
+        </div>
+      </main>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Table, Tag, Switch, Input, message, Space } from "antd";
 import { SearchOutlined, CheckCircleOutlined, StopOutlined } from "@ant-design/icons";
 import { getUsers, toggleBlockUser, User } from "@/services/users";
+import AdminHeader from "@/components/admin/AdminHeader";
 
 export default function UsuariosPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -115,18 +116,13 @@ export default function UsuariosPage() {
       key: "blocked",
       align: "center" as const,
       render: (blocked: boolean, record: User) => (
-        <Space direction="vertical" size="small" align="center">
-          <Tag color={blocked ? "red" : "green"}>
-            {blocked ? "Bloqueado" : "Activo"}
-          </Tag>
-          <Switch
-            checked={!blocked}
-            onChange={() => handleToggleBlock(record.id, blocked)}
-            checkedChildren="Activo"
-            unCheckedChildren="Bloqueado"
-            disabled={record.role?.type === "admin"}
-          />
-        </Space>
+        <Switch
+          checked={!blocked}
+          onChange={() => handleToggleBlock(record.id, blocked)}
+          checkedChildren="Activo"
+          unCheckedChildren="Bloqueado"
+          disabled={record.role?.type === "admin"}
+        />
       ),
     },
     {
@@ -147,62 +143,63 @@ export default function UsuariosPage() {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div style={{
-        background: "#1f2937",
-        padding: "32px",
-        borderRadius: "8px",
-        marginBottom: "24px",
-      }}>
-        <h1 style={{ color: "#fff", fontSize: "28px", fontWeight: 600, margin: 0 }}>
-          Gestión de Usuarios
-        </h1>
-        <div style={{ display: "flex", gap: "24px", marginTop: "16px" }}>
-          <div>
-            <p style={{ color: "#9ca3af", margin: 0, fontSize: "14px" }}>Total</p>
-            <p style={{ color: "#fff", margin: 0, fontSize: "20px", fontWeight: 600 }}>{stats.total}</p>
+      <AdminHeader
+        titulo="Gestión de Usuarios"
+        subtitulo={`${stats.total} usuarios • ${stats.active} activos • ${stats.blocked} bloqueados`}
+      />
+
+      <main className="px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-sm mb-1">Total</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           </div>
-          <div>
-            <p style={{ color: "#9ca3af", margin: 0, fontSize: "14px" }}>Activos</p>
-            <p style={{ color: "#10b981", margin: 0, fontSize: "20px", fontWeight: 600 }}>{stats.active}</p>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-sm mb-1">Activos</p>
+            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
           </div>
-          <div>
-            <p style={{ color: "#9ca3af", margin: 0, fontSize: "14px" }}>Bloqueados</p>
-            <p style={{ color: "#ef4444", margin: 0, fontSize: "20px", fontWeight: 600 }}>{stats.blocked}</p>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-sm mb-1">Bloqueados</p>
+            <p className="text-2xl font-bold text-red-600">{stats.blocked}</p>
           </div>
-          <div>
-            <p style={{ color: "#9ca3af", margin: 0, fontSize: "14px" }}>Confirmados</p>
-            <p style={{ color: "#3b82f6", margin: 0, fontSize: "20px", fontWeight: 600 }}>{stats.confirmed}</p>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-sm mb-1">Confirmados</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.confirmed}</p>
           </div>
         </div>
-      </div>
 
-      {/* Barra de búsqueda */}
-      <div style={{ marginBottom: "24px" }}>
-        <Input
-          placeholder="Buscar por usuario, nombre o email..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 400 }}
-          allowClear
-        />
-      </div>
+        {/* Barra de búsqueda */}
+        <div style={{ marginBottom: "24px" }}>
+          <Input
+            placeholder="Buscar por usuario, nombre o email..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ maxWidth: 400 }}
+            allowClear
+          />
+        </div>
 
-      {/* Tabla */}
-      <Table
-        columns={columns}
-        dataSource={filteredUsers}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          pageSize: 15,
-          showSizeChanger: true,
-          showTotal: (total) => `Total: ${total} usuarios`,
-        }}
-        bordered
-      />
+        {/* Tabla con scroll responsive */}
+        <div style={{ overflowX: "auto" }}>
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 15,
+              showSizeChanger: true,
+              showTotal: (total) => `Total: ${total} usuarios`,
+            }}
+            scroll={{ x: 1000 }}
+            bordered
+          />
+        </div>
+      </main>
     </div>
   );
 }

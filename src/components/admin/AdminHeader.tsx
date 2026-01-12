@@ -1,6 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 
 interface AdminHeaderProps {
   titulo: string;
@@ -30,18 +31,18 @@ export default function AdminHeader({
 
   return (
     <header className="bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Logo */}
-        <div className="mb-6 flex items-center justify-between">
-          <div 
+      <div className="px-8 py-6">
+        {/* Logo y Actions */}
+        <div className="mb-4 flex items-center justify-between">
+          <Link 
+            href="/admin/proyectos"
             className="cursor-pointer"
-            onClick={() => router.push("/admin/proyectos")}
           >
             <div className="text-2xl font-bold text-red-500">NODO CONCEPTUAL</div>
             <div className="text-sm text-gray-400 mt-1">
               {getPanelText()}
             </div>
-          </div>
+          </Link>
 
           {mostrarVistaCliente && tokenNFC && (
             <button

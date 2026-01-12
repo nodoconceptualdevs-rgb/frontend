@@ -1,31 +1,92 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { createProyecto } from "@/services/proyectos";
+import { getClientes, getGerentes } from "@/services/usuarios";
+import { alerts } from "@/lib/alerts";
+import { Toaster } from "react-hot-toast";
+
+interface Usuario {
+  id: number;
+  username: string;
+  email: string;
+  name?: string;
+}
 
 export default function NuevoProyectoPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [clientes, setClientes] = useState<Usuario[]>([]);
+  const [gerentes, setGerentes] = useState<Usuario[]>([]);
   const [formData, setFormData] = useState({
     nombre_proyecto: "",
-    cliente_email: "",
-    cliente_nombre: "",
+    cliente: "",
+    gerente_proyecto: "",
     estado_general: "En Planificación",
     fecha_inicio: new Date().toISOString().split("T")[0],
+    es_publico: true,
   });
+
+  useEffect(() => {
+    async function fetchUsuarios() {
+      try {
+        setLoadingUsers(true);
+        
+        // Obtener clientes y gerentes en paralelo
+        const [clientesData, gerentesData] = await Promise.all([
+          getClientes(),
+          getGerentes()
+        ]);
+        
+        console.log("Clientes cargados:", clientesData);
+        console.log("Gerentes cargados:", gerentesData);
+        
+        setClientes(Array.isArray(clientesData) ? clientesData : []);
+        setGerentes(Array.isArray(gerentesData) ? gerentesData : []);
+      } catch (error) {
+        console.error("Error cargando usuarios:", error);
+        setClientes([]);
+        setGerentes([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    fetchUsuarios();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // TODO: Llamada al backend para crear proyecto
-    // const nuevoProyecto = await crearProyecto(formData);
-    
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    alert("Proyecto creado exitosamente!");
-    router.push("/admin/proyectos");
+    try {
+      await alerts.promise(
+        createProyecto({
+          nombre_proyecto: formData.nombre_proyecto,
+          fecha_inicio: formData.fecha_inicio,
+          estado_general: formData.estado_general,
+          cliente: formData.cliente ? parseInt(formData.cliente) : undefined,
+          gerente_proyecto: formData.gerente_proyecto ? parseInt(formData.gerente_proyecto) : undefined,
+          es_publico: formData.es_publico
+        }),
+        {
+          loading: 'Creando proyecto...',
+          success: 'Proyecto creado exitosamente',
+          error: 'Error al crear el proyecto'
+        }
+      );
+      
+      // Esperar un poco para que se vea la alerta de éxito
+      setTimeout(() => {
+        router.push("/admin/proyectos");
+      }, 1000);
+    } catch (error: any) {
+      console.error("Error creando proyecto:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (
@@ -39,6 +100,7 @@ export default function NuevoProyectoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster />
       {/* Header */}
       <AdminHeader
         titulo="Crear Nuevo Proyecto"
@@ -68,38 +130,55 @@ export default function NuevoProyectoPage() {
               </p>
             </div>
 
-            {/* Cliente */}
+            {/* Cliente y Gerente */}
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre del Cliente *
+                  Cliente
                 </label>
-                <input
-                  type="text"
-                  name="cliente_nombre"
-                  value={formData.cliente_nombre}
+                <select
+                  name="cliente"
+                  value={formData.cliente}
                   onChange={handleChange}
-                  required
-                  placeholder="Ej: María González"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
+                  disabled={loadingUsers}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {loadingUsers ? "Cargando clientes..." : "Sin cliente asignado"}
+                  </option>
+                  {!loadingUsers && clientes.map((cliente: Usuario) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {cliente.username || cliente.email}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {loadingUsers ? "Cargando lista de clientes..." : `${clientes.length} clientes disponibles`}
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email del Cliente *
+                  Gerente de Proyecto
                 </label>
-                <input
-                  type="email"
-                  name="cliente_email"
-                  value={formData.cliente_email}
+                <select
+                  name="gerente_proyecto"
+                  value={formData.gerente_proyecto}
                   onChange={handleChange}
-                  required
-                  placeholder="cliente@email.com"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
+                  disabled={loadingUsers}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {loadingUsers ? "Cargando gerentes..." : "Sin gerente asignado"}
+                  </option>
+                  {!loadingUsers && gerentes.map((gerente: Usuario) => (
+                    <option key={gerente.id} value={gerente.id}>
+                      {gerente.username || gerente.email}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Se enviará acceso NFC a este email
+                  {loadingUsers ? "Cargando lista de gerentes..." : `${gerentes.length} gerentes disponibles`}
                 </p>
               </div>
             </div>
@@ -137,6 +216,54 @@ export default function NuevoProyectoPage() {
               </div>
             </div>
 
+            {/* Privacidad del Proyecto */}
+            <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                    Configuración de Privacidad
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {formData.es_publico 
+                      ? "El proyecto es accesible con el token NFC sin necesidad de autenticación" 
+                      : "El proyecto requiere autenticación además del token NFC"}
+                  </p>
+                </div>
+                <div className="ml-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, es_publico: !formData.es_publico })}
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                      formData.es_publico ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                  >
+                    <span className="sr-only">Proyecto público</span>
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                        formData.es_publico ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-4 text-xs">
+                <div className={`flex items-center gap-1 ${formData.es_publico ? 'text-green-600 font-semibold' : 'text-gray-400'}`}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span>Público</span>
+                </div>
+                <div className={`flex items-center gap-1 ${!formData.es_publico ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span>Privado</span>
+                </div>
+              </div>
+            </div>
+
             {/* Info Box */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <div className="flex gap-3">
@@ -162,12 +289,12 @@ export default function NuevoProyectoPage() {
                       • Se generará automáticamente un <strong>token NFC único</strong>
                     </li>
                     <li>
-                      • Se crearán los <strong>7 hitos predeterminados</strong> del proyecto
+                      • Podrás <strong>crear los hitos</strong> del proyecto manualmente
                     </li>
                     <li>
-                      • El cliente recibirá un email con instrucciones de acceso
+                      • El proyecto estará disponible para gestión inmediata
                     </li>
-                    <li>• Podrás empezar a agregar contenido a cada hito</li>
+                    <li>• Podrás agregar contenido multimedia a cada hito creado</li>
                   </ul>
                 </div>
               </div>

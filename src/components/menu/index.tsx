@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { RedButton } from "../CustomButtons";
 import styles from "./Menu.module.css";
 import { useRouter } from "next/navigation";
@@ -9,11 +10,14 @@ import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import TransitionOverlay from "@/components/TransitionOverlay";
 import { FaSync } from "react-icons/fa";
+import { useAuth } from "@/context/AuthContext";
+import { ROLES } from "@/constants/roles";
 
 export default function Menu() {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setIsTransitioning } = useTheme();
+  const { isAuthenticated, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   
@@ -23,6 +27,7 @@ export default function Menu() {
   const isCursos = pathname.startsWith("/cursos");
   const isQuienes = pathname === "/#quienes-somos";
   const isBynodo = pathname.startsWith("/bynodo");
+  const isLoginPage = pathname === "/login" || pathname === "/registro";
 
   const handleNav = (cb: () => void) => {
     setOpen(false);
@@ -48,6 +53,26 @@ export default function Menu() {
     setIsTransitioning(false);
   };
 
+  /**
+   * Manejar click en el botón principal
+   */
+  const handleMainButtonClick = () => {
+    if (isAuthenticated && user) {
+      // Usuario logueado - ir al panel correspondiente según rol
+      if (user.role.type === ROLES.ADMIN) {
+        router.push('/admin/proyectos');
+      } else if (user.role.type === ROLES.GERENTE_PROYECTO) {
+        router.push('/dashboard/mi-proyecto');
+      } else {
+        // Cliente o cualquier otro rol autenticado
+        router.push('/dashboard/cursos');
+      }
+    } else {
+      // Usuario no logueado - ir a login
+      router.push('/login');
+    }
+  };
+
   // Si estamos en BYNODO, mostrar el menú simplificado
   if (isBynodo) {
     return (
@@ -59,7 +84,7 @@ export default function Menu() {
         <div style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
           <nav className={`${styles.menuContainer} ${styles.darkTheme} ${styles.bynodoMenu}`}>
             <div className={styles.bynodoMenuContent}>
-              <div onClick={() => handleNav(() => router.push("/bynodo"))}>
+              <Link href="/bynodo" onClick={() => setOpen(false)}>
                 <Image
                   src="/bynodo.svg"
                   alt="BYNODO"
@@ -68,7 +93,7 @@ export default function Menu() {
                   priority
                   style={{ cursor: "pointer" }}
                 />
-              </div>
+              </Link>
               <button
                 className={styles.themeToggle}
                 onClick={handleThemeToggle}
@@ -95,7 +120,7 @@ export default function Menu() {
         <nav className={styles.menuContainer}>
           <div className={styles.menuContent}>
             <div className={styles.logoSection}>
-              <div onClick={() => handleNav(() => router.push("/"))}>
+              <Link href="/" onClick={() => setOpen(false)}>
                 <Image
                   src="/logo.svg"
                   alt="Nodo Conceptual"
@@ -104,7 +129,7 @@ export default function Menu() {
                   priority
                   style={{ cursor: "pointer" }}
                 />
-              </div>
+              </Link>
               <button
                 className={styles.themeToggle}
                 onClick={handleThemeToggle}
@@ -125,58 +150,62 @@ export default function Menu() {
           </button>
           <ul className={styles.menuLinks + (open ? " " + styles.open : "")}>
             <li>
-              <button
-                type="button"
+              <Link
+                href="/"
                 className={isHome && !isQuienes ? styles.active : undefined}
-                onClick={() => handleNav(() => router.push("/"))}
+                onClick={() => setOpen(false)}
               >
                 Inicio
-              </button>
+              </Link>
             </li>
             <li>
-              <button
-                type="button"
+              <Link
+                href="/portafolio"
                 className={isPortafolio ? styles.active : undefined}
-                onClick={() => handleNav(() => router.push("/portafolio"))}
+                onClick={() => setOpen(false)}
               >
                 Portafolio
-              </button>
+              </Link>
             </li>
             <li>
               <button
                 type="button"
                 className={isQuienes ? styles.active : undefined}
-                onClick={() =>
-                  handleNav(() => {
-                    if (pathname === "/") {
-                      const section = document.getElementById("quienes-somos");
-                      if (section) {
-                        section.scrollIntoView({ behavior: "smooth" });
-                      }
-                    } else {
-                      router.push("/#quienes-somos");
+                onClick={() => {
+                  setOpen(false);
+                  if (pathname === "/") {
+                    const section = document.getElementById("quienes-somos");
+                    if (section) {
+                      section.scrollIntoView({ behavior: "smooth" });
                     }
-                  })
-                }
+                  } else {
+                    router.push("/#quienes-somos");
+                  }
+                }}
               >
                 Quiénes Somos
               </button>
             </li>
             <li>
-              <button
-                type="button"
+              <Link
+                href="/cursos"
                 className={isCursos ? styles.active : undefined}
-                onClick={() => handleNav(() => router.push("/cursos"))}
+                onClick={() => setOpen(false)}
               >
                 Cursos y Formaciones
-              </button>
+              </Link>
             </li>
           </ul>
-          <div className={styles.buttonSection}>
-            <RedButton style={{ padding: "0 60px", cursor: "pointer" }}>
-              Contáctanos
-            </RedButton>
-          </div>
+          {!isLoginPage && (
+            <div className={styles.buttonSection}>
+              <RedButton 
+                style={{ padding: "0 60px", cursor: "pointer" }}
+                onClick={handleMainButtonClick}
+              >
+                {isAuthenticated ? "Ir al Panel" : "Iniciar sesión"}
+              </RedButton>
+            </div>
+          )}
         </div>
       </nav>
     </div>

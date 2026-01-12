@@ -5,6 +5,7 @@
   padding: clamp(2rem, 6vw, 56px) clamp(1rem, 3vw, 0) 0 clamp(1rem, 3vw, 0);
   position: relative;
   font-family: inherit;
+  padding-top: 20px !important;
 }
 
 .grid {

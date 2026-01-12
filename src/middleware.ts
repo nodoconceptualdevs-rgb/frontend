@@ -33,7 +33,7 @@ function getDefaultRouteByRole(role: string | undefined): string {
     return '/admin/proyectos';
   }
   if (isClientRole(role)) {
-    return '/dashboard/mis-cursos';
+    return '/dashboard/cursos';
   }
   return '/login';
 }

@@ -13,7 +13,7 @@ export default function NuevoCursoPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values: { title: string; description: string; price: number; isActive?: boolean; number_lessons?: number }) => {
+  const handleSubmit = async (values: { title: string; description: string; price: number; isActive?: boolean }) => {
     try {
       setLoading(true);
       const payload = {
@@ -21,7 +21,6 @@ export default function NuevoCursoPage() {
         description: values.description,
         price: values.price,
         isActive: values.isActive || false,
-        number_lessons: values.number_lessons || 0,
       };
 
       await createCourse(payload);
@@ -69,7 +68,6 @@ export default function NuevoCursoPage() {
           onFinish={handleSubmit}
           initialValues={{
             isActive: false,
-            number_lessons: 0,
             price: 0,
           }}
         >
@@ -102,17 +100,6 @@ export default function NuevoCursoPage() {
               min={0}
               precision={2}
               prefix="$"
-              style={{ width: "100%" }}
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Número de Lecciones"
-            name="number_lessons"
-          >
-            <InputNumber
-              min={0}
               style={{ width: "100%" }}
               size="large"
             />

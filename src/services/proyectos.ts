@@ -1,21 +1,13 @@
-"use server";
 import api from "@/lib/api";
-import { cookies } from "next/headers";
+import type { 
+  Proyecto, 
+  RegenerarTokenResponse, 
+  ProyectoResponse,
+  UpdateProyectoPayload 
+} from "@/types/proyecto.types";
 
-interface Usuario {
-  id: number;
-  username: string;
-  email: string;
-  name?: string;
-}
-
-interface Hito {
-  id: number;
-  titulo: string;
-  descripcion?: string;
-  estado: string;
-  fecha?: string;
-}
+// Re-exportar Proyecto para compatibilidad con imports existentes
+export type { Proyecto } from "@/types/proyecto.types";
 
 interface Comentario {
   id: number;
@@ -23,32 +15,15 @@ interface Comentario {
   createdAt: string;
 }
 
-export interface Proyecto {
-  id: number;
-  nombre_proyecto: string;
-  token_nfc: string;
-  estado_general: "En Planificación" | "En Ejecución" | "Completado";
-  fecha_inicio: string;
-  ultimo_avance?: string;
-  cliente?: Usuario;
-  gerente_proyecto?: Usuario;
-  hitos?: Hito[];
-  comentarios?: Comentario[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 /**
- * Obtener proyectos del usuario logueado (cliente)
+ * Obtener proyectos del usuario logueado (cliente o gerente)
+ * El backend filtra automáticamente según el usuario autenticado
  */
 export async function getMisProyectos() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  const userId = cookieStore.get("userId")?.value;
-
-  const res = await api.get(`/proyectos?filters[cliente][id][$eq]=${userId}&populate=*`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  // El controlador del backend se encarga de filtrar según el rol
+  // Populate simplificado para evitar errores de sintaxis
+  const res = await api.get(`/proyectos?populate=*`);
+  
   return res.data;
 }
 
@@ -72,12 +47,7 @@ export async function getProyectoByToken(tokenNfc: string) {
  * Obtener todos los proyectos (admin)
  */
 export async function getProyectos() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
-  const res = await api.get("/proyectos?populate=*", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await api.get("/proyectos?populate=*");
   return res.data;
 }
 
@@ -85,9 +55,13 @@ export async function getProyectos() {
  * Crear comentario en un proyecto
  */
 export async function createComentario(proyectoId: number, contenido: string) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  const userId = cookieStore.get("userId")?.value;
+  const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  if (!userStr) {
+    throw new Error('Usuario no autenticado');
+  }
+  
+  const user = JSON.parse(userStr);
+  const userId = user.id;
 
   const res = await api.post("/comentario-proyectos", {
     data: {
@@ -95,8 +69,6 @@ export async function createComentario(proyectoId: number, contenido: string) {
       proyecto: proyectoId,
       usuario: userId,
     }
-  }, {
-    headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
 }
@@ -109,4 +81,68 @@ export async function getComentariosByProyecto(proyectoId: number) {
     headers: {},
   });
   return res.data;
+}
+
+/**
+ * Crear un nuevo proyecto
+ */
+export async function createProyecto(data: {
+  nombre_proyecto: string;
+  fecha_inicio: string;
+  estado_general?: string;
+  cliente?: number;
+  gerente_proyecto?: number;
+  es_publico?: boolean;
+}) {
+  const res = await api.post("/proyectos", {
+    data
+  });
+  return res.data;
+}
+
+/**
+ * Actualizar un proyecto
+ */
+export async function updateProyecto(id: number, data: UpdateProyectoPayload) {
+  const res = await api.put(`/proyectos/${id}`, {
+    data
+  });
+  return res.data;
+}
+
+/**
+ * Eliminar un proyecto
+ */
+export async function deleteProyecto(id: number) {
+  const res = await api.delete(`/proyectos/${id}`);
+  return res.data;
+}
+
+/**
+ * Regenerar token NFC de un proyecto
+ */
+export async function regenerarTokenNFC(id: number): Promise<RegenerarTokenResponse> {
+  const res = await api.post<RegenerarTokenResponse>(`/proyectos/${id}/regenerar-token`, {});
+  return res.data;
+}
+
+/**
+ * Obtener un proyecto por ID con todas sus relaciones
+ */
+export async function getProyectoById(id: number) {
+  const res = await api.get(`/proyectos/${id}?populate[gerente_proyecto]=*&populate[cliente]=*&populate[hitos][populate][contenido][populate]=*`);
+  return res.data;
+}
+
+/**
+ * Validar token NFC del proyecto
+ * Retorna true si el token existe y es válido
+ */
+export async function validarTokenNFC(tokenNfc: string) {
+  try {
+    const res = await api.get(`/proyectos/auth-nfc?token=${tokenNfc}`);
+    return { valido: true, proyecto: res.data };
+  } catch (error) {
+    return { valido: false, proyecto: null };
+  }
 }

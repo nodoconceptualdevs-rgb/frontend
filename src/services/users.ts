@@ -1,6 +1,5 @@
-"use server";
 import api from "@/lib/api";
-import { cookies } from "next/headers";
+import { getAuthHeaders } from "@/lib/getAuthToken";
 
 export interface User {
   id: number;
@@ -22,11 +21,8 @@ export interface User {
  * Obtener todos los usuarios
  */
 export async function getUsers() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.get("/users?populate=role", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -35,11 +31,8 @@ export async function getUsers() {
  * Obtener un usuario por ID
  */
 export async function getUserById(id: number) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.get(`/users/${id}?populate=role`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -48,11 +41,8 @@ export async function getUserById(id: number) {
  * Actualizar un usuario
  */
 export async function updateUser(id: number, data: Partial<User>) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
   const res = await api.put(`/users/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }

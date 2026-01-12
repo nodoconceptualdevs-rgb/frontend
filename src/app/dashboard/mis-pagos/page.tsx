@@ -5,14 +5,25 @@ import { Table, Tag, Empty, Card, Statistic, Row, Col, message } from "antd";
 import { DollarOutlined, ShoppingOutlined } from "@ant-design/icons";
 import { getTransactionsByUser, Transaction } from "@/services/transactions";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { ROLES } from "@/constants/roles";
 
 export default function MisPagosPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Redirigir si el usuario es Gerente de Proyecto
   useEffect(() => {
-    if (user?.id) {
+    if (user && user.role.type === ROLES.GERENTE_PROYECTO) {
+      message.warning("Esta sección es solo para clientes");
+      router.push("/dashboard/mi-proyecto");
+    }
+  }, [user, router]);
+
+  useEffect(() => {
+    if (user?.id && user.role.type !== ROLES.GERENTE_PROYECTO) {
       loadTransactions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -41,12 +41,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Redireccionar según el rol del usuario
    */
   const redirectByRole = useCallback((roleType: string) => {
-    if (isAdminRole(roleType)) {
-      // Admin y Gerente gestionan proyectos en la misma interfaz
+    if (roleType === ROLES.ADMIN) {
+      // Solo Admin va a /admin/proyectos
       router.push('/admin/proyectos');
+    } else if (roleType === ROLES.GERENTE_PROYECTO) {
+      // Gerente va a su dashboard
+      router.push('/dashboard/mi-proyecto');
     } else if (isClientRole(roleType)) {
       // Cliente ve cursos por defecto
-      router.push('/dashboard/mis-cursos');
+      router.push('/dashboard/cursos');
     } else {
       // Por defecto, redirigir a login
       router.push('/login');
@@ -82,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Guardar en localStorage
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', response.jwt);
+      localStorage.setItem('userId', response.user.id.toString());
       localStorage.setItem('name', response.user.name || response.user.username);
       
       // Redireccionar según rol
@@ -109,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Limpiar localStorage
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       localStorage.removeItem('name');
       
       // Intentar limpiar todas las cookies del lado del cliente
