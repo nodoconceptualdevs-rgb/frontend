@@ -48,9 +48,22 @@ export async function loginClient(data: LoginPayload): Promise<LoginResponse> {
       localStorage.setItem('token', token);
       
       // También en cookie para mayor compatibilidad
-      document.cookie = `token=${token}; path=/; max-age=2592000`; // 30 días
+      // Ajustamos configuración para que funcione en producción
+      const isProduction = window.location.protocol === 'https:';
+      const cookieOptions = isProduction 
+        ? 'path=/; max-age=2592000; SameSite=None; Secure' // Producción (HTTPS)
+        : 'path=/; max-age=2592000'; // Desarrollo (HTTP)
       
-      console.log('✅ Token guardado:', token.substring(0, 10) + '...');
+      // Establecer cookies con configuración adecuada
+      document.cookie = `token=${token}; ${cookieOptions}`;
+      
+      // Debug para verificar creación de cookies
+      setTimeout(() => {
+        const cookies = document.cookie;
+        console.log('🍪 Cookies después de login:', cookies);
+      }, 100);
+      
+      console.log('✅ Token guardado:', token.substring(0, 10) + '...', isProduction ? '(producción)' : '(desarrollo)');
     }
     
     // 3. Obtener usuario completo con rol usando el token

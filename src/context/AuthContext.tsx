@@ -93,9 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('role', response.user.role.type);
       
       // Guardar en cookies para mayor compatibilidad
-      document.cookie = `token=${response.jwt}; path=/; max-age=2592000`; // 30 días
-      document.cookie = `userId=${response.user.id}; path=/; max-age=2592000`;
-      document.cookie = `role=${response.user.role.type}; path=/; max-age=2592000`;
+      const isProduction = window.location.protocol === 'https:';
+      const cookieOptions = isProduction 
+        ? 'path=/; max-age=2592000; SameSite=None; Secure' // Producción (HTTPS)
+        : 'path=/; max-age=2592000'; // Desarrollo (HTTP)
+      
+      // Establecer cookies con la configuración correcta para el entorno
+      document.cookie = `token=${response.jwt}; ${cookieOptions}`;
+      document.cookie = `userId=${response.user.id}; ${cookieOptions}`;
+      document.cookie = `role=${response.user.role.type}; ${cookieOptions}`;
 
       // Verificar que los datos se guardaron
       console.log('💾 Datos guardados:',
