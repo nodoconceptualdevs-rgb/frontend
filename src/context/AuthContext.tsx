@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, AuthContextType, RoleType } from '@/types/auth';
-import { login as loginService, logout as logoutService } from '@/services/auth';
+import { loginClient as loginService } from '@/services/auth-client';
+import { logout as logoutService } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 import { ROLES, isAdminRole, isClientRole } from '@/constants/roles';
 
