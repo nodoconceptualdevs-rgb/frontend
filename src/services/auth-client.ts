@@ -31,19 +31,41 @@ type LoginResponse = {
  */
 export async function loginClient(data: LoginPayload): Promise<LoginResponse> {
   try {
-    // Hacer login en Strapi
-    const res = await api.post("/auth/local", data);
-    const responseData = res.data as LoginResponse;
+    console.log('🔄 Iniciando login con:', data.identifier);
     
+    // 1. Iniciar login con API - IMPORTANTE: withCredentials debe estar en true en api.ts
+    const res = await api.post("/auth/local", data, {
+      withCredentials: true
+    });
+    
+    console.log('✅ Login exitoso, procesando respuesta');
+    const responseData = res.data as LoginResponse;
     const token = responseData.jwt;
     
-    // Obtener usuario completo con rol usando el token
+    // 2. Guardar token en localStorage y document.cookie para redundancia
+    if (typeof window !== 'undefined') {
+      // En localStorage
+      localStorage.setItem('token', token);
+      
+      // También en cookie para mayor compatibilidad
+      document.cookie = `token=${token}; path=/; max-age=2592000`; // 30 días
+      
+      console.log('✅ Token guardado:', token.substring(0, 10) + '...');
+    }
+    
+    // 3. Obtener usuario completo con rol usando el token
+    console.log('🔄 Obteniendo datos de usuario...');
     const userRes = await api.get("/users/me?populate=role", {
       headers: {
         Authorization: `Bearer ${token}`
-      }
+      },
+      withCredentials: true
     });
+    console.log('✅ Datos de usuario obtenidos');
     const user = userRes.data as UserResponse;
+    
+    // 4. Verificar que el token está disponible para futuras peticiones
+    console.log('🔄 Verificando token:', localStorage.getItem('token') ? '✅ Presente en localStorage' : '❌ No encontrado en localStorage');
     
     // Retornar jwt con el usuario completo (con rol poblado)
     return {

@@ -62,7 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔑 Iniciando login...');
       const response = await loginService({ identifier: email, password });
+      console.log('✅ Login exitoso, procesando respuesta:', response);
       
       const userData: User = {
         id: parseInt(response.user.id.toString()),
@@ -83,13 +85,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       setToken(response.jwt);
       
-      // Guardar en localStorage
+      // Guardar en localStorage (IMPORTANTE para peticiones futuras)
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', response.jwt);
       localStorage.setItem('userId', response.user.id.toString());
       localStorage.setItem('name', response.user.name || response.user.username);
+      localStorage.setItem('role', response.user.role.type);
+      
+      // Guardar en cookies para mayor compatibilidad
+      document.cookie = `token=${response.jwt}; path=/; max-age=2592000`; // 30 días
+      document.cookie = `userId=${response.user.id}; path=/; max-age=2592000`;
+      document.cookie = `role=${response.user.role.type}; path=/; max-age=2592000`;
+
+      // Verificar que los datos se guardaron
+      console.log('💾 Datos guardados:',
+        '\nToken:', localStorage.getItem('token') ? '✅' : '❌',
+        '\nUser:', localStorage.getItem('user') ? '✅' : '❌',
+        '\nCookies:', document.cookie ? '✅' : '❌'
+      );
       
       // Redireccionar según rol
+      console.log('🚀 Redirigiendo a rol:', response.user.role.type);
       redirectByRole(response.user.role.type);
     } catch (error) {
       console.error('Login error:', error);

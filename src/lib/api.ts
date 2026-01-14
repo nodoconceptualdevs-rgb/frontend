@@ -1,6 +1,7 @@
 import axios from "axios";
 
 // Determinar la URL base para la API
+//https://backend-production-2ce7.up.railway.app/api
 const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
 
 // Crear instancia de axios con configuración mejorada para producción
@@ -25,17 +26,42 @@ const PUBLIC_ROUTES = [
   '/auth/reset-password',
 ];
 
+// Función para obtener el token (de múltiples fuentes para mayor robustez)
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  // 1. Intentar obtener desde localStorage (principal)
+  let token = localStorage.getItem('token');
+  
+  // 2. Si no existe, intentar obtener de las cookies
+  if (!token) {
+    const tokenCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('token='));
+    
+    if (tokenCookie) {
+      token = tokenCookie.split('=')[1];
+      // Si se encontró en cookie pero no en localStorage, sincronizar
+      localStorage.setItem('token', token);
+    }
+  }
+  
+  return token;
+}
+
 // Interceptor para agregar el token JWT a todas las peticiones
 api.interceptors.request.use(
   (config) => {
     // Verificar si la ruta es pública
     const isPublicRoute = PUBLIC_ROUTES.some(route => config.url?.includes(route));
     
-    // Obtener token del localStorage (guardado como 'token')
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    // Obtener token usando la función robusta
+    const token = getAuthToken();
     
+    // Agregar token a los headers si existe
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 Usando token en petición:', config.url);
     } else if (!isPublicRoute) {
       // Solo mostrar warning si NO es una ruta pública
       console.warn('⚠️ No hay token JWT disponible para:', config.url);
