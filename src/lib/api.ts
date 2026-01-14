@@ -7,11 +7,9 @@ const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
 const api = axios.create({
   baseURL: API_URL,
   timeout: 20000, // Aumentar timeout para producción
-  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
-    "Origin": typeof window !== 'undefined' ? window.location.origin : '',
   },
 });
 

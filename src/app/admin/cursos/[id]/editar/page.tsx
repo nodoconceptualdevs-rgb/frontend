@@ -191,7 +191,7 @@ export default function EditarCursoPage() {
             uid: '-1',
             name: 'Portada actual',
             status: 'done',
-            url: `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${coverUrl}`,
+            url: `https://backend-production-2ce7.up.railway.app${coverUrl}`,
           },
         ]);
       }
@@ -244,7 +244,7 @@ export default function EditarCursoPage() {
 
   const uploadProps: UploadProps = {
     name: 'file',
-    action: `${process.env.NEXT_PUBLIC_API_URL}/upload`,
+    action: `https://backend-production-2ce7.up.railway.app/api/upload`,
     headers: {
       authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
     },

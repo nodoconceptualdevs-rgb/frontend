@@ -239,7 +239,7 @@ export default function CourseViewPage() {
           {course?.cover && (
             <Card style={{ marginBottom: '24px', padding: 0 }} bodyStyle={{ padding: 0 }}>
               <img 
-                src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${course.cover.url || course.cover}`}
+                src={`https://backend-production-2ce7.up.railway.app${course.cover.url || course.cover}`}
                 alt={course.title}
                 style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px' }}
               />
