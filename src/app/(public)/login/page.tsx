@@ -19,32 +19,21 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      console.log('💬 Iniciando login con:', data.email);
-      
-      // Intentar login y capturar respuesta
+      // Intentar login con credenciales
       await login(data.email, data.password);
-      
-      // Verificar que el token se guardó (para depurar)
+
+      // Verificar que las cookies y el token se guardaron (para debugging)
       const token = localStorage.getItem('token');
-      const cookieToken = document.cookie.includes('token=');
-      
-      console.log('✅ Login procesado:', {
-        tokenEnLocalStorage: !!token,
-        tokenEnCookies: cookieToken,
-        cookieCompleta: document.cookie
+      const cookieExists = document.cookie.includes('token=');
+      console.log('🔑 Estado después de login:', { 
+        tokenEnLocalStorage: !!token, 
+        tokenEnCookies: cookieExists, 
+        cookies: document.cookie 
       });
       
       // La redirección se maneja automáticamente en AuthContext según el rol
     } catch (err: unknown) {
-      console.error('❌ ERROR EN LOGIN:', err);
-      
-      // Detallar el error
-      if (err instanceof Error) {
-        console.error('💬 Mensaje de error:', err.message);
-        console.error('💬 Stack:', err.stack);
-      }
-      
-      // El error ya viene formateado desde auth.ts
+      console.error('❌ Error de login:', err);
       const errorMessage = err instanceof Error 
         ? err.message 
         : "Error al iniciar sesión. Por favor, intenta nuevamente.";

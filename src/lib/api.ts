@@ -2,13 +2,13 @@ import axios from "axios";
 
 // Determinar la URL base para la API
 //https://backend-production-2ce7.up.railway.app/api
-const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
+const API_URL =  "http://localhost:1337/api";
 
 // Crear instancia de axios con configuración mejorada para producción
 const api = axios.create({
   baseURL: API_URL,
   timeout: 20000, // Aumentar timeout para producción
-  withCredentials: true,
+  withCredentials: true, // Necesario para enviar/recibir cookies
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
@@ -26,7 +26,7 @@ const PUBLIC_ROUTES = [
   '/auth/reset-password',
 ];
 
-// Función para obtener el token (de múltiples fuentes para mayor robustez)
+// Función para obtener el token de múltiples fuentes
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   
@@ -41,8 +41,6 @@ function getAuthToken(): string | null {
     
     if (tokenCookie) {
       token = tokenCookie.split('=')[1];
-      // Si se encontró en cookie pero no en localStorage, sincronizar
-      localStorage.setItem('token', token);
     }
   }
   
@@ -61,7 +59,6 @@ api.interceptors.request.use(
     // Agregar token a los headers si existe
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔑 Usando token en petición:', config.url);
     } else if (!isPublicRoute) {
       // Solo mostrar warning si NO es una ruta pública
       console.warn('⚠️ No hay token JWT disponible para:', config.url);

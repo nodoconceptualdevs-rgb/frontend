@@ -62,9 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const login = async (email: string, password: string) => {
     try {
-      console.log('🔑 Iniciando login...');
       const response = await loginService({ identifier: email, password });
-      console.log('✅ Login exitoso, procesando respuesta:', response);
       
       const userData: User = {
         id: parseInt(response.user.id.toString()),
@@ -85,33 +83,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       setToken(response.jwt);
       
-      // Guardar en localStorage (IMPORTANTE para peticiones futuras)
+      // Guardar en localStorage para el interceptor
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', response.jwt);
       localStorage.setItem('userId', response.user.id.toString());
       localStorage.setItem('name', response.user.name || response.user.username);
-      localStorage.setItem('role', response.user.role.type);
       
-      // Guardar en cookies para mayor compatibilidad
+      // Guardar en cookies para la autenticación del servidor
       const isProduction = window.location.protocol === 'https:';
       const cookieOptions = isProduction 
         ? 'path=/; max-age=2592000; SameSite=None; Secure' // Producción (HTTPS)
         : 'path=/; max-age=2592000'; // Desarrollo (HTTP)
       
-      // Establecer cookies con la configuración correcta para el entorno
       document.cookie = `token=${response.jwt}; ${cookieOptions}`;
       document.cookie = `userId=${response.user.id}; ${cookieOptions}`;
       document.cookie = `role=${response.user.role.type}; ${cookieOptions}`;
-
-      // Verificar que los datos se guardaron
-      console.log('💾 Datos guardados:',
-        '\nToken:', localStorage.getItem('token') ? '✅' : '❌',
-        '\nUser:', localStorage.getItem('user') ? '✅' : '❌',
-        '\nCookies:', document.cookie ? '✅' : '❌'
-      );
       
       // Redireccionar según rol
-      console.log('🚀 Redirigiendo a rol:', response.user.role.type);
       redirectByRole(response.user.role.type);
     } catch (error) {
       console.error('Login error:', error);
@@ -139,11 +127,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('userId');
       localStorage.removeItem('name');
       
-      // Intentar limpiar todas las cookies del lado del cliente
-      // (aunque sean httpOnly, no hace daño intentarlo)
+      // Limpiar cookies (tanto para HTTP como HTTPS)
       document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
       document.cookie = 'userId=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'userId=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
       document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
       
       // Redireccionar a login
       router.push('/login');

@@ -31,54 +31,36 @@ type LoginResponse = {
  */
 export async function loginClient(data: LoginPayload): Promise<LoginResponse> {
   try {
-    console.log('🔄 Iniciando login con:', data.identifier);
-    
-    // 1. Iniciar login con API - IMPORTANTE: withCredentials debe estar en true en api.ts
+    // 1. Hacer login en Strapi
     const res = await api.post("/auth/local", data, {
       withCredentials: true
     });
-    
-    console.log('✅ Login exitoso, procesando respuesta');
     const responseData = res.data as LoginResponse;
+    
     const token = responseData.jwt;
     
-    // 2. Guardar token en localStorage y document.cookie para redundancia
+    // 2. Guardar token en localStorage y cookies
     if (typeof window !== 'undefined') {
-      // En localStorage
+      // En localStorage para el interceptor
       localStorage.setItem('token', token);
       
-      // También en cookie para mayor compatibilidad
-      // Ajustamos configuración para que funcione en producción
+      // En cookies para autenticación del servidor
       const isProduction = window.location.protocol === 'https:';
       const cookieOptions = isProduction 
         ? 'path=/; max-age=2592000; SameSite=None; Secure' // Producción (HTTPS)
         : 'path=/; max-age=2592000'; // Desarrollo (HTTP)
-      
-      // Establecer cookies con configuración adecuada
+        
       document.cookie = `token=${token}; ${cookieOptions}`;
-      
-      // Debug para verificar creación de cookies
-      setTimeout(() => {
-        const cookies = document.cookie;
-        console.log('🍪 Cookies después de login:', cookies);
-      }, 100);
-      
-      console.log('✅ Token guardado:', token.substring(0, 10) + '...', isProduction ? '(producción)' : '(desarrollo)');
     }
     
     // 3. Obtener usuario completo con rol usando el token
-    console.log('🔄 Obteniendo datos de usuario...');
     const userRes = await api.get("/users/me?populate=role", {
       headers: {
         Authorization: `Bearer ${token}`
       },
-      withCredentials: true
+      withCredentials: true // Importante para enviar/recibir cookies
     });
-    console.log('✅ Datos de usuario obtenidos');
     const user = userRes.data as UserResponse;
-    
-    // 4. Verificar que el token está disponible para futuras peticiones
-    console.log('🔄 Verificando token:', localStorage.getItem('token') ? '✅ Presente en localStorage' : '❌ No encontrado en localStorage');
     
     // Retornar jwt con el usuario completo (con rol poblado)
     return {
