@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Determinar la URL base para la API
 //https://backend-production-2ce7.up.railway.app/api
-const API_URL =  "http://localhost:1337/api";
+const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
 
 // Crear instancia de axios con configuración mejorada para producción
 const api = axios.create({
