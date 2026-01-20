@@ -107,26 +107,46 @@ export async function loginClient(data: LoginPayload): Promise<LoginResponse> {
       
       try {
         if (isProduction) {
-          // Producción: usar SameSite=None para cross-domain
-          Cookies.set('token', token, { 
-            expires: 30, 
-            path: '/', 
-            sameSite: 'None', 
-            secure: true 
-          });
-          Cookies.set('userId', userIdString, { 
-            expires: 30, 
-            path: '/', 
-            sameSite: 'None', 
-            secure: true 
-          });
-          Cookies.set('role', user.role.type, { 
-            expires: 30, 
-            path: '/', 
-            sameSite: 'None', 
-            secure: true 
-          });
-          console.log('🍪 Cookies seteadas en PRODUCCIÓN con SameSite=None');
+          // MÉTODO 1: js-cookie (puede fallar en algunos navegadores)
+          try {
+            // Producción: usar SameSite=None para cross-domain
+            Cookies.set('token', token, { 
+              expires: 30, 
+              path: '/', 
+              sameSite: 'None', 
+              secure: true 
+            });
+            Cookies.set('userId', userIdString, { 
+              expires: 30, 
+              path: '/', 
+              sameSite: 'None', 
+              secure: true 
+            });
+            Cookies.set('role', user.role.type, { 
+              expires: 30, 
+              path: '/', 
+              sameSite: 'None', 
+              secure: true 
+            });
+            console.log('🍪 Cookies seteadas con js-cookie');
+          } catch (e) {
+            console.error('Error con js-cookie:', e);
+          }
+          
+          // MÉTODO 2: document.cookie directo (más compatible)
+          const maxAge = 30 * 24 * 60 * 60; // 30 días en segundos
+          document.cookie = `token=${token}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
+          document.cookie = `userId=${userIdString}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
+          document.cookie = `role=${user.role.type}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
+          console.log('🍪 Cookies seteadas con document.cookie');
+          
+          // MÉTODO 3: document.cookie con Domain explícito
+          const domain = window.location.hostname;
+          document.cookie = `token=${token}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
+          document.cookie = `userId=${userIdString}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
+          document.cookie = `role=${user.role.type}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
+          console.log('🍪 Cookies seteadas con document.cookie y domain');
+          
         } else {
           // Desarrollo: usar SameSite=Lax
           Cookies.set('token', token, { 

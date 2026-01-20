@@ -109,20 +109,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (isProduction) {
-          // Producción: usar SameSite=None para cross-domain
-          const cookieOptions = { 
-            expires: 30, 
-            path: '/', 
-            sameSite: 'None' as const, 
-            secure: true 
-          };
+          // PRODUCCIÓN: MÚTLIPLES MÉTODOS PARA MAYOR COMPATIBILIDAD
           
-          Cookies.set('token', response.jwt, cookieOptions);
-          Cookies.set('userId', response.user.id.toString(), cookieOptions);
-          Cookies.set('role', response.user.role.type, cookieOptions);
-          console.log('🍪 Cookies seteadas en PRODUCCIÓN con SameSite=None');
+          // MÉTODO 1: js-cookie
+          try {
+            const cookieOptions = { 
+              expires: 30, 
+              path: '/', 
+              sameSite: 'None' as const, 
+              secure: true 
+            };
+            
+            Cookies.set('token', response.jwt, cookieOptions);
+            Cookies.set('userId', response.user.id.toString(), cookieOptions);
+            Cookies.set('role', response.user.role.type, cookieOptions);
+            console.log('🍪 [AuthContext] Cookies seteadas con js-cookie');
+          } catch (e) {
+            console.error('Error con js-cookie:', e);
+          }
+          
+          // MÉTODO 2: document.cookie directo
+          try {
+            const maxAge = 30 * 24 * 60 * 60; // 30 días en segundos
+            document.cookie = `token=${response.jwt}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
+            document.cookie = `userId=${response.user.id}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
+            document.cookie = `role=${response.user.role.type}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
+            console.log('🍪 [AuthContext] Cookies seteadas con document.cookie');
+          } catch (e) {
+            console.error('Error con document.cookie:', e);
+          }
+          
+          // MÉTODO 3: Con domain explícito
+          try {
+            const domain = window.location.hostname;
+            const maxAge = 30 * 24 * 60 * 60;
+            document.cookie = `token=${response.jwt}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
+            document.cookie = `userId=${response.user.id}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
+            document.cookie = `role=${response.user.role.type}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
+            console.log('🍪 [AuthContext] Cookies seteadas con document.cookie y domain');
+          } catch (e) {
+            console.error('Error con document.cookie y domain:', e);
+          }
+          
         } else {
-          // Desarrollo: usar SameSite=Lax
+          // DESARROLLO: SameSite=Lax es suficiente
           const cookieOptions = { 
             expires: 30, 
             path: '/', 
@@ -135,10 +165,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('🍪 Cookies seteadas en DESARROLLO');
         }
         
-        console.log('✅ Cookies verificadas en AuthContext:', {
+        console.log('✅ Verificación de cookies:', {
           token: !!Cookies.get('token'),
           userId: !!Cookies.get('userId'),
-          role: !!Cookies.get('role')
+          role: !!Cookies.get('role'),
+          documentCookie: document.cookie.includes('token')
         });
       } catch (error) {
         console.error('❌ ERROR CRÍTICO seteando cookies:', error);
