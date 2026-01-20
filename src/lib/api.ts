@@ -1,8 +1,9 @@
 import axios from "axios";
+import Cookies from 'js-cookie';
 
 // Determinar la URL base para la API
-//https://backend-production-2ce7.up.railway.app/api
-const API_URL =  "https://backend-production-2ce7.up.railway.app/api";
+// Usar variable de entorno o fallback a localhost para desarrollo
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2ce7.up.railway.app/api";
 
 // Crear instancia de axios con configuración mejorada para producción
 const api = axios.create({
@@ -33,15 +34,9 @@ function getAuthToken(): string | null {
   // 1. Intentar obtener desde localStorage (principal)
   let token = localStorage.getItem('token');
   
-  // 2. Si no existe, intentar obtener de las cookies
+  // 2. Si no existe, intentar obtener de las cookies con js-cookie
   if (!token) {
-    const tokenCookie = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('token='));
-    
-    if (tokenCookie) {
-      token = tokenCookie.split('=')[1];
-    }
+    token = Cookies.get('token') || null;
   }
   
   return token;

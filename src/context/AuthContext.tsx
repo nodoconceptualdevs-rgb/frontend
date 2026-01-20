@@ -6,6 +6,7 @@ import { loginClient as loginService } from '@/services/auth-client';
 import { logout as logoutService } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 import { ROLES, isAdminRole, isClientRole } from '@/constants/roles';
+import Cookies from 'js-cookie';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -89,15 +90,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('userId', response.user.id.toString());
       localStorage.setItem('name', response.user.name || response.user.username);
       
-      // Guardar en cookies para la autenticación del servidor
+      // Guardar en cookies usando js-cookie para mayor confiabilidad
       const isProduction = window.location.protocol === 'https:';
-      const cookieOptions = isProduction 
-        ? 'path=/; max-age=2592000; SameSite=None; Secure' // Producción (HTTPS)
-        : 'path=/; max-age=2592000'; // Desarrollo (HTTP)
       
-      document.cookie = `token=${response.jwt}; ${cookieOptions}`;
-      document.cookie = `userId=${response.user.id}; ${cookieOptions}`;
-      document.cookie = `role=${response.user.role.type}; ${cookieOptions}`;
+      if (isProduction) {
+        // Producción (HTTPS) - usar SameSite=None para cross-domain
+        const cookieOptions = {
+          expires: 30, // 30 días
+          path: '/',
+          sameSite: 'None' as const,
+          secure: true
+        };
+        
+        Cookies.set('token', response.jwt, cookieOptions);
+        Cookies.set('userId', response.user.id.toString(), cookieOptions);
+        Cookies.set('role', response.user.role.type, cookieOptions);
+      } else {
+        // Desarrollo (HTTP) - no se puede usar SameSite=None con Secure
+        const cookieOptions = {
+          expires: 30,
+          path: '/',
+          sameSite: 'Lax' as const
+        };
+        
+        Cookies.set('token', response.jwt, cookieOptions);
+        Cookies.set('userId', response.user.id.toString(), cookieOptions);
+        Cookies.set('role', response.user.role.type, cookieOptions);
+      }
+      
+      console.log('✅ Cookies seteadas:', {
+        token: !!Cookies.get('token'),
+        userId: !!Cookies.get('userId'),
+        role: !!Cookies.get('role')
+      });
       
       // Redireccionar según rol
       redirectByRole(response.user.role.type);
@@ -127,13 +152,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('userId');
       localStorage.removeItem('name');
       
-      // Limpiar cookies (tanto para HTTP como HTTPS)
-      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
-      document.cookie = 'userId=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'userId=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
-      document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
+      // Limpiar cookies con js-cookie
+      Cookies.remove('token', { path: '/' });
+      Cookies.remove('userId', { path: '/' });
+      Cookies.remove('role', { path: '/' });
+      
+      // En producción, también intentar eliminar con opciones de SameSite
+      if (window.location.protocol === 'https:') {
+        Cookies.remove('token', { path: '/', sameSite: 'None' as const, secure: true });
+        Cookies.remove('userId', { path: '/', sameSite: 'None' as const, secure: true });
+        Cookies.remove('role', { path: '/', sameSite: 'None' as const, secure: true });
+      }
       
       // Redireccionar a login
       router.push('/login');

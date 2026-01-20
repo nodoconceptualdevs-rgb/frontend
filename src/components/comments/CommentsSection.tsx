@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { List, Avatar, Empty, Spin, Input, Button, Tag, message } from 'antd';
 import { SendOutlined, UserOutlined, CommentOutlined } from '@ant-design/icons';
+import api from '@/lib/api';
 
 interface Comment {
   id: number;
@@ -46,17 +47,11 @@ export default function CommentsSection({
       
       // Construir query según el tipo de entidad
       const filterField = entityType === 'course' ? 'course' : 'content_course';
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/comments?filters[${filterField}][id][$eq]=${entityId}&populate=*&sort=createdAt:desc`,
-        {
-          headers: {
-            'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
-          },
-        }
+      const response = await api.get(
+        `/comments?filters[${filterField}][id][$eq]=${entityId}&populate=*&sort=createdAt:desc`
       );
       
-      const data = await response.json();
-      setComments(data.data || []);
+      setComments((response.data as any).data || []);
     } catch (error) {
       console.error("Error loading comments:", error);
       message.error("Error al cargar comentarios");
@@ -90,22 +85,14 @@ export default function CommentsSection({
         commentData.is_admin_reply = true;
       }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
-        },
-        body: JSON.stringify({ data: commentData }),
-      });
+      const response = await api.post('/comments', { data: commentData });
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 201) {
         message.success("Comentario enviado");
         setCommentText("");
         loadComments();
       } else {
-        const error = await response.json();
-        console.error("Error response:", error);
+        console.error("Error response:", response.data);
         message.error("Error al enviar comentario");
       }
     } catch (error) {
