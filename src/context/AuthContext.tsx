@@ -84,45 +84,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       setToken(response.jwt);
       
-      // Guardar en localStorage para el interceptor
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', response.jwt);
-      localStorage.setItem('userId', response.user.id.toString());
-      localStorage.setItem('name', response.user.name || response.user.username);
-      
-      // Guardar en cookies usando js-cookie para mayor confiabilidad
-      const isProduction = window.location.protocol === 'https:';
-      
-      if (isProduction) {
-        // Producción (HTTPS) - usar SameSite=None para cross-domain
-        const cookieOptions = {
-          expires: 30, // 30 días
-          path: '/',
-          sameSite: 'None' as const,
-          secure: true
-        };
+      // CRÍTICO: Guardar en localStorage (principal método de persistencia)
+      try {
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', response.jwt);
+        localStorage.setItem('userId', response.user.id.toString());
+        localStorage.setItem('name', response.user.name || response.user.username);
+        localStorage.setItem('role', response.user.role.type);
         
-        Cookies.set('token', response.jwt, cookieOptions);
-        Cookies.set('userId', response.user.id.toString(), cookieOptions);
-        Cookies.set('role', response.user.role.type, cookieOptions);
-      } else {
-        // Desarrollo (HTTP) - no se puede usar SameSite=None con Secure
-        const cookieOptions = {
-          expires: 30,
-          path: '/',
-          sameSite: 'Lax' as const
-        };
-        
-        Cookies.set('token', response.jwt, cookieOptions);
-        Cookies.set('userId', response.user.id.toString(), cookieOptions);
-        Cookies.set('role', response.user.role.type, cookieOptions);
+        console.log('✅ LocalStorage guardado exitosamente en AuthContext:', {
+          token: localStorage.getItem('token')?.substring(0, 20) + '...',
+          userId: localStorage.getItem('userId'),
+          role: localStorage.getItem('role'),
+          name: localStorage.getItem('name')
+        });
+      } catch (error) {
+        console.error('❌ ERROR CRÍTICO guardando en localStorage:', error);
+        alert('Error guardando datos de sesión. Por favor, intenta de nuevo.');
+        throw error;
       }
       
-      console.log('✅ Cookies seteadas:', {
-        token: !!Cookies.get('token'),
-        userId: !!Cookies.get('userId'),
-        role: !!Cookies.get('role')
-      });
+      // CRÍTICO: Cookies necesarias para server components
+      const isProduction = window.location.protocol === 'https:';
+      
+      try {
+        if (isProduction) {
+          // Producción: usar SameSite=None para cross-domain
+          const cookieOptions = { 
+            expires: 30, 
+            path: '/', 
+            sameSite: 'None' as const, 
+            secure: true 
+          };
+          
+          Cookies.set('token', response.jwt, cookieOptions);
+          Cookies.set('userId', response.user.id.toString(), cookieOptions);
+          Cookies.set('role', response.user.role.type, cookieOptions);
+          console.log('🍪 Cookies seteadas en PRODUCCIÓN con SameSite=None');
+        } else {
+          // Desarrollo: usar SameSite=Lax
+          const cookieOptions = { 
+            expires: 30, 
+            path: '/', 
+            sameSite: 'Lax' as const
+          };
+          
+          Cookies.set('token', response.jwt, cookieOptions);
+          Cookies.set('userId', response.user.id.toString(), cookieOptions);
+          Cookies.set('role', response.user.role.type, cookieOptions);
+          console.log('🍪 Cookies seteadas en DESARROLLO');
+        }
+        
+        console.log('✅ Cookies verificadas en AuthContext:', {
+          token: !!Cookies.get('token'),
+          userId: !!Cookies.get('userId'),
+          role: !!Cookies.get('role')
+        });
+      } catch (error) {
+        console.error('❌ ERROR CRÍTICO seteando cookies:', error);
+      }
       
       // Redireccionar según rol
       redirectByRole(response.user.role.type);

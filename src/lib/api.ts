@@ -34,7 +34,7 @@ function getAuthToken(): string | null {
   // 1. Intentar obtener desde localStorage (principal)
   let token = localStorage.getItem('token');
   
-  // 2. Si no existe, intentar obtener de las cookies con js-cookie
+  // 2. Si no existe en localStorage, intentar obtener de cookies
   if (!token) {
     token = Cookies.get('token') || null;
   }
