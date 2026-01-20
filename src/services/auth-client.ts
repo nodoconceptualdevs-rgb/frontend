@@ -76,31 +76,76 @@ export async function loginClient(data: LoginPayload): Promise<LoginResponse> {
       },
       withCredentials: true // Importante para enviar/recibir cookies
     });
+    
+    // Verificar respuesta
     const user = userRes.data as UserResponse;
+    console.log('📊 Datos de usuario obtenidos:', {
+      id: user.id,
+      role: user.role?.type || 'SIN ROL',
+      tieneRol: !!user.role,
+      username: user.username
+    });
     
     // 4. Guardar todo en localStorage (NO depender de cookies en producción)
     if (typeof window !== 'undefined') {
       // Asegurar que userId es string
       const userIdString = String(user.id);
       
-      try {
-        // CRÍTICO: Guardar en localStorage SIEMPRE
-        localStorage.setItem('userId', userIdString);
-        localStorage.setItem('role', user.role.type);
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('name', user.name || user.username);
-        
-        console.log('✅ LocalStorage guardado exitosamente:', {
-          token: localStorage.getItem('token')?.substring(0, 20) + '...',
-          userId: localStorage.getItem('userId'),
-          role: localStorage.getItem('role'),
-          name: localStorage.getItem('name')
-        });
-      } catch (error) {
-        console.error('❌ ERROR CRÍTICO guardando en localStorage:', error);
-        alert('Error guardando datos de sesión. Por favor, intenta de nuevo.');
-        throw error;
+      // 4.A. Verificar estructura de user.role
+      if (!user.role) {
+        console.error('⚠️ Usuario no tiene role definido:', user);
+      } else if (!user.role.type) {
+        console.error('⚠️ Role no tiene type definido:', user.role);
       }
+      
+      // 4.B. GUARDAR CADA ELEMENTO EN LOCALSTORAGE POR SEPARADO
+      console.log('💾 Guardando en localStorage...');
+      
+      // Token (ya fue guardado antes)
+      console.log('✓ Token ya guardado');  
+      
+      // UserId
+      try { 
+        localStorage.setItem('userId', userIdString);
+        console.log('✓ UserId guardado:', userIdString);
+      } catch (e) {
+        console.error('❌ Error guardando userId:', e);
+      }
+      
+      // Role (con verificación extra)
+      try { 
+        const roleValue = user.role?.type || 'authenticated';
+        localStorage.setItem('role', roleValue);
+        console.log('✓ Role guardado:', roleValue);
+      } catch (e) {
+        console.error('❌ Error guardando role:', e);
+      }
+      
+      // Name
+      try { 
+        const nameValue = user.name || user.username || '';
+        localStorage.setItem('name', nameValue);
+        console.log('✓ Name guardado:', nameValue);
+      } catch (e) {
+        console.error('❌ Error guardando name:', e);
+      }
+      
+      // User completo
+      try { 
+        localStorage.setItem('user', JSON.stringify(user));
+        console.log('✓ User JSON guardado');
+      } catch (e) {
+        console.error('❌ Error guardando user JSON:', e);
+      }
+      
+      // 4.C. Verificación final del localStorage
+      console.log('📋 Estado final de localStorage:', {
+        token: localStorage.getItem('token') ? '✓' : '❌',
+        userId: localStorage.getItem('userId'),
+        role: localStorage.getItem('role'),
+        name: localStorage.getItem('name'),
+        user: localStorage.getItem('user') ? '✓' : '❌'
+      });
       
       // CRÍTICO: Las cookies SON necesarias para server components
       const isProduction = window.location.protocol === 'https:';
@@ -133,19 +178,24 @@ export async function loginClient(data: LoginPayload): Promise<LoginResponse> {
             console.error('Error con js-cookie:', e);
           }
           
-          // MÉTODO 2: document.cookie directo (más compatible)
-          const maxAge = 30 * 24 * 60 * 60; // 30 días en segundos
-          document.cookie = `token=${token}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
-          document.cookie = `userId=${userIdString}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
-          document.cookie = `role=${user.role.type}; path=/; max-age=${maxAge}; SameSite=None; Secure`;
-          console.log('🍪 Cookies seteadas con document.cookie');
+          // MÉTODO 2: document.cookie lo más simple posible
+          try {
+            const roleValue = user.role?.type || 'authenticated';
+            document.cookie = `token=${token}; path=/;`;
+            document.cookie = `userId=${userIdString}; path=/;`;
+            document.cookie = `role=${roleValue}; path=/;`;
+            console.log('🍪 Cookies básicas seteadas correctamente');
+          } catch (e) {
+            console.error('❌ Error seteando cookies básicas:', e);
+          }
           
-          // MÉTODO 3: document.cookie con Domain explícito
-          const domain = window.location.hostname;
-          document.cookie = `token=${token}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
-          document.cookie = `userId=${userIdString}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
-          document.cookie = `role=${user.role.type}; path=/; domain=${domain}; max-age=${maxAge}; SameSite=None; Secure`;
-          console.log('🍪 Cookies seteadas con document.cookie y domain');
+          // Verificar estado de las cookies
+          console.log('🔍 Verificación final de cookies:', { 
+            raw: document.cookie,
+            token: document.cookie.includes('token='),
+            userId: document.cookie.includes('userId='),
+            role: document.cookie.includes('role=') 
+          });
           
         } else {
           // Desarrollo: usar SameSite=Lax
