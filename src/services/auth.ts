@@ -90,7 +90,7 @@ export async function login(data: LoginPayload): Promise<AuthResponse> {
     const cookieOptions = {
       path: "/",
       httpOnly: true,
-      sameSite: "lax" as const,
+      sameSite: "none" as const,
       secure: true,         // Siempre usar HTTPS en producción
       domain: ".railway.app", // Dominio del backend (ajústalo según tu dominio real en Railway)
       maxAge: 30 * 24 * 60 * 60, // 30 días
