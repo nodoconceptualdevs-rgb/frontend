@@ -1,38 +1,7 @@
 "use server";
 import api from "@/lib/api";
 import { cookies } from "next/headers";
-
-type RegisterPayload = {
-  username?: string;
-  email: string;
-  password: string;
-  name?: string;
-};
-
-type LoginPayload = { 
-  identifier: string; 
-  password: string 
-};
-
-type UserResponse = {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  confirmed?: boolean;
-  blocked?: boolean;
-  role: {
-    id: number;
-    name: string;
-    type: string;
-    description?: string;
-  };
-};
-
-type LoginResponse = {
-  jwt: string;
-  user: UserResponse;
-};
+import { RegisterPayload, LoginPayload, AuthResponse, User } from "@/types/auth";
 
 export async function register(data: RegisterPayload) {
   const res = await api.post("/auth/local/register", data);
@@ -89,50 +58,56 @@ export async function updateUserProfile(name: string) {
   return res.data;
 }
 
-export async function login(data: LoginPayload): Promise<LoginResponse> {
-  // Strapi default: POST /auth/local
-  
+/**
+ * Login del usuario (server-side)
+ * Esta función maneja solo las cookies del lado del servidor.
+ * El manejo de localStorage debe hacerse en el componente cliente.
+ */
+export async function login(data: LoginPayload): Promise<AuthResponse> {
   try {
+    // 1. Hacer login en Strapi
     const res = await api.post("/auth/local", data);
-    const responseData = res.data as LoginResponse;
-
-  
+    const responseData = res.data as AuthResponse;
     const token = responseData.jwt;
     
-    // Obtener usuario completo con rol usando el token
+    if (!token) {
+      throw new Error('No se recibió token del servidor');
+    }
+    
+    // 2. Obtener usuario completo con rol usando el token
     const userRes = await api.get("/users/me?populate=role", {
       headers: {
         Authorization: `Bearer ${token}`
       }
     });
-    const user = userRes.data as UserResponse;
     
+    const user = userRes.data as User;
+    
+    // 3. Guardar en cookies del servidor con configuración para cross-domain (producción)
     const cookieStore = await cookies();
+    
+    // Configuración optimizada para cross-domain en producción
+    const cookieOptions = {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: true,         // Siempre usar HTTPS en producción
+      domain: ".railway.app", // Dominio del backend (ajústalo según tu dominio real en Railway)
+      maxAge: 30 * 24 * 60 * 60, // 30 días
+    };
   
     if (token) {
       // Guardar token
-      cookieStore.set("token", token, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "strict",
-      });
+      cookieStore.set("token", token, cookieOptions);
       
-      // Guardar user ID (convertir a string)
-      cookieStore.set("userId", String(user.id), {
-        path: "/",
-        httpOnly: true,
-        sameSite: "strict",
-      });
+      // Guardar user ID
+      cookieStore.set("userId", String(user.id), cookieOptions);
       
       // Guardar rol del usuario
-      cookieStore.set("role", user.role.type, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "strict",
-      });
+      cookieStore.set("role", user.role.type, cookieOptions);
     }
 
-    // Retornar jwt con el usuario completo (con rol poblado)
+    // 4. Retornar JWT y usuario para que el cliente pueda manejarlos
     return {
       jwt: token,
       user: user
