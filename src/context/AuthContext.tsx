@@ -89,9 +89,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('user', JSON.stringify(userData));
       
       // También guardar en cookies del cliente para producción
-      Cookies.set('token', response.jwt, { expires: 30, sameSite: 'lax' });
-      Cookies.set('userId', response.user.id.toString(), { expires: 30, sameSite: 'lax' });
-      Cookies.set('role', response.user.role.type, { expires: 30, sameSite: 'lax' });
+      try {
+        console.log('🍪 Intentando guardar en localStorage y cookies...');
+        
+        // Cookies con configuración cross-domain
+        Cookies.set('token', response.jwt, { 
+          expires: 30, 
+          sameSite: 'none', 
+          secure: true,
+          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app' 
+        });
+        
+        Cookies.set('userId', response.user.id.toString(), { 
+          expires: 30, 
+          sameSite: 'none', 
+          secure: true,
+          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app'
+        });
+        
+        Cookies.set('role', response.user.role.type, { 
+          expires: 30, 
+          sameSite: 'none', 
+          secure: true,
+          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app'
+        });
+        
+        // Verificar que se guardó correctamente
+        setTimeout(() => {
+          console.log('✅ Verificación después de login:', { 
+            tokenEnLocalStorage: !!localStorage.getItem('token'),
+            tokenEnCookies: !!Cookies.get('token'),
+            cookieValue: Cookies.get('token')
+          });
+        }, 100);
+      } catch (e) {
+        console.error('❌ Error guardando cookies:', e);
+      }
       
       // Redireccionar según rol
       redirectByRole(response.user.role.type);
