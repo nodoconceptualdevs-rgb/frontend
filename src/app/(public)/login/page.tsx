@@ -21,15 +21,6 @@ export default function LoginPage() {
     try {
       // Intentar login con credenciales
       await login(data.email, data.password);
-
-      // Verificar que las cookies y el token se guardaron (para debugging)
-      const token = localStorage.getItem('token');
-      const cookieExists = document.cookie.includes('token=');
-      console.log('🔑 Estado después de login:', { 
-        tokenEnLocalStorage: !!token, 
-        tokenEnCookies: cookieExists, 
-        cookies: document.cookie 
-      });
       
       // La redirección se maneja automáticamente en AuthContext según el rol
     } catch (err: unknown) {
@@ -47,7 +38,7 @@ export default function LoginPage() {
     <div
       className={styles.bgContainer}
       style={{
-        backgroundImage: "url(/bgFooter.png)",
+        backgroundImage: "url(/bgFooter.jpg)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
