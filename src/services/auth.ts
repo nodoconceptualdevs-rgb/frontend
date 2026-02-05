@@ -83,29 +83,30 @@ export async function login(data: LoginPayload): Promise<AuthResponse> {
     
     const user = userRes.data as User;
     
-    // 3. Guardar en cookies del servidor con configuración para cross-domain (producción)
-    const cookieStore = await cookies();
+    // 3. Solo guardar cookies si estamos en el mismo dominio (desarrollo)
+    // En producción con dominios diferentes (Vercel + Railway), 
+    // las cookies httpOnly cross-domain NO funcionan
+    const isDevelopment = process.env.NODE_ENV === 'development';
     
-    // Configuración optimizada para cross-domain en producción
-    const cookieOptions = {
-      path: "/",
-      httpOnly: true,
-      sameSite: "none" as const,
-      secure: true,         // Siempre usar HTTPS en producción
-      domain: ".railway.app", // Dominio del backend (ajústalo según tu dominio real en Railway)
-      maxAge: 30 * 24 * 60 * 60, // 30 días
-    };
-  
-    if (token) {
-      // Guardar token
-      cookieStore.set("token", token, cookieOptions);
+    if (isDevelopment) {
+      // Solo en desarrollo local setear cookies
+      const cookieStore = await cookies();
       
-      // Guardar user ID
-      cookieStore.set("userId", String(user.id), cookieOptions);
-      
-      // Guardar rol del usuario
-      cookieStore.set("role", user.role.type, cookieOptions);
+      const cookieOptions = {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax" as const,
+        secure: false,
+        maxAge: 30 * 24 * 60 * 60, // 30 días
+      };
+    
+      if (token) {
+        cookieStore.set("token", token, cookieOptions);
+        cookieStore.set("userId", String(user.id), cookieOptions);
+        cookieStore.set("role", user.role.type, cookieOptions);
+      }
     }
+    // En producción, el cliente manejará el token vía localStorage
 
     // 4. Retornar JWT y usuario para que el cliente pueda manejarlos
     return {

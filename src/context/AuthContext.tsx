@@ -5,6 +5,7 @@ import { User, AuthContextType, RoleType } from '@/types/auth';
 import { login as loginService, logout as logoutService } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 import { ROLES, isAdminRole, isClientRole } from '@/constants/roles';
+import Cookies from 'js-cookie';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -87,6 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('name', response.user.name || response.user.username);
       localStorage.setItem('user', JSON.stringify(userData));
       
+      // También guardar en cookies del cliente para producción
+      Cookies.set('token', response.jwt, { expires: 30, sameSite: 'lax' });
+      Cookies.set('userId', response.user.id.toString(), { expires: 30, sameSite: 'lax' });
+      Cookies.set('role', response.user.role.type, { expires: 30, sameSite: 'lax' });
+      
       // Redireccionar según rol
       redirectByRole(response.user.role.type);
     } catch (error) {
@@ -114,13 +120,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('role');
       localStorage.removeItem('name');
       
+      // Limpiar cookies del cliente
+      Cookies.remove('token');
+      Cookies.remove('userId');
+      Cookies.remove('role');
+      
       // Redireccionar a login
       router.push('/login');
     } catch (error) {
       console.error('Error en logout:', error);
-      // Intentar limpiar localStorage de todos modos
+      // Intentar limpiar localStorage y cookies de todos modos
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      Cookies.remove('token');
+      Cookies.remove('userId');
+      Cookies.remove('role');
       router.push('/login');
     }
   };
