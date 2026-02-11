@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Cookies con configuración cross-domain
 
-        Cookies.set('c', response.jwt, { 
+        Cookies.set('token', response.jwt, { 
 
           expires: 30, 
 
