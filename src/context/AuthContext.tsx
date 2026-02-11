@@ -12,9 +12,8 @@ import { useRouter } from 'next/navigation';
 
 import { ROLES, isAdminRole, isClientRole } from '@/constants/roles';
 
-import Cookies from 'js-cookie';
-
-
+// Solo usamos localStorage para almacenar la sesión
+// Esto evita problemas CORS en producción
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -116,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      // Llamar a server action login que maneja las cookies
+      // Llamar a server action login para autenticación
       // Este endpoint ya hace internamente la llamada a /users/me?populate=role
       // y devuelve la información completa del usuario con su rol
       const response = await loginService({ identifier: email, password });
@@ -155,67 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem('user', JSON.stringify(userData));
 
-      // También guardar en cookies del cliente para producción
-
-      try {
-
-        
-
-        // Cookies con configuración cross-domain
-
-        Cookies.set('token', response.jwt, { 
-
-          expires: 30, 
-
-          sameSite: 'none', 
-
-          secure: true,
-
-          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app' 
-
-        });
-
-       
-
-        Cookies.set('userId', response.user.id.toString(), { 
-
-          expires: 30, 
-
-          sameSite: 'none', 
-
-          secure: true,
-
-          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app'
-
-        });
-
-        
-
-        Cookies.set('role', response.user.role.type, { 
-
-          expires: 30, 
-
-          sameSite: 'none', 
-
-          secure: true,
-
-          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app'
-
-        });
-
-
-
-        
-
-
-      } catch (e) {
-
-        console.error('❌ Error guardando cookies:', e);
-
-      }
-
-      
-
       // Redireccionar según rol
 
       redirectByRole(response.user.role.type);
@@ -242,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
 
-      // Llamar al server action para limpiar cookies
+      // Llamar al server action para cerrar sesión
 
       await logoutService();
 
@@ -270,16 +208,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       
 
-      // Limpiar cookies del cliente
-
-      Cookies.remove('token');
-
-      Cookies.remove('userId');
-
-      Cookies.remove('role');
-
-      
-
       // Redireccionar a login
 
       router.push('/login');
@@ -288,17 +216,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.error('Error en logout:', error);
 
-      // Intentar limpiar localStorage y cookies de todos modos
+      // Intentar limpiar localStorage de todos modos
 
       localStorage.removeItem('user');
 
       localStorage.removeItem('token');
-
-      Cookies.remove('token');
-
-      Cookies.remove('userId');
-
-      Cookies.remove('role');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('role');
 
       router.push('/login');
 
