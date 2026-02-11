@@ -124,6 +124,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const response = await loginService({ identifier: email, password });
       console.log('1) response', response);
+      console.log('1) response.user.role.id', response?.user?.role?.id);
+      console.log('1) response.user.role.name', response?.user?.role?.name);
+      console.log('1) response.user.role.type', response?.user?.role?.type);
+      console.log('1) response.user.role.description', response?.user?.role?.description);
+
 
       
 
@@ -141,13 +146,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         role: {
 
-          id: response.user.role.id,
+          id: response?.user?.role?.id,
 
-          name: response.user.role.name,
+          name: response?.user?.role?.name,
 
-          type: response.user.role.type as RoleType,
+          type: response?.user?.role?.type as RoleType,
 
-          description: response.user.role.description,
+          description: response?.user?.role?.description,
 
         },
 
