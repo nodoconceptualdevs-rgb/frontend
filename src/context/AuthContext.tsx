@@ -119,47 +119,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('password', password);
 
     try {
-
       // Llamar a server action login que maneja las cookies
-
+      // Este endpoint ya hace internamente la llamada a /users/me?populate=role
+      // y devuelve la información completa del usuario con su rol
       const response = await loginService({ identifier: email, password });
-      console.log('1) response', response);
-      console.log('1) response.user.role.id', response?.user?.role?.id);
-      console.log('1) response.user.role.name', response?.user?.role?.name);
-      console.log('1) response.user.role.type', response?.user?.role?.type);
-      console.log('1) response.user.role.description', response?.user?.role?.description);
-
-
+      console.log('1) response completa:', response);
       
-
-      // Mapear datos del usuario
-
+      // Verificar que el rol viene correctamente
+      if (!response.user.role || !response.user.role.type) {
+        console.error('⚠️ ALERTA: El rol del usuario no está presente en la respuesta');
+        console.log('Datos del usuario recibidos:', response.user);
+      } else {
+        console.log('✅ Rol recibido correctamente:', {
+          id: response.user.role.id,
+          name: response.user.role.name,
+          type: response.user.role.type,
+        });
+      }
+      
+      // Mapear datos del usuario asegurando que el rol esté presente
       const userData: User = {
-
         id: parseInt(response.user.id.toString()),
-
         username: response.user.username,
-
         email: response.user.email,
-
         name: response.user.name,
-
         role: {
-
-          id: response?.user?.role?.id,
-
-          name: response?.user?.role?.name,
-
-          type: response?.user?.role?.type as RoleType,
-
-          description: response?.user?.role?.description,
-
+          // Usar valores por defecto si no existe el rol
+          id: response.user.role?.id || 0,
+          name: response.user.role?.name || 'authenticated',
+          type: (response.user.role?.type as RoleType) || 'authenticated',
+          description: response.user.role?.description || '',
         },
-
         confirmed: response.user.confirmed,
-
         blocked: response.user.blocked,
-
       };
       console.log('2) userData', userData);
 
