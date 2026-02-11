@@ -34,13 +34,20 @@ export default function SortableHitoItem({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <button
+      <div
         onClick={() => onSelect(hito.id)}
-        className={`w-full text-left px-4 py-3 rounded-lg transition border-2 group ${
+        className={`w-full text-left px-4 py-3 rounded-lg transition border-2 group cursor-pointer ${
           isSelected
             ? "border-red-600 bg-red-50"
             : "border-gray-200 hover:border-gray-300"
         }`}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onSelect(hito.id);
+          }
+        }}
       >
         <div className="flex items-center gap-3 relative">
           {/* Icono de drag */}
@@ -109,7 +116,7 @@ export default function SortableHitoItem({
             </svg>
           </button>
         </div>
-      </button>
+      </div>
     </div>
   );
 }
