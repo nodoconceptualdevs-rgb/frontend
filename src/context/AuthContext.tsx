@@ -115,27 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
 
   const login = async (email: string, password: string) => {
-    console.log('email', email);
-    console.log('password', password);
-
     try {
       // Llamar a server action login que maneja las cookies
       // Este endpoint ya hace internamente la llamada a /users/me?populate=role
       // y devuelve la información completa del usuario con su rol
       const response = await loginService({ identifier: email, password });
-      console.log('1) response completa:', response);
-      
-      // Verificar que el rol viene correctamente
-      if (!response.user.role || !response.user.role.type) {
-        console.error('⚠️ ALERTA: El rol del usuario no está presente en la respuesta');
-        console.log('Datos del usuario recibidos:', response.user);
-      } else {
-        console.log('✅ Rol recibido correctamente:', {
-          id: response.user.role.id,
-          name: response.user.role.name,
-          type: response.user.role.type,
-        });
-      }
       
       // Mapear datos del usuario asegurando que el rol esté presente
       const userData: User = {
@@ -153,17 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         confirmed: response.user.confirmed,
         blocked: response.user.blocked,
       };
-      console.log('2) userData', userData);
-
-
-
       // Guardar en estado local
-
       setUser(userData);
-      console.log('3) setUser', userData);
-
       setToken(response.jwt);
-      console.log('4) setToken', response.jwt);
 
       
 
@@ -179,15 +155,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem('user', JSON.stringify(userData));
 
-      console.log('5) localStorage', localStorage);
-
       // También guardar en cookies del cliente para producción
 
       try {
 
-        console.log('🍪 Intentando guardar en localStorage y cookies...');
-
-        console.log('response', response);
         
 
         // Cookies con configuración cross-domain
@@ -233,31 +204,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
 
-        const cookieValue = Cookies.get('token');
-        console.log('Cookie token después de set:', { 
-          existe: !!cookieValue,
-          valor: cookieValue,
-          todasLasCookies: document.cookie
-        });
-        console.log('document.cookie', document.cookie);
 
         
 
-        // Verificar que se guardó correctamente
-
-        setTimeout(() => {
-
-          console.log('✅ Verificación después de login:', { 
-
-            tokenEnLocalStorage: !!localStorage.getItem('token'),
-
-            tokenEnCookies: !!Cookies.get('token'),
-
-            cookieValue: Cookies.get('token')
-
-          });
-
-        }, 100);
 
       } catch (e) {
 
