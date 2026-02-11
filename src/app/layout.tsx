@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AntdProvider } from "./AntdProvider";
+
+// Aplicar parche de compatibilidad de Ant Design con React 19
 import "@ant-design/v5-patch-for-react-19";
+
 import { Toaster } from "react-hot-toast";
-import { AuthProvider } from "@/context/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import ClientProviders from "@/app/ClientProviders";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,11 +35,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <ThemeProvider>
-            <AntdProvider>{children}</AntdProvider>
-          </ThemeProvider>
-        </AuthProvider>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
         <Toaster />
       </body>
     </html>

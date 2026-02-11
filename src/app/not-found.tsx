@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { RedButton } from "@/components/CustomButtons";
@@ -38,7 +40,7 @@ export default function NotFound() {
         <br />
         Si crees que esto es un error, contacta al administrador.
       </p>
-      <Link href="/" passHref legacyBehavior>
+      <Link href="/">
         <RedButton style={{ padding: "0 2.5em", fontSize: 18, height: 48 }}>
           Ir a inicio
         </RedButton>

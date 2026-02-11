@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { setAuthToken } from '@/lib/api';
 
 /**
@@ -33,7 +33,10 @@ export function useTokenStorage() {
   }, []);
 
   // Función para guardar token con persistencia
-  const setToken = (newToken: string | null) => {
+  const setToken = useCallback((newToken: string | null) => {
+    // Evitar actualizaciones innecesarias si el token no cambia
+    if (newToken === token) return;
+    
     // Actualizar estado en memoria
     setTokenState(newToken);
     
@@ -52,10 +55,13 @@ export function useTokenStorage() {
     } catch (error) {
       console.error('Error guardando token en localStorage:', error);
     }
-  };
+  }, [token]);
 
   // Función para guardar userId con persistencia
-  const setUserId = (newUserId: string | null) => {
+  const setUserId = useCallback((newUserId: string | null) => {
+    // Evitar actualizaciones innecesarias si el userId no cambia
+    if (newUserId === userId) return;
+    
     // Actualizar estado en memoria
     setUserIdState(newUserId);
     
@@ -69,10 +75,13 @@ export function useTokenStorage() {
     } catch (error) {
       console.error('Error guardando userId en localStorage:', error);
     }
-  };
+  }, [userId]);
 
   // Función para guardar role con persistencia
-  const setRole = (newRole: string | null) => {
+  const setRole = useCallback((newRole: string | null) => {
+    // Evitar actualizaciones innecesarias si el role no cambia
+    if (newRole === role) return;
+    
     // Actualizar estado en memoria
     setRoleState(newRole);
     
@@ -86,10 +95,13 @@ export function useTokenStorage() {
     } catch (error) {
       console.error('Error guardando role en localStorage:', error);
     }
-  };
+  }, [role]);
 
   // Función para limpiar todos los datos de autenticación
-  const clearTokens = () => {
+  const clearTokens = useCallback(() => {
+    // Solo limpiar si hay algo que limpiar
+    if (!token && !userId && !role) return;
+    
     setTokenState(null);
     setUserIdState(null);
     setRoleState(null);
@@ -103,7 +115,7 @@ export function useTokenStorage() {
     } catch (error) {
       console.error('Error limpiando tokens de localStorage:', error);
     }
-  };
+  }, [token, userId, role]);
 
   // Verificar si hay token disponible
   const hasToken = !!token;

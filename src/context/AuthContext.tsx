@@ -83,12 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         blocked: response.user.blocked,
       };
 
-      // Guardar en estado local
+      // Guardar en estado local y tokens usando el hook especializado
       setUser(userData);
-      setToken(response.jwt);
-      
-      // Guardar tokens usando el hook especializado
-      setToken(response.jwt);
+      setToken(response.jwt); // Actualiza tanto el estado local como localStorage
       setUserId(response.user.id.toString());
       setRole(response.user.role.type);
       
