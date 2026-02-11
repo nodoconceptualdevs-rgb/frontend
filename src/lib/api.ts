@@ -20,7 +20,7 @@ const api = axios.create({
 
   timeout: 20000, // Aumentar timeout para producción
 
-  withCredentials: true, // Cambiar a false para evitar problemas CORS con cookies cross-domain
+  withCredentials: false, // Desactivado para evitar problemas CORS con cookies cross-domain
 
   headers: {
 
