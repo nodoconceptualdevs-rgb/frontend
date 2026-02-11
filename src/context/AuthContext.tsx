@@ -156,14 +156,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         blocked: response.user.blocked,
 
       };
+      console.log('2) userData', userData);
 
 
 
       // Guardar en estado local
 
       setUser(userData);
+      console.log('3) setUser', userData);
 
       setToken(response.jwt);
+      console.log('4) setToken', response.jwt);
 
       
 
@@ -179,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem('user', JSON.stringify(userData));
 
-      
+      console.log('5) localStorage', localStorage);
 
       // También guardar en cookies del cliente para producción
 
