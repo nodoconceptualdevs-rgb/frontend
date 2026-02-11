@@ -115,12 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
 
   const login = async (email: string, password: string) => {
+    console.log('email', email);
+    console.log('password', password);
 
     try {
 
       // Llamar a server action login que maneja las cookies
 
       const response = await loginService({ identifier: email, password });
+      console.log('1) response', response);
 
       
 
