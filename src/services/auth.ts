@@ -1,21 +1,41 @@
-"use server";
+// auth.ts - Versión 100% client-side
 import api from "@/lib/api";
-import { cookies } from "next/headers";
 import { RegisterPayload, LoginPayload, AuthResponse, User } from "@/types/auth";
+import Cookies from 'js-cookie';
 
+/**
+ * Registrar un nuevo usuario
+ */
 export async function register(data: RegisterPayload) {
   const res = await api.post("/auth/local/register", data);
   return res.data;
 }
 
+/**
+ * Cerrar sesión del usuario
+ * Elimina tokens del localStorage y cookies
+ */
 export async function logout() {
-  // Borra cookies httpOnly desde el servidor
-  const cookieStore = await cookies();
-  cookieStore.delete("token");
-  cookieStore.delete("userId");
-  cookieStore.delete("role");
+  // Limpiar cookies
+  Cookies.remove('token');
+  Cookies.remove('userId');
+  Cookies.remove('role');
+  
+  // Limpiar localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('role');
+    localStorage.removeItem('user');
+    localStorage.removeItem('name');
+  }
+  
+  return true;
 }
 
+/**
+ * Actualizar nombre de usuario
+ */
 export async function updateUserName(
   userId: number,
   name: string,
@@ -33,13 +53,12 @@ export async function updateUserName(
 }
 
 /**
- * Actualizar perfil del usuario (server-side)
+ * Actualizar perfil del usuario
  */
 export async function updateUserProfile(name: string) {
-  "use server";
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-  const userId = cookieStore.get("userId")?.value;
+  // Obtener token y userId del localStorage
+  const token = localStorage.getItem('token');
+  const userId = localStorage.getItem('userId');
 
   if (!token || !userId) {
     throw new Error("No autenticado");
@@ -59,9 +78,8 @@ export async function updateUserProfile(name: string) {
 }
 
 /**
- * Login del usuario (server-side)
- * Esta función maneja solo las cookies del lado del servidor.
- * El manejo de localStorage debe hacerse en el componente cliente.
+ * Login del usuario
+ * Esta función maneja la autenticación completa del usuario
  */
 export async function login(data: LoginPayload): Promise<AuthResponse> {
   try {
@@ -83,32 +101,7 @@ export async function login(data: LoginPayload): Promise<AuthResponse> {
     
     const user = userRes.data as User;
     
-    // 3. Solo guardar cookies si estamos en el mismo dominio (desarrollo)
-    // En producción con dominios diferentes (Vercel + Railway), 
-    // las cookies httpOnly cross-domain NO funcionan
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    if (isDevelopment) {
-      // Solo en desarrollo local setear cookies
-      const cookieStore = await cookies();
-      
-      const cookieOptions = {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax" as const,
-        secure: false,
-        maxAge: 30 * 24 * 60 * 60, // 30 días
-      };
-    
-      if (token) {
-        cookieStore.set("token", token, cookieOptions);
-        cookieStore.set("userId", String(user.id), cookieOptions);
-        cookieStore.set("role", user.role.type, cookieOptions);
-      }
-    }
-    // En producción, el cliente manejará el token vía localStorage
-
-    // 4. Retornar JWT y usuario para que el cliente pueda manejarlos
+    // 3. Retornar JWT y usuario para que el cliente pueda manejarlos
     return {
       jwt: token,
       user: user
@@ -126,10 +119,23 @@ export async function login(data: LoginPayload): Promise<AuthResponse> {
   }
 }
 
+/**
+ * Obtener sesión actual del usuario
+ */
 export async function getSession() {
-  // Example: Strapi user endpoint (requires Authorization)
   try {
-    const res = await api.get("/users/me");
+    // Verificar si hay token en localStorage
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return null;
+    }
+    
+    // Obtener datos del usuario
+    const res = await api.get("/users/me?populate=role", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return res.data;
   } catch {
     return null;
