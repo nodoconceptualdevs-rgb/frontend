@@ -29,7 +29,7 @@ export default function MiProyectoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 px-8 py-8">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
       <ProyectosGrid
         proyectos={proyectos as any}
         loading={loading}

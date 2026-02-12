@@ -98,14 +98,14 @@ export default function MisPagosPage() {
       {/* Header */}
       <div style={{
         background: "#1f2937",
-        padding: "32px",
+        padding: "clamp(16px, 4vw, 32px)",
         borderRadius: "8px",
         marginBottom: "24px",
       }}>
-        <h1 style={{ color: "#fff", fontSize: "28px", fontWeight: 600, margin: 0 }}>
+        <h1 style={{ color: "#fff", fontSize: "clamp(20px, 4vw, 28px)", fontWeight: 600, margin: 0 }}>
           Mis Pagos
         </h1>
-        <p style={{ color: "#d1d5db", margin: "8px 0 0 0" }}>
+        <p style={{ color: "#d1d5db", margin: "8px 0 0 0", fontSize: "clamp(12px, 2vw, 14px)" }}>
           Historial completo de tus compras
         </p>
       </div>
@@ -148,18 +148,23 @@ export default function MisPagosPage() {
           style={{ padding: "60px 0" }}
         />
       ) : (
-        <Table
-          columns={columns}
-          dataSource={transactions}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} pagos`,
-          }}
-          bordered
-        />
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <Table
+            columns={columns}
+            dataSource={transactions}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} pagos`,
+              responsive: true,
+            }}
+            scroll={{ x: 600 }}
+            bordered
+            size="middle"
+          />
+        </div>
       )}
     </div>
   );

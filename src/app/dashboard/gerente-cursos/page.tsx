@@ -164,7 +164,7 @@ export default function GerenteCursosPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 px-8 py-8">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -177,41 +177,45 @@ export default function GerenteCursosPage() {
 
       {/* Search and Actions */}
       <Card className="mb-6">
-        <div className="flex justify-between items-center gap-4">
+        <div className="flex flex-wrap justify-between items-center gap-3">
           <Input
             placeholder="Buscar cursos..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="max-w-md"
+            style={{ maxWidth: 400, width: "100%", minWidth: 0, flex: "1 1 200px" }}
             size="large"
           />
-          <div className="flex gap-2">
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push("/dashboard/gerente-cursos/nuevo")}
-              size="large"
-            >
-              Crear Curso
-            </Button>
-          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push("/dashboard/gerente-cursos/nuevo")}
+            size="large"
+            style={{ flexShrink: 0 }}
+          >
+            Crear Curso
+          </Button>
         </div>
       </Card>
 
       {/* Table */}
       <Card>
-        <Table
-          columns={columns}
-          dataSource={filteredCourses}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} cursos`,
-          }}
-        />
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <Table
+            columns={columns}
+            dataSource={filteredCourses}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} cursos`,
+              responsive: true,
+            }}
+            scroll={{ x: 700 }}
+            size="middle"
+          />
+        </div>
       </Card>
     </div>
   );

@@ -321,7 +321,7 @@ export default function GerenteCourseContentPage() {
   ];
 
   return (
-    <div className="bg-gray-50 px-8 py-8">
+    <div className="bg-gray-50 px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
       <Button 
         icon={<ArrowLeftOutlined />}
         onClick={() => router.push('/dashboard/gerente-cursos')}

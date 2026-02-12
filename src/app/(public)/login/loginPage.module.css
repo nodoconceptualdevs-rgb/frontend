@@ -3,11 +3,12 @@
   width: 100%;
   position: relative;
   display: flex;
-  height: 80vh;
+  min-height: 80vh;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: #f5f6fa;
+  padding: 16px;
 }
 
 .bgImg {

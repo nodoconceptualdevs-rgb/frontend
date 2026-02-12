@@ -18,14 +18,14 @@ export default function MiPerfilPage() {
       {/* Header */}
       <div style={{
         background: "#1f2937",
-        padding: "32px",
+        padding: "clamp(16px, 4vw, 32px)",
         borderRadius: "8px",
         marginBottom: "24px",
       }}>
-        <h1 style={{ color: "#fff", fontSize: "28px", fontWeight: 600, margin: 0 }}>
+        <h1 style={{ color: "#fff", fontSize: "clamp(20px, 4vw, 28px)", fontWeight: 600, margin: 0 }}>
           Mi Perfil
         </h1>
-        <p style={{ color: "#d1d5db", margin: "8px 0 0 0" }}>
+        <p style={{ color: "#d1d5db", margin: "8px 0 0 0", fontSize: "clamp(12px, 2vw, 14px)" }}>
           Información de tu cuenta
         </p>
       </div>

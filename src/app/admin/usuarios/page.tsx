@@ -319,24 +319,24 @@ export default function UsuariosPage() {
         subtitulo={`${stats.total} usuarios • ${stats.active} activos • ${stats.blocked} bloqueados`}
       />
 
-      <main className="px-8 py-8">
+      <main className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-gray-500 text-sm mb-1">Total</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Total</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-gray-500 text-sm mb-1">Activos</p>
-            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Activos</p>
+            <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.active}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-gray-500 text-sm mb-1">Bloqueados</p>
-            <p className="text-2xl font-bold text-red-600">{stats.blocked}</p>
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Bloqueados</p>
+            <p className="text-xl sm:text-2xl font-bold text-red-600">{stats.blocked}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-gray-500 text-sm mb-1">Confirmados</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.confirmed}</p>
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Confirmados</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.confirmed}</p>
           </div>
         </div>
 
@@ -347,13 +347,13 @@ export default function UsuariosPage() {
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ maxWidth: 400 }}
+            style={{ maxWidth: 400, width: "100%" }}
             allowClear
           />
         </div>
 
         {/* Tabla con scroll responsive */}
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <Table
             columns={columns}
             dataSource={filteredUsers}
@@ -363,9 +363,11 @@ export default function UsuariosPage() {
               pageSize: 15,
               showSizeChanger: true,
               showTotal: (total) => `Total: ${total} usuarios`,
+              responsive: true,
             }}
-            scroll={{ x: 1000 }}
+            scroll={{ x: 900 }}
             bordered
+            size="middle"
           />
         </div>
       </main>

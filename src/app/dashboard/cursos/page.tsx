@@ -141,7 +141,7 @@ export default function CursosClientePage() {
   }, [allCourses, purchasedCourses, searchText]);
 
   return (
-    <div className="min-h-screen bg-gray-50 px-8 py-8">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Cursos</h2>

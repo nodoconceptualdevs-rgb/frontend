@@ -178,14 +178,14 @@ export default function CursosPage() {
         subtitulo={`${courses.length} cursos en total`}
       />
 
-      <main className="px-8 py-8">
+      <main className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
         {/* Barra de acciones */}
         <div style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: "24px",
-          gap: "16px",
+          gap: "12px",
           flexWrap: "wrap",
         }}>
           <Input
@@ -193,7 +193,7 @@ export default function CursosPage() {
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ maxWidth: 300, flex: 1 }}
+            style={{ maxWidth: 300, flex: 1, minWidth: 0 }}
             allowClear
           />
           <Button
@@ -206,6 +206,7 @@ export default function CursosPage() {
               borderColor: "#f5b940",
               color: "#222",
               fontWeight: 600,
+              flexShrink: 0,
             }}
           >
             Nuevo Curso
@@ -213,7 +214,7 @@ export default function CursosPage() {
         </div>
 
         {/* Tabla con scroll responsive */}
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <Table
             columns={columns}
             dataSource={filteredCourses}
@@ -223,9 +224,11 @@ export default function CursosPage() {
               pageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `Total: ${total} cursos`,
+              responsive: true,
             }}
             scroll={{ x: 800 }}
             bordered
+            size="middle"
           />
         </div>
       </main>

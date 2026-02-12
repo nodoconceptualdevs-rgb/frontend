@@ -940,7 +940,7 @@ export default function EditarCursoPage() {
         subtitulo="Gestiona toda la información y contenido del curso"
       />
 
-      <main className="px-8 py-8">
+      <main className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => router.push('/admin/cursos')}

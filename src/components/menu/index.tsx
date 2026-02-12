@@ -195,6 +195,19 @@ export default function Menu() {
                 Cursos y Formaciones
               </Link>
             </li>
+            {!isLoginPage && (
+              <li className={styles.mobileButtonItem}>
+                <RedButton 
+                  style={{ padding: "12px 32px", cursor: "pointer", width: "100%" }}
+                  onClick={() => {
+                    setOpen(false);
+                    handleMainButtonClick();
+                  }}
+                >
+                  {isAuthenticated ? "Ir al Panel" : "Iniciar sesión"}
+                </RedButton>
+              </li>
+            )}
           </ul>
           {!isLoginPage && (
             <div className={styles.buttonSection}>

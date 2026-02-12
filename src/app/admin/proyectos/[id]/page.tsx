@@ -388,13 +388,13 @@ export default function EditarProyectoPage() {
         tokenNFC={proyecto.token_nfc}
       />
 
-      <main className="px-8 py-8">
+      <main className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
 
         {/* Tabs */}
-        <div className="flex gap-6 mb-6 border-b border-gray-200">
+        <div className="flex gap-4 sm:gap-6 mb-6 border-b border-gray-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab("info")}
-            className={`pb-3 px-1 font-semibold transition border-b-2 ${
+            className={`pb-3 px-1 font-semibold transition border-b-2 whitespace-nowrap text-sm sm:text-base ${
               activeTab === "info"
                 ? "border-red-600 text-red-600"
                 : "border-transparent text-gray-600 hover:text-gray-900"
@@ -404,7 +404,7 @@ export default function EditarProyectoPage() {
           </button>
           <button
             onClick={() => setActiveTab("hitos")}
-            className={`pb-3 px-1 font-semibold transition border-b-2 ${
+            className={`pb-3 px-1 font-semibold transition border-b-2 whitespace-nowrap text-sm sm:text-base ${
               activeTab === "hitos"
                 ? "border-red-600 text-red-600"
                 : "border-transparent text-gray-600 hover:text-gray-900"

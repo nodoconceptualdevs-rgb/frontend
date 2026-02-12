@@ -203,7 +203,7 @@ export default function CourseViewPage() {
     return (
       <div style={{ background: '#f5f5f5', minHeight: '100vh' }}>
         {/* Header */}
-        <div style={{ maxWidth: '100%', padding: '24px' }}>
+        <div style={{ maxWidth: '100%', padding: 'clamp(12px, 3vw, 24px)' }}>
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => router.push("/dashboard/cursos")}
@@ -214,7 +214,7 @@ export default function CourseViewPage() {
 
           {/* Hero Section */}
           <Card style={{ marginBottom: '24px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '16px', color: '#222' }}>
+            <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 'bold', marginBottom: '16px', color: '#222' }}>
               {course?.title}
             </h1>
             
@@ -317,34 +317,39 @@ export default function CourseViewPage() {
       {/* Header fijo */}
       <div style={{ 
         background: 'white', 
-        padding: '12px 24px', 
+        padding: '12px clamp(12px, 3vw, 24px)', 
         borderBottom: '1px solid #e0e0e0',
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => setSelectedContent(null)}
+            size="small"
           >
             Volver
           </Button>
-          <span style={{ color: '#222', fontSize: '14px', fontWeight: '500' }}>
+          <span style={{ color: '#222', fontSize: '13px', fontWeight: '500' }}>
             Clase {selectedContent.order} de {contents.length}
           </span>
-          <span style={{ color: '#999', fontSize: '14px' }}>• {course?.title}</span>
+          <span style={{ color: '#999', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px' }}>• {course?.title}</span>
         </div>
         
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           <Button
             icon={<BookOutlined />}
             onClick={() => setSelectedContent(null)}
+            size="small"
           >
             Ver clases
           </Button>
           <Button
             type="primary"
+            size="small"
             onClick={() => {
               const currentIndex = contents.findIndex(c => c.id === selectedContent.id);
               if (currentIndex < contents.length - 1) {
@@ -354,13 +359,21 @@ export default function CourseViewPage() {
             disabled={contents.findIndex(c => c.id === selectedContent.id) === contents.length - 1}
             style={{ background: '#f5b940', borderColor: '#f5b940' }}
           >
-            Siguiente clase →
+            Siguiente →
           </Button>
         </div>
       </div>
 
-      {/* Contenido Principal - Layout de 2 columnas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 450px', flex: 1, height: 'calc(100vh - 61px)', gap: '1px', background: '#e0e0e0' }}>
+      {/* Contenido Principal - Layout responsive */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(450px, 100%)', flex: 1, minHeight: 0, gap: '1px', background: '#e0e0e0' }} className="course-player-grid">
+        <style>{`
+          @media (max-width: 1024px) {
+            .course-player-grid {
+              grid-template-columns: 1fr !important;
+              height: auto !important;
+            }
+          }
+        `}</style>
         {/* Columna 1: Video Player + Descripción */}
         <div style={{ background: 'white', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
           {/* Video Player */}
@@ -383,8 +396,8 @@ export default function CourseViewPage() {
           </div>
 
           {/* Título y Descripción */}
-          <div style={{ padding: '24px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#222' }}>
+          <div style={{ padding: 'clamp(12px, 3vw, 24px)' }}>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 'bold', marginBottom: '16px', color: '#222' }}>
               {selectedContent.lesson_title}
             </h2>
             <p style={{ color: '#666', lineHeight: '1.6' }}>
@@ -405,7 +418,7 @@ export default function CourseViewPage() {
                 label: (
                 <span style={{ marginLeft: 12 }}>Contenido del curso</span>),
                 children: (
-                  <div style={{ height: 'calc(100vh - 160px)', overflowY: 'auto' }}>
+                  <div style={{ maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' }}>
                     <List
                       dataSource={contents}
                       renderItem={(content) => (

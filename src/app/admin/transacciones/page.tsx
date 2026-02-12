@@ -99,7 +99,7 @@ export default function TransaccionesPage() {
         subtitulo={`${transactions.length} transacciones • Total: $${totalAmount.toFixed(2)}`}
       />
 
-      <main className="px-8 py-8">
+      <main className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
         {/* Barra de búsqueda */}
         <div style={{ marginBottom: "24px" }}>
           <Input
@@ -107,13 +107,13 @@ export default function TransaccionesPage() {
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ maxWidth: 400 }}
+            style={{ maxWidth: 400, width: "100%" }}
             allowClear
           />
         </div>
 
         {/* Tabla con scroll responsive */}
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <Table
             columns={columns}
             dataSource={filteredTransactions}
@@ -123,6 +123,7 @@ export default function TransaccionesPage() {
               pageSize: 15,
               showSizeChanger: true,
               showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} transacciones`,
+              responsive: true,
             }}
             scroll={{ x: 800 }}
             summary={() => (
@@ -141,6 +142,7 @@ export default function TransaccionesPage() {
               </Table.Summary>
             )}
             bordered
+            size="middle"
           />
         </div>
       </main>

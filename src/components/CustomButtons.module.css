@@ -86,9 +86,5 @@
   justify-content: center;
 }
 
-/* Responsive - Ocultar botón Contáctanos en móvil */
-@media (max-width: 768px) {
-  .redButton {
-    display: none;
-  }
-}
+/* Responsive - Se eliminó la regla que ocultaba todos los botones .redButton en móvil
+   Esta regla estaba ocultando incorrectamente todos los botones, incluidos login y registro */

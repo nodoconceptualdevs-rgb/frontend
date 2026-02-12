@@ -143,4 +143,133 @@
 .main {
   flex: 1;
   padding: 0;
+  min-width: 0;
+}
+
+/* === Botón hamburguesa fijo en móvil === */
+.mobileMenuButton {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  background: #ab2731;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  transition: background 0.2s;
+}
+
+.mobileMenuButton:hover {
+  background: #8a1f28;
+}
+
+/* === Botón cerrar sidebar en móvil === */
+.mobileCloseButton {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #ab2731;
+  padding: 8px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.mobileCloseButton:hover {
+  background: #f3e8e9;
+}
+
+/* === Overlay oscuro detrás del sidebar === */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* === Responsive: Tablet y Móvil (hasta 1024px) === */
+@media (max-width: 1024px) {
+  .mobileMenuButton {
+    display: flex;
+  }
+
+  .mobileCloseButton {
+    display: flex;
+  }
+
+  .overlay {
+    display: block;
+  }
+
+  /* Ocultar botón de colapsar en tablet/móvil */
+  .toggleButton {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: none;
+  }
+
+  .sidebar.collapsed {
+    width: 280px;
+    padding: 32px 0;
+  }
+
+  .sidebar.mobileOpen {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .main {
+    width: 100%;
+    padding-top: 60px;
+  }
+
+  .header {
+    padding: 0 16px 24px;
+  }
+
+  .footer {
+    padding: 16px;
+  }
+}
+
+/* Móvil: sidebar más angosto */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 240px;
+  }
+
+  .sidebar.collapsed {
+    width: 240px;
+  }
 }
