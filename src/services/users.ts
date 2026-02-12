@@ -53,3 +53,37 @@ export async function updateUser(id: number, data: Partial<User>) {
 export async function toggleBlockUser(id: number, blocked: boolean) {
   return updateUser(id, { blocked });
 }
+
+/**
+ * Actualizar el rol de un usuario
+ * @param userId ID del usuario
+ * @param roleId ID del nuevo rol
+ */
+export async function updateUserRole(userId: number, roleId: number) {
+  const res = await api.put(`/users/${userId}`, { role: roleId }, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+/**
+ * Interfaz para roles
+ */
+export interface Role {
+  id: number;
+  name: string;
+  type: string;
+  description?: string;
+}
+
+/**
+ * Obtener todos los roles disponibles
+ */
+export async function getRoles() {
+  const res = await api.get('/users-permissions/roles', {
+    headers: getAuthHeaders(),
+  });
+  // Manejo seguro de la respuesta
+  const data = res.data as any;
+  return (data && Array.isArray(data.roles) ? data.roles : []) as Role[];
+}

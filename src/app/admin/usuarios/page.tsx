@@ -1,37 +1,183 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Table, Tag, Switch, Input, message, Space } from "antd";
-import { SearchOutlined, CheckCircleOutlined, StopOutlined } from "@ant-design/icons";
-import { getUsers, toggleBlockUser, User } from "@/services/users";
+import { useState, useEffect, useMemo } from "react";
+import { Table, Tag, Switch, Input, message, Space, Select, Tooltip } from "antd";
+import { SearchOutlined, CheckCircleOutlined, StopOutlined, UserSwitchOutlined } from "@ant-design/icons";
+import { getUsers, toggleBlockUser, User, getRoles, updateUserRole, Role } from "@/services/users";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { alerts } from "@/lib/alerts";
+
+// Componente para manejar la selección de roles de usuarios
+interface RoleSelectorProps {
+  record: User;
+  roles: Role[];
+  isUpdating: boolean;
+  loadingRoles: boolean;
+  onChangeRole: (userId: number, roleId: number) => void;
+}
+
+const RoleSelector = ({ record, roles, isUpdating, loadingRoles, onChangeRole }: RoleSelectorProps) => {
+  // Colores para los diferentes tipos de roles
+  const colors: Record<string, string> = {
+    admin: "red",
+    gerente_de_proyecto: "orange",
+    authenticated: "blue",
+    client: "green",
+    public: "default",
+  };
+
+  // Determinar el ID y tipo de rol actual
+  const roleId = useMemo(() => {
+    // Si el rol es un número (ID), usarlo directamente
+    if (typeof record.role === 'number') {
+      return record.role;
+    }
+    // Si el rol es un objeto, usar su ID
+    if (record.role && typeof record.role === 'object') {
+      return record.role.id;
+    }
+    // Valor predeterminado: ID del rol Cliente (authenticated)
+    return 4; // Este es normalmente el ID del rol authenticated/cliente
+  }, [record.role]);
+
+  // Determinar el tipo de rol
+  const roleType = useMemo(() => {
+    // Si el rol es un objeto con tipo, usarlo
+    if (record.role && typeof record.role === 'object' && record.role.type) {
+      return record.role.type;
+    }
+    
+    // Si tenemos un ID de rol, intentar encontrar el tipo en la lista de roles
+    if (typeof roleId === 'number') {
+      const foundRole = roles.find(r => r.id === roleId);
+      if (foundRole) {
+        return foundRole.type;
+      }
+    }
+    
+    // Valor predeterminado
+    return "authenticated";
+  }, [record.role, roleId, roles]);
+
+  // Determinar el nombre a mostrar
+  const roleName = useMemo(() => {
+    // Si el rol es un objeto con nombre, usarlo
+    if (record.role && typeof record.role === 'object' && record.role.name) {
+      return record.role.name;
+    }
+    
+    // Si tenemos un ID, buscar el nombre en la lista de roles
+    if (typeof roleId === 'number') {
+      const foundRole = roles.find(r => r.id === roleId);
+      if (foundRole) {
+        // Para el rol authenticated, mostrar "Cliente"
+        return foundRole.type === "authenticated" ? "Cliente" : foundRole.name;
+      }
+    }
+    
+    // Valor predeterminado
+    return "Cliente";
+  }, [record.role, roleId, roles]);
+
+  // Verificar si es un admin
+  const isAdmin = roleType === "admin";
+
+  // Para administradores, mostrar solo la etiqueta sin posibilidad de cambio
+  if (isAdmin) {
+    return (
+      <Tooltip title="El rol de administrador no se puede cambiar">
+        <Tag color={colors[roleType]}>
+          {roleName}
+        </Tag>
+      </Tooltip>
+    );
+  }
+
+  // Para usuarios normales, mostrar selector
+  return (
+    <Select
+      value={roleId}
+      style={{ minWidth: 180 }}
+      onChange={(value) => onChangeRole(record.id, value)}
+      loading={isUpdating}
+      disabled={loadingRoles || isUpdating}
+      optionFilterProp="label"
+      options={roles
+        .filter(role => role.type === "gerente_de_proyecto" || role.type === "authenticated")
+        .map(role => ({
+          value: role.id,
+          label: role.type === "authenticated" ? "Cliente" : role.name,
+        }))}
+      suffixIcon={<UserSwitchOutlined />}
+      placeholder="Seleccionar rol"
+    />
+  );
+};
 
 export default function UsuariosPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRoles, setLoadingRoles] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [updatingRole, setUpdatingRole] = useState<number | null>(null);
 
   useEffect(() => {
-    loadUsers();
+    // Primero cargar los roles, luego los usuarios
+    const initialize = async () => {
+      await loadRoles();
+      await loadUsers();
+    };
+    initialize();
   }, []);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
       const response = await getUsers() as User[];
-      setUsers(response || []);
+      
+      // Procesar los usuarios para normalizar los roles
+      const processedUsers = response?.map(user => {
+        // Si el rol es solo un número (ID), buscar el objeto de rol correspondiente
+        if (typeof user.role === 'number') {
+          const roleId = user.role;
+          const matchedRole = roles.find(r => r.id === roleId);
+          if (matchedRole) {
+            return {
+              ...user,
+              role: matchedRole
+            };
+          }
+        }
+        return user;
+      }) || [];
+      
+      setUsers(processedUsers);
     } catch (error) {
       console.error("Error loading users:", error);
-      message.error("Error al cargar los usuarios");
+      alerts.error("Error al cargar los usuarios");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      const rolesData = await getRoles();
+      setRoles(rolesData);
+    } catch (error) {
+      console.error("Error loading roles:", error);
+      alerts.error("Error al cargar los roles disponibles");
+    } finally {
+      setLoadingRoles(false);
     }
   };
 
   const handleToggleBlock = async (userId: number, currentBlocked: boolean) => {
     try {
       await toggleBlockUser(userId, !currentBlocked);
-      message.success(
+      alerts.success(
         !currentBlocked
           ? "Usuario bloqueado correctamente"
           : "Usuario desbloqueado correctamente"
@@ -39,7 +185,36 @@ export default function UsuariosPage() {
       loadUsers();
     } catch (error) {
       console.error("Error toggling user block:", error);
-      message.error("Error al cambiar el estado del usuario");
+      alerts.error("Error al cambiar el estado del usuario");
+    }
+  };
+
+  const handleRoleChange = async (userId: number, roleId: number) => {
+    try {
+      setUpdatingRole(userId);
+      await updateUserRole(userId, roleId);
+      alerts.success("Rol actualizado correctamente");
+      
+      // Actualizar el usuario localmente sin necesidad de recargar todos los usuarios
+      setUsers(prevUsers => prevUsers.map(user => {
+        if (user.id === userId) {
+          // Encontrar el rol seleccionado
+          const selectedRole = roles.find(r => r.id === roleId);
+          if (selectedRole) {
+            // Actualizar el rol del usuario
+            return {
+              ...user,
+              role: selectedRole
+            };
+          }
+        }
+        return user;
+      }));
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      alerts.error("Error al actualizar el rol del usuario");
+    } finally {
+      setUpdatingRole(null);
     }
   };
 
@@ -72,20 +247,14 @@ export default function UsuariosPage() {
       dataIndex: ["role", "name"],
       key: "role",
       render: (_: unknown, record: User) => {
-        const roleType = record.role?.type || "public";
-        const colors: Record<string, string> = {
-          admin: "red",
-          gerente_de_proyecto: "orange",
-          authenticated: "blue",
-          client: "green",
-          public: "default",
-        };
-        const roleName = record.role?.name || "Público";
-        return (
-          <Tag color={colors[roleType]}>
-            {roleName}
-          </Tag>
-        );
+        // Componente RoleSelector especializado para manejar diferentes formatos de roles
+        return <RoleSelector 
+          record={record} 
+          roles={roles} 
+          isUpdating={updatingRole === record.id}
+          loadingRoles={loadingRoles}
+          onChangeRole={handleRoleChange}
+        />
       },
       filters: [
         { text: "Admin", value: "admin" },
