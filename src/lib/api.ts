@@ -17,7 +17,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2
 const api = axios.create({
   baseURL: API_URL,
   timeout: 20000, // Aumentar timeout para producción
-  withCredentials: true, // Activado para permitir cookies cross-domain
+  withCredentials: false, // Desactivado para evitar problemas CORS en producción
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
