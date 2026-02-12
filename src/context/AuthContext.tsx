@@ -171,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           secure: true,
 
-          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app' 
+          domain: window.location.hostname.includes('localhost') ? undefined : 'frontend-o5rz.vercel.app' 
 
         });
 
@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           secure: true,
 
-          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app'
+          domain: window.location.hostname.includes('localhost') ? undefined : 'frontend-o5rz.vercel.app'
 
         });
 
@@ -199,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           secure: true,
 
-          domain: window.location.hostname.includes('localhost') ? undefined : '.vercel.app'
+          domain: window.location.hostname.includes('localhost') ? undefined : 'frontend-o5rz.vercel.app'
 
         });
 
