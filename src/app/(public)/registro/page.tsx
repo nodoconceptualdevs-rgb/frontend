@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import RegistroForm from "./RegistroForm";
 import styles from "../login/loginPage.module.css";
 import { register, updateUserName } from "@/services/auth";
+import { updateUserRole, getClientRoleId } from "@/services/users";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 export default function RegistroPage() {
@@ -32,8 +33,15 @@ export default function RegistroPage() {
       const registerResponse = res as { user?: { id: number }; jwt?: string };
       const userId = registerResponse?.user?.id;
       const jwt = registerResponse?.jwt;
+      
       if (userId && jwt) {
+        // Actualizar el nombre del usuario
         await updateUserName(userId, data.nombre, jwt);
+        
+        // Asignar el rol de cliente (obteniendo el ID dinámicamente)
+        // Este paso asegura que el usuario tenga siempre el rol correcto
+        const clientRoleId = await getClientRoleId();
+        await updateUserRole(userId, clientRoleId);
       }
       toast.success("¡Registro exitoso!");
       router.push("/login");

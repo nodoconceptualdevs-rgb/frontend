@@ -87,3 +87,25 @@ export async function getRoles() {
   const data = res.data as any;
   return (data && Array.isArray(data.roles) ? data.roles : []) as Role[];
 }
+
+/**
+ * Obtener el ID del rol cliente/authenticated
+ * Esta función busca el rol por tipo y devuelve su ID
+ */
+export async function getClientRoleId(): Promise<number> {
+  try {
+    const roles = await getRoles();
+    const clientRole = roles.find(role => role.type === 'authenticated' || role.name.toLowerCase().includes('client'));
+    
+    if (clientRole) {
+      return clientRole.id;
+    }
+    
+    // Si no encuentra el rol específico, devolver el ID predeterminado (4 suele ser el authenticated)
+    return 4;
+  } catch (error) {
+    console.error('Error obteniendo el ID del rol cliente:', error);
+    // ID predeterminado como fallback
+    return 4;
+  }
+}
