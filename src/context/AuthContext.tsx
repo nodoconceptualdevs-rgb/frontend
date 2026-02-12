@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
 
         // Cookies con configuración cross-domain
-
+        console.log('window.location.hostname.includes()', window.location.hostname.includes('localhost'))
         Cookies.set('token', response.jwt, { 
 
           expires: 30, 
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           secure: true,
 
-          domain: window.location.hostname.includes('localhost') ? undefined : 'frontend-o5rz.vercel.app' 
+          domain: undefined 
 
         });
 
@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           secure: true,
 
-          domain: window.location.hostname.includes('localhost') ? undefined : 'frontend-o5rz.vercel.app'
+          domain: undefined
 
         });
 
@@ -199,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           secure: true,
 
-          domain: window.location.hostname.includes('localhost') ? undefined : 'frontend-o5rz.vercel.app'
+          domain: undefined
 
         });
 
