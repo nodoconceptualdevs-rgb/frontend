@@ -27,16 +27,7 @@ export default function RegistroPage() {
         email: data.email,
         password: data.password,
       });
-
-      // Actualizar el campo nombre en la tabla users
-      const registerResponse = res as { user?: { id: number }; jwt?: string };
-      const userId = registerResponse?.user?.id;
-      const jwt = registerResponse?.jwt;
       
-      if (userId && jwt) {
-        // Actualizar el nombre del usuario
-        await updateUserName(userId, data.nombre, jwt);
-      }
       toast.success("¡Registro exitoso!");
       router.push("/login");
     } catch (err: unknown) {
