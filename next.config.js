@@ -2,27 +2,30 @@
 const nextConfig = {
   // Optimizar imágenes
   images: {
-    formats: ['image/avif', 'image/webp'],
-    domains: ['localhost', '127.0.0.1', 'res.cloudinary.com', 'backend-production-2ce7.up.railway.app'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
-        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'backend-production-2ce7.up.railway.app',
-        pathname: '/**',
       },
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '1337',
-        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
       },
     ],
+    // Dominios permitidos (enfoque antiguo pero más simple)
+    domains: ['localhost', '127.0.0.1', 'res.cloudinary.com', 'backend-production-2ce7.up.railway.app'],
+    // Desactivar optimización de imágenes para desarrollo
+    unoptimized: process.env.NODE_ENV === 'development',
   },
+  // Otras configuraciones
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -31,4 +34,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

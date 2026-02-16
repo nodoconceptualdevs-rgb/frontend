@@ -222,4 +222,81 @@
     min-height: 300px;
     border-radius: 1.5rem;
   }
+  
+  .placeholderIcon {
+    font-size: 2rem;
+  }
+  
+  .placeholderText {
+    font-size: 0.8rem;
+  }
+}
+
+/* Estilos para placeholder de iconos */
+.iconPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  opacity: 0.7;
+}
+
+/* Estilos para placeholder de imágenes */
+.imagePlaceholder {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #2c2c2c, #3d3d3d);
+  border-radius: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.placeholderContent {
+  text-align: center;
+  padding: 20px;
+}
+
+.placeholderIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+
+.placeholderText {
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+
+/* Estilos para el estado vacío */
+.emptyState {
+  width: 100%;
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyStateTitle {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.emptyStateText {
+  font-size: 16px;
+  color: #666;
+  max-width: 500px;
+  margin: 0 auto;
 }

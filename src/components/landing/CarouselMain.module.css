@@ -206,6 +206,74 @@
     width: 10px;
     height: 10px;
   }
+  
+  .emptyStateContainer {
+    padding: 20px;
+  }
+  
+  .emptyStateTitle {
+    font-size: 1.3rem;
+  }
+  
+  .emptyStateText {
+    font-size: 0.9rem;
+  }
+}
+
+/* Estilos para el placeholder de imagen */
+.noImagePlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #3B3B3B, #232323);
+  color: #fff;
+  z-index: 2;
+  border-radius: 5em;
+}
+
+.noImageIcon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  opacity: 0.7;
+}
+
+.noImageText {
+  font-size: 1.2rem;
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* Estilos para el estado vacío */
+.emptyStateContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #232323, #3B3B3B);
+  height: 100%;
+  border-radius: 5em;
+  padding: 40px;
+  text-align: center;
+}
+
+.emptyStateContent {
+  max-width: 600px;
+}
+
+.emptyStateTitle {
+  font-size: 2.5rem;
+  color: #FFD64D;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+.emptyStateText {
+  font-size: 1.2rem;
+  color: #fff;
+  line-height: 1.6;
 }
 
 

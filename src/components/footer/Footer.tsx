@@ -43,7 +43,7 @@ export default function Footer({ showCta = false }: FooterProps) {
               <li>
                 <FaMapMarkerAlt />{" "}
                 <span>
-                  <b>Av. Lorem Ipsum</b>, Calle Dolor
+                  <b>Dirección</b>
                   <br />
                   Sit Amet. Edif. Consectetur
                 </span>
