@@ -123,11 +123,7 @@ function Model3DViewer({ model, onClose }: Model3DViewerProps) {
 /**
  * Componente de placeholder para renderizar cuando no hay imagen
  */
-interface PlaceholderProps {
-  onShowModel: () => void;
-}
-
-function ProjectPlaceholder({ onShowModel }: PlaceholderProps) {
+function ProjectPlaceholder() {
   return (
     <div className={styles.placeholderContainer}>
       <div className={styles.placeholderIcon}>
@@ -137,15 +133,8 @@ function ProjectPlaceholder({ onShowModel }: PlaceholderProps) {
         Render no disponible
       </p>
       <p className={styles.placeholderText}>
-        Visualiza este proyecto a través de un modelo 3D interactivo
+        Proyecto destacado de nuestro portafolio
       </p>
-      <button
-        onClick={onShowModel}
-        className={styles.modelButton}
-      >
-        <span className={styles.modelIcon}>⟳</span>
-        Ver modelo 3D
-      </button>
     </div>
   );
 }
@@ -266,9 +255,7 @@ export default function RenderCarousel() {
                       className={styles.projectImage}
                     />
                   ) : (
-                    <ProjectPlaceholder 
-                      onShowModel={() => setShowModel(idx)}
-                    />
+                    <ProjectPlaceholder />
                   )}
                   
                   {/* Mostrar modelo 3D cuando se haga clic en el botón */}
