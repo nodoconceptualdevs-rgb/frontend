@@ -161,17 +161,33 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
         await uploadPendingFiles();
       }
       
+      // Actualizar el contenido del hito con los archivos subidos
+      const contenidoActualizado: ContenidoHito = {
+        id: localHito.contenido?.id,
+        descripcion_avance: localHito.descripcion_avance,
+        enlace_tour_360: localHito.enlace_tour_360,
+        galeria_fotos: archivosSubidos.filter(f => f.tipo === 'imagen'),
+        videos_walkthrough: archivosSubidos.filter(f => f.tipo === 'video'),
+        documentacion: archivosSubidos.filter(f => f.tipo === 'documento')
+      };
+      
+      // Actualizar el hito local con el contenido nuevo
+      const hitoActualizado = {
+        ...localHito,
+        contenido: contenidoActualizado
+      };
+      
       // Si se marca como completado y no tiene fecha, agregar fecha actual
-      if (localHito.estado_completado && !localHito.fecha_actualizacion) {
-        localHito.fecha_actualizacion = new Date().toISOString();
+      if (hitoActualizado.estado_completado && !hitoActualizado.fecha_actualizacion) {
+        hitoActualizado.fecha_actualizacion = new Date().toISOString();
       }
       
       // Si se marca como pendiente, quitar fecha
-      if (!localHito.estado_completado) {
-        localHito.fecha_actualizacion = null;
+      if (!hitoActualizado.estado_completado) {
+        hitoActualizado.fecha_actualizacion = null;
       }
 
-      onUpdate(localHito);
+      onUpdate(hitoActualizado);
       alerts.success('✅ Hito actualizado correctamente');
     } catch (error) {
       console.error('Error guardando hito:', error);
