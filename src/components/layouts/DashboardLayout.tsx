@@ -5,6 +5,7 @@ import { Menu, MenuProps } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, MenuOutlined, CloseOutlined } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 import styles from "./DashboardLayout.module.css";
+import { useAuth } from "@/context/AuthContext";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, menuItems }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -33,11 +35,16 @@ export default function DashboardLayout({ children, menuItems }: DashboardLayout
   }, [mobileOpen]);
 
   const handleLogout = useCallback(async () => {
-    const { logout } = await import("@/services/auth");
-    await logout();
-    localStorage.removeItem("name");
-    router.push("/login");
-  }, [router]);
+    try {
+      // Usar el logout del AuthContext que limpia todo correctamente
+      await logout();
+      setMobileOpen(false);
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // En caso de error, forzar la redirección
+      router.push('/login');
+    }
+  }, [logout, router]);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => !prev);
@@ -109,10 +116,7 @@ export default function DashboardLayout({ children, menuItems }: DashboardLayout
         <div className={styles.footer}>
           <button
             type="button"
-            onClick={() => {
-              handleLogout();
-              setMobileOpen(false);
-            }}
+            onClick={handleLogout}
             className={`${styles.logoutButton} ${collapsed ? styles.logoutCollapsed : ""}`}
           >
             <LogoutOutlined className={styles.logoutIcon} />

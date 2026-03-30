@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import api from "@/lib/api";
 import { alerts } from "@/lib/alerts";
 import { determinarTipoArchivo } from "@/lib/fileUtils";
+import BibliotecaArchivos from "@/components/admin/BibliotecaArchivos";
+import type { MediaFile } from "@/services/mediaLibrary";
 
 interface ArchivoSubido {
   id: number;
@@ -74,6 +76,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
   const [archivosPendientes, setArchivosPendientes] = useState<File[]>([]);
   const [archivosSubidos, setArchivosSubidos] = useState<ArchivoSubido[]>([]);
   const [previewUrls, setPreviewUrls] = useState<PreviewUrl[]>([]);
+  const [showBiblioteca, setShowBiblioteca] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar archivos existentes del hito
@@ -289,6 +292,29 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
     }
   };
 
+  const handleSelectFromLibrary = (files: MediaFile[]) => {
+    const nuevos: ArchivoSubido[] = files.map(f => ({
+      id: f.id,
+      name: f.name,
+      url: f.url,
+      size: f.size * 1024, // Strapi devuelve KB, convertir a bytes
+      tipo: f.mime.startsWith('image/') ? 'imagen' : f.mime.startsWith('video/') ? 'video' : 'documento',
+      mime: f.mime,
+    }));
+    // Evitar duplicados por id
+    setArchivosSubidos(prev => {
+      const existingIds = new Set(prev.map(a => a.id));
+      const sinDuplicados = nuevos.filter(n => !existingIds.has(n.id));
+      if (sinDuplicados.length < nuevos.length) {
+        alerts.error(`${nuevos.length - sinDuplicados.length} archivo(s) ya estaban agregados`);
+      }
+      return [...prev, ...sinDuplicados];
+    });
+    if (nuevos.length > 0) {
+      alerts.success(`${nuevos.length} archivo(s) agregado(s) desde la biblioteca`);
+    }
+  };
+
   const getIconoArchivo = (tipo: string) => {
     if (tipo === 'imagen') {
       return (
@@ -439,7 +465,6 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
             className={`relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
               isDragging
                 ? 'border-red-500 bg-red-50 scale-[1.02]'
@@ -474,11 +499,19 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
                 <p className="text-sm text-gray-500 mb-4">
                   o haz click para seleccionar
                 </p>
-                <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition shadow-sm">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Seleccionar Archivos
+                
+                {/* Botón de Biblioteca */}
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setShowBiblioteca(true); }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Biblioteca de Archivos
+                  </button>
                 </div>
               </>
             )}
@@ -653,6 +686,14 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
           </button>
         </div>
       </div>
+
+      {/* Biblioteca de Archivos */}
+      <BibliotecaArchivos
+        visible={showBiblioteca}
+        onClose={() => setShowBiblioteca(false)}
+        onSelect={handleSelectFromLibrary}
+        maxSelection={10}
+      />
     </div>
   );
 }

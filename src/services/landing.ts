@@ -107,7 +107,7 @@ export async function getTrabajadores(): Promise<TrabajadoresData | null> {
 /**
  * Obtener datos de Proyectos del Portafolio
  * Collection Type: proyectos — /api/proyectos
- * Fields: Titulo, Subtitulo, Descripcion, Modelo3D (Media), Imagen (Media)
+ * Fields: Titulo, Subtitulo, Descripcion, Imagenes (Multiple Media)
  */
 export async function getProyectosPortafolio(): Promise<ProyectoPortafolioItem[]> {
   try {
@@ -128,8 +128,7 @@ export async function getProyectosPortafolio(): Promise<ProyectoPortafolioItem[]
         Titulo: attributes.Titulo || 'Sin título',
         Subtitulo: attributes.Subtitulo || '',
         Descripcion: attributes.Descripcion || '',
-        Modelo3D: attributes.Modelo3D?.data || null,
-        Imagen: attributes.Imagen?.data || null,
+        Imagenes: Array.isArray(attributes.Imagenes?.data) ? attributes.Imagenes.data : [],
         CTA: attributes.CTA || 'Ver más detalles'
       } as ProyectoPortafolioItem;
     });

@@ -14,7 +14,7 @@ export async function createHito(data: CreateHitoPayload) {
   }, {
     headers: getAuthHeaders(),
   });
-  return res.data;
+  return res.data as { data: Hito };
 }
 
 /**
@@ -26,7 +26,7 @@ export async function updateHito(id: number, data: Partial<Hito>) {
   }, {
     headers: getAuthHeaders(),
   });
-  return res.data;
+  return res.data as { data: Hito };
 }
 
 /**
@@ -36,7 +36,7 @@ export async function deleteHito(id: number) {
   const res = await api.delete(`/hitos/${id}`, {
     headers: getAuthHeaders(),
   });
-  return res.data;
+  return res.data as { data: Hito };
 }
 
 /**
@@ -46,7 +46,7 @@ export async function getHitoById(id: number) {
   const res = await api.get(`/hitos/${id}?populate[contenido][populate]=*`, {
     headers: getAuthHeaders(),
   });
-  return res.data;
+  return res.data as { data: Hito };
 }
 
 /**

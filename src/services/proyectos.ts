@@ -48,7 +48,7 @@ export async function getProyectoByToken(tokenNfc: string) {
  */
 export async function getProyectos() {
   const res = await api.get("/proyectos?populate=*");
-  return res.data;
+  return res.data as { data: Proyecto[] };
 }
 
 /**
@@ -97,7 +97,7 @@ export async function createProyecto(data: {
   const res = await api.post("/proyectos", {
     data
   });
-  return res.data;
+  return res.data as { data: Proyecto };
 }
 
 /**
@@ -107,7 +107,7 @@ export async function updateProyecto(id: number, data: UpdateProyectoPayload) {
   const res = await api.put(`/proyectos/${id}`, {
     data
   });
-  return res.data;
+  return res.data as { data: Proyecto };
 }
 
 /**
@@ -115,7 +115,7 @@ export async function updateProyecto(id: number, data: UpdateProyectoPayload) {
  */
 export async function deleteProyecto(id: number) {
   const res = await api.delete(`/proyectos/${id}`);
-  return res.data;
+  return res.data as { data: Proyecto };
 }
 
 /**
@@ -129,9 +129,9 @@ export async function regenerarTokenNFC(id: number): Promise<RegenerarTokenRespo
 /**
  * Obtener un proyecto por ID con todas sus relaciones
  */
-export async function getProyectoById(id: number) {
+export async function getProyectoById(id: number): Promise<ProyectoResponse> {
   const res = await api.get(`/proyectos/${id}?populate[gerente_proyecto]=*&populate[cliente]=*&populate[hitos][populate][contenido][populate]=*`);
-  return res.data;
+  return res.data as ProyectoResponse;
 }
 
 /**

@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Table, Tag, Switch, Input, message, Space, Select, Tooltip } from "antd";
-import { SearchOutlined, CheckCircleOutlined, StopOutlined, UserSwitchOutlined } from "@ant-design/icons";
-import { getUsers, toggleBlockUser, User, getRoles, updateUserRole, Role } from "@/services/users";
-import AdminHeader from "@/components/admin/AdminHeader";
+import React, { useState, useEffect, useMemo } from "react";
+import { Table, Button, Input, Space, Tag, message, Switch, Tooltip, Select, Popconfirm } from "antd";
+import { SearchOutlined, PlusOutlined, UserSwitchOutlined, CheckCircleOutlined, StopOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { User, Role } from "@/services/users";
+import { getUsers, getRoles } from "@/services/users";
+import { toggleBlockUser, deleteUser } from "@/services/adminUsers";
 import { alerts } from "@/lib/alerts";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AddUserModal from "@/components/admin/AddUserModal";
+import EditUserModal from "@/components/admin/EditUserModal";
 
 // Componente para manejar la selección de roles de usuarios
 interface RoleSelectorProps {
@@ -70,8 +74,8 @@ const RoleSelector = ({ record, roles, isUpdating, loadingRoles, onChangeRole }:
     if (typeof roleId === 'number') {
       const foundRole = roles.find(r => r.id === roleId);
       if (foundRole) {
-        // Para el rol authenticated, mostrar "Cliente"
-        return foundRole.type === "authenticated" ? "Cliente" : foundRole.name;
+        // Para el rol client, mostrar "Cliente"
+        return foundRole.type === "client" ? "Cliente" : foundRole.name;
       }
     }
     
@@ -98,15 +102,16 @@ const RoleSelector = ({ record, roles, isUpdating, loadingRoles, onChangeRole }:
     <Select
       value={roleId}
       style={{ minWidth: 180 }}
-      onChange={(value) => onChangeRole(record.id, value)}
-      loading={isUpdating}
+      onChange={(value: number) => onChangeRole(record.id, value)}
+      loading={loadingRoles}
       disabled={loadingRoles || isUpdating}
       optionFilterProp="label"
+      optionLabelProp="label"
       options={roles
-        .filter(role => role.type === "gerente_de_proyecto" || role.type === "authenticated")
+        .filter(role => role.type === "gerente_de_proyecto" || role.type === "client")
         .map(role => ({
           value: role.id,
-          label: role.type === "authenticated" ? "Cliente" : role.name,
+          label: role.type === "client" ? "Cliente" : role.name,
         }))}
       suffixIcon={<UserSwitchOutlined />}
       placeholder="Seleccionar rol"
@@ -121,6 +126,9 @@ export default function UsuariosPage() {
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [updatingRole, setUpdatingRole] = useState<number | null>(null);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
     // Primero cargar los roles, luego los usuarios
@@ -174,34 +182,19 @@ export default function UsuariosPage() {
     }
   };
 
-  const handleToggleBlock = async (userId: number, currentBlocked: boolean) => {
-    try {
-      await toggleBlockUser(userId, !currentBlocked);
-      alerts.success(
-        !currentBlocked
-          ? "Usuario bloqueado correctamente"
-          : "Usuario desbloqueado correctamente"
-      );
-      loadUsers();
-    } catch (error) {
-      console.error("Error toggling user block:", error);
-      alerts.error("Error al cambiar el estado del usuario");
-    }
-  };
-
   const handleRoleChange = async (userId: number, roleId: number) => {
     try {
       setUpdatingRole(userId);
-      await updateUserRole(userId, roleId);
-      alerts.success("Rol actualizado correctamente");
       
-      // Actualizar el usuario localmente sin necesidad de recargar todos los usuarios
+      // Actualizar el rol del usuario
+      const { updateUser } = await import("@/services/adminUsers");
+      await updateUser(userId, { role: roleId });
+      
+      // Actualizar el usuario localmente
       setUsers(prevUsers => prevUsers.map(user => {
         if (user.id === userId) {
-          // Encontrar el rol seleccionado
           const selectedRole = roles.find(r => r.id === roleId);
           if (selectedRole) {
-            // Actualizar el rol del usuario
             return {
               ...user,
               role: selectedRole
@@ -210,12 +203,37 @@ export default function UsuariosPage() {
         }
         return user;
       }));
+      
+      alerts.success("Rol actualizado correctamente");
     } catch (error) {
       console.error("Error updating user role:", error);
       alerts.error("Error al actualizar el rol del usuario");
     } finally {
       setUpdatingRole(null);
     }
+  };
+
+  const handleToggleBlock = async (userId: number, currentBlocked: boolean) => {
+    try {
+      await toggleBlockUser(userId, !currentBlocked);
+      loadUsers(); // Recargar la lista
+    } catch (error) {
+      console.error("Error toggling user block:", error);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    try {
+      await deleteUser(userId);
+      loadUsers(); // Recargar la lista
+    } catch (error) {
+      console.error("Error deleting user:", error);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setShowEditUserModal(true);
   };
 
   const filteredUsers = users.filter((user) =>
@@ -302,6 +320,46 @@ export default function UsuariosPage() {
       sorter: (a: User, b: User) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
+    {
+      title: "Acciones",
+      key: "actions",
+      align: "center" as const,
+      render: (_: unknown, record: User) => {
+        const isAdmin = record.role?.type === "admin";
+        
+        return (
+          <Space>
+            <Tooltip title="Editar usuario">
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEditUser(record)}
+                style={{ color: "#f5b940" }}
+              />
+            </Tooltip>
+            
+            {!isAdmin && (
+              <Popconfirm
+                title="¿Estás seguro de eliminar este usuario?"
+                description="Esta acción no se puede deshacer"
+                onConfirm={() => handleDeleteUser(record.id)}
+                okText="Sí, eliminar"
+                cancelText="Cancelar"
+                okButtonProps={{ danger: true }}
+              >
+                <Tooltip title="Eliminar usuario">
+                  <Button
+                    type="link"
+                    danger
+                    icon={<DeleteOutlined />}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
+    },
   ];
 
   const stats = {
@@ -316,11 +374,11 @@ export default function UsuariosPage() {
       {/* Header */}
       <AdminHeader
         titulo="Gestión de Usuarios"
-        subtitulo={`${stats.total} usuarios • ${stats.active} activos • ${stats.blocked} bloqueados`}
+        subtitulo={`${stats.total} usuarios`}
       />
 
       <main className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
-        {/* Stats Cards */}
+        {/* Botón agregar usuario en la esquina */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="bg-white p-3 sm:p-4 rounded-lg shadow">
             <p className="text-gray-500 text-xs sm:text-sm mb-1">Total</p>
@@ -338,6 +396,26 @@ export default function UsuariosPage() {
             <p className="text-gray-500 text-xs sm:text-sm mb-1">Confirmados</p>
             <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.confirmed}</p>
           </div>
+        </div>
+
+        {/* Botón agregar usuario en la esquina */}
+        <div style={{ marginBottom: "24px", display: "flex", justifyContent: "flex-end" }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setShowAddUserModal(true)}
+            style={{ 
+              background: "#f5b940", 
+              borderColor: "#f5b940",
+              color: "#000",
+              height: 40,
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}
+          >
+            Agregar Usuario
+          </Button>
         </div>
 
         {/* Barra de búsqueda */}
@@ -371,6 +449,33 @@ export default function UsuariosPage() {
           />
         </div>
       </main>
+
+      {/* Modal para agregar usuario */}
+      <AddUserModal
+        visible={showAddUserModal}
+        onCancel={() => setShowAddUserModal(false)}
+        onSuccess={() => {
+          setShowAddUserModal(false);
+          loadUsers(); // Recargar la lista de usuarios
+        }}
+        roles={roles}
+      />
+
+      {/* Modal para editar usuario */}
+      <EditUserModal
+        visible={showEditUserModal}
+        onCancel={() => {
+          setShowEditUserModal(false);
+          setSelectedUser(null);
+        }}
+        onSuccess={() => {
+          setShowEditUserModal(false);
+          setSelectedUser(null);
+          loadUsers(); // Recargar la lista de usuarios
+        }}
+        user={selectedUser}
+        roles={roles}
+      />
     </div>
   );
 }

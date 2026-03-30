@@ -95,7 +95,7 @@ export async function getRoles() {
 export async function getClientRoleId(): Promise<number> {
   try {
     const roles = await getRoles();
-    const clientRole = roles.find(role => role.type === 'authenticated' || role.name.toLowerCase().includes('client'));
+    const clientRole = roles.find(role => role.type === 'client' || role.name.toLowerCase().includes('client'));
     
     if (clientRole) {
       return clientRole.id;

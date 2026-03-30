@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 export default function AdminNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAdmin, isGerente, isCliente } = useAuth();
+  const { isAdmin, isGerente, isCliente, logout } = useAuth();
 
   const isProyectos = pathname.startsWith("/admin/proyectos");
 
@@ -16,6 +16,15 @@ export default function AdminNav() {
     if (isGerente) return "Panel de Gerente";
     if (isCliente) return "Panel de Cliente";
     return "Panel de Usuario";
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      router.push('/');
+    }
   };
 
   return (
@@ -46,12 +55,12 @@ export default function AdminNav() {
                 Mis Proyectos
               </Link>
               
-              <Link
-                href="/"
+              <button
+                onClick={handleLogout}
                 className="px-4 py-2 text-gray-600 hover:text-gray-900 font-semibold transition"
               >
                 Salir
-              </Link>
+              </button>
             </div>
           </div>
         </div>

@@ -12,11 +12,6 @@ interface TestimonialDisplay {
   avatar: string;
 }
 
-const FALLBACK_TESTIMONIALS: TestimonialDisplay[] = [
-  { text: "Excelente servicio y atención al detalle en cada proyecto.", name: "Cliente", role: "Proyecto Residencial", avatar: "/image1.jpg" },
-  { text: "Superaron nuestras expectativas en diseño y calidad.", name: "Cliente", role: "Proyecto Comercial", avatar: "/image2.jpg" },
-  { text: "Profesionalismo y creatividad en cada etapa del proceso.", name: "Cliente", role: "Consultoría", avatar: "/image3.jpg" },
-];
 
 const AVATAR_POOL = ["/image1.jpg", "/image2.jpg", "/image3.jpg"];
 
@@ -63,10 +58,10 @@ export default function TestimonialsCarousel() {
           avatar: AVATAR_POOL[idx % AVATAR_POOL.length],
         }));
 
-        setTestimonials(parsed.length > 0 ? parsed : FALLBACK_TESTIMONIALS);
+        setTestimonials(parsed.length > 0 ? parsed : []);
       } catch (error) {
         console.error("Error cargando testimonios:", error);
-        setTestimonials(FALLBACK_TESTIMONIALS);
+        setTestimonials([]);
       } finally {
         if (!cancelled) setLoading(false);
       }

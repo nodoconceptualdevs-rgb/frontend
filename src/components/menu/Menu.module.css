@@ -43,6 +43,7 @@
   box-shadow: 0px 0px 9px 0px rgba(112, 112, 112, 0.75);
   height: 10vh;
   position: relative;
+  z-index: 1000; /* Asegurar que esté por encima del login */
 }
 .menuContent {
   width: 95%;
@@ -125,6 +126,7 @@
     border-radius: 1.5rem;
     height: auto;
     min-height: 60px;
+    z-index: 1000; /* Mantener por encima en móvil */
   }
   
   .menuContent {

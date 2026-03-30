@@ -22,7 +22,7 @@ function isAdminRole(role: string | undefined): boolean {
  * Verifica si un rol es de cliente
  */
 function isClientRole(role: string | undefined): boolean {
-  return role === ROLES.AUTHENTICATED || role === ROLES.CLIENT;
+  return role === ROLES.CLIENT;
 }
 
 /**

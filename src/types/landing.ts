@@ -78,15 +78,16 @@ export interface ServicioItem {
 // ============================================================
 // Trabajos Realizados (Single Type) — /api/trabajosrealizado
 // Repeatable Component: proyectos (Proyecto)
-// Fields: Titulo, Descripcion, Render (Media), subtitulo
+// Fields: Titulo, Descripcion, Imagenes (Multiple Media), subtitulo
 // ============================================================
 
 export interface ProyectoItem {
   id: number;
   Titulo: string;
   Descripcion: string;
-  Render: StrapiMedia | null;
+  Imagenes: StrapiMedia[]; // Array de imágenes en lugar de un solo Render
   subtitulo: string;
+  Categorias?: string; // Campo de categoría agregado (con 's' como viene de la API)
 }
 
 export interface TrabajosRealizadosData {
@@ -151,7 +152,7 @@ export interface TrabajadoresData {
 
 // ============================================================
 // Proyectos de Portafolio — /api/proyectos
-// Fields: Titulo, Subtitulo, Descripcion, Modelo3D (Media), Imagen (Media)
+// Fields: Titulo, Subtitulo, Descripcion, Imagenes (Multiple Media)
 // ============================================================
 
 export interface ProyectoPortafolioItem {
@@ -160,9 +161,8 @@ export interface ProyectoPortafolioItem {
   Titulo: string;
   Subtitulo: string;
   Descripcion: string;
-  Modelo3D: StrapiMedia | null; // Para archivos .glb, .obj, etc.
-  Imagen: StrapiMedia | null;    // Imagen alternativa cuando no hay modelo 3D
-  CTA?: string;                  // Call-to-action texto
+  Imagenes: StrapiMedia[]; // Array de imágenes en lugar de Modelo3D
+  CTA?: string; // Call-to-action texto
 }
 
 export interface ProyectoPortafolioData {

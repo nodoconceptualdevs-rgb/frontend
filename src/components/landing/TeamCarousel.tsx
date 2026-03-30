@@ -60,7 +60,7 @@ function EmptyTeam() {
       <h3 className={styles.emptyStateTitle}>
         Equipo en formación
       </h3>
-      <p className={styles.emptyStateText}>
+      <p className={styles.emptyStateText} style={{ color: 'black' }}>
         Próximamente conocerás a nuestro equipo de profesionales.
       </p>
     </div>

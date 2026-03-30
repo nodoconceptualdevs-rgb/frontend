@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Project3DList from "@/components/portafolio/Project3DList";
 import Pagination from "@/components/portafolio/Pagination";
+import CategoryFilter from "@/components/portafolio/CategoryFilter";
 import { getTrabajosRealizados } from "@/services/landing";
 import { Spin, Empty } from "antd";
 import { Construction } from "lucide-react";
@@ -10,138 +11,121 @@ import type { ProyectoItem } from "@/types/landing";
 
 export default function PortafolioPage() {
   const [projects, setProjects] = useState<any[]>([]);
+  const [allProjects, setAllProjects] = useState<ProyectoItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProjects, setTotalProjects] = useState(0);
   const pageSize = 6;
 
   const transformProyectoToCard = (proyecto: ProyectoItem) => {
-    // Obtener la URL del render (puede ser imagen, video o modelo 3D)
-    let modelUrl = null;
-    let tipoArchivo = '3d';
-
-    if (proyecto.Render) {
-      const renderUrl = typeof proyecto.Render === 'string' ? proyecto.Render : proyecto.Render.url;
-      modelUrl = fixCloudinaryURL(renderUrl);
-      
-      // Determinar tipo de archivo basado en la extensión
-      if (renderUrl) {
-        const extension = renderUrl.toLowerCase().split('.').pop();
-        const formatos3D = ['glb', 'gltf', 'fbx', 'obj', 'dae', '3ds', 'blend'];
-        const formatosCAD = ['dwg', 'dxf', 'skp', 'step', 'stp', 'iges', 'igs'];
-        const formatosImagen = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
-        const formatosVideo = ['mp4', 'webm', 'avi', 'mov', 'mkv'];
-        
-        if (formatos3D.includes(extension || '')) {
-          tipoArchivo = '3d';
-        } else if (formatosCAD.includes(extension || '')) {
-          tipoArchivo = 'cad';
-        } else if (formatosVideo.includes(extension || '')) {
-          tipoArchivo = 'video';
-        } else if (formatosImagen.includes(extension || '')) {
-          tipoArchivo = 'imagen';
-        } else {
-          tipoArchivo = '3d'; // Por defecto asumir 3D
+    // Obtener las URLs de las imágenes
+    const images: string[] = [];
+    
+    if (proyecto.Imagenes && Array.isArray(proyecto.Imagenes)) {
+      proyecto.Imagenes.forEach((imagen) => {
+        if (imagen && imagen.url) {
+          const imageUrl = fixCloudinaryURL(imagen.url);
+          if (imageUrl) {
+            images.push(imageUrl);
+          }
         }
-      }
+      });
     }
 
-    // Si no hay render, NO mostrar nada (eliminar modelo por defecto)
-    if (!modelUrl) {
+    // Crear descripción mejorada con categoría
+    const categoria = proyecto.Categorias || "Sin categoría";
+    const descripcionBase = proyecto.Descripcion || "";
+    const descripcionMejorada = descripcionBase 
+      ? `${descripcionBase.substring(0, 100)}${descripcionBase.length > 100 ? "..." : ""}`
+      : `Proyecto de categoría ${categoria}`;
+
+    // Si no hay imágenes, mostrar placeholder
+    if (images.length === 0) {
       return {
         id: proyecto.id,
         title: proyecto.Titulo,
-        subtitle: proyecto.subtitulo || "Proyecto Destacado",
-        description: proyecto.Descripcion || "Proyecto destacado de nuestro portafolio",
+        subtitle: `${categoria} • ${proyecto.subtitulo || "Proyecto Destacado"}`,
+        description: descripcionMejorada,
         cta: "Ver detalles",
         icon: "📋",
-        model: null,
-        tipoArchivo: 'none', // Nuevo tipo para indicar que no hay media
+        images: [],
+        tipoArchivo: 'none',
         proyecto: proyecto
       };
     }
 
-    // Determinar texto del botón según el tipo
-    let ctaText = 'Ver modelo 3D';
-    switch (tipoArchivo) {
-      case 'cad':
-        ctaText = 'Ver modelo CAD';
-        break;
-      case '3d':
-        ctaText = 'Ver modelo 3D';
-        break;
-      case 'video':
-        ctaText = 'Ver video';
-        break;
-      case 'imagen':
-        ctaText = 'Ver imagen';
-        break;
-      default:
-        ctaText = 'Ver modelo 3D';
-    }
-
-    // Determinar icono según el tipo
-    let icon = '🏗️';
-    switch (tipoArchivo) {
-      case 'cad':
-        icon = '📐';
-        break;
-      case '3d':
-        icon = '🏗️';
-        break;
-      case 'video':
-        icon = '🎥';
-        break;
-      case 'imagen':
-        icon = '🖼️';
-        break;
-      default:
-        icon = '🏗️';
-    }
+    // Determinar texto del botón según la cantidad de imágenes
+    const ctaText = images.length === 1 ? '1 imagen' : `Galería (${images.length} imágenes)`;
+    const icon = '📸';
 
     return {
       id: proyecto.id,
       title: proyecto.Titulo,
-      subtitle: proyecto.subtitulo || "Proyecto Destacado",
-      description: proyecto.Descripcion || "Proyecto destacado de nuestro portafolio",
+      subtitle: `${categoria} • ${proyecto.subtitulo || "Proyecto Destacado"}`,
+      description: descripcionMejorada,
       cta: ctaText,
       icon: icon,
-      model: modelUrl,
-      tipoArchivo,
+      images: images,
+      tipoArchivo: 'imagen',
       proyecto: proyecto
     };
   };
 
-  const loadProjects = async (page: number) => {
+  const loadProjects = async (page: number, category: string | null = null) => {
     try {
       setLoading(true);
       const trabajosData = await getTrabajosRealizados();
       
       // Obtener todos los proyectos del landing
-      const allProjects = trabajosData?.proyectos || [];
+      const allProjectsData = trabajosData?.proyectos || [];
+      setAllProjects(allProjectsData);
+      
+      // Extraer categorías únicas
+      const uniqueCategories = Array.from(
+        new Set(
+          allProjectsData
+            .map(p => p.Categorias)
+            .filter((cat): cat is string => Boolean(cat))
+        )
+      ).sort();
+      setCategories(uniqueCategories);
+      
+      // Filtrar por categoría si se selecciona una
+      const filteredProjects = category 
+        ? allProjectsData.filter(p => p.Categorias === category)
+        : allProjectsData;
       
       // Aplicar paginación en el frontend
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
-      const paginatedProjects = allProjects.slice(startIndex, endIndex);
+      const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
       
       const transformedProjects = paginatedProjects.map(transformProyectoToCard);
       setProjects(transformedProjects);
-      setTotalProjects(allProjects.length);
+      setTotalProjects(filteredProjects.length);
     } catch (error) {
       console.error("Error cargando proyectos:", error);
       setProjects([]);
+      setAllProjects([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadProjects(currentPage);
-  }, [currentPage]);
+    loadProjects(currentPage, selectedCategory);
+  }, [currentPage, selectedCategory]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleCategoryChange = (category: string | null) => {
+    setSelectedCategory(category);
+    setCurrentPage(1); // Resetear a la primera página cuando cambia la categoría
   };
 
   return (
@@ -156,6 +140,14 @@ export default function PortafolioPage() {
         <hr className="border-dotted border-t border-gray-400 mb-4" />
       </div>
 
+      {/* Filtro de categorías */}
+      <CategoryFilter
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryChange={handleCategoryChange}
+        loading={loading}
+      />
+
       <div className="min-h-[400px]">
         {loading ? (
           <div className="flex justify-center items-center py-16">
@@ -168,10 +160,16 @@ export default function PortafolioPage() {
               description={
                 <div className="text-center">
                   <p className="text-lg font-medium text-gray-600 mb-2">
-                    No hay proyectos disponibles
+                    {selectedCategory 
+                      ? `No hay proyectos en la categoría "${selectedCategory}"`
+                      : "No hay proyectos disponibles"
+                    }
                   </p>
                   <p className="text-sm text-gray-500">
-                    Pronto compartiremos nuestros proyectos más recientes
+                    {selectedCategory 
+                      ? "Prueba seleccionando otra categoría"
+                      : "Pronto compartiremos nuestros proyectos más recientes"
+                    }
                   </p>
                 </div>
               }

@@ -1,88 +1,170 @@
 "use client";
-import { useRef, useState } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Stage, useGLTF } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import { useState } from "react";
 import styles from "../landing/RenderCarousel.module.css";
 
-function HouseModel({ model }: { model: string }) {
-  const { scene } = useGLTF(model);
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (ref.current) {
-      ref.current.rotation.y += 0.003;
-    }
-  });
-  return <primitive ref={ref} object={scene} scale={1.2} />;
-}
+function ImageSlider({ images, title }: { images: string[]; title: string }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-function ImageViewer({ src, alt }: { src: string; alt: string }) {
-  return (
-    <img 
-      src={src} 
-      alt={alt}
-      style={{
+  if (!images || images.length === 0) {
+    return (
+      <div style={{
         width: '100%',
         height: '100%',
-        objectFit: 'cover',
-        borderRadius: '12px'
-      }}
-    />
-  );
-}
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5',
+        borderRadius: '12px',
+        color: '#999',
+        fontSize: '14px'
+      }}>
+        Sin imágenes disponibles
+      </div>
+    );
+  }
 
-function VideoViewer({ src }: { src: string }) {
-  return (
-    <video
-      src={src}
-      controls
-      autoPlay
-      muted
-      loop
-      style={{
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        borderRadius: '12px'
-      }}
-    />
-  );
-}
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
 
-function CADViewer({ src }: { src: string }) {
-  // Para archivos CAD, mostramos un preview con opción de descarga
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f5f5f5',
-      borderRadius: '12px',
-      border: '2px dashed #d0d0d0'
-    }}>
-      <div style={{ fontSize: '48px', marginBottom: '8px' }}>📐</div>
-      <p style={{ margin: '0 0 16px 0', textAlign: 'center', color: '#666' }}>
-        Archivo CAD<br />
-        <small>No se puede previsualizar</small>
-      </p>
-      <a 
-        href={src} 
-        download
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '12px' }}>
+      <img 
+        src={images[currentImageIndex]} 
+        alt={`${title} - Imagen ${currentImageIndex + 1}`}
         style={{
-          padding: '8px 16px',
-          backgroundColor: '#1890ff',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '4px',
-          fontSize: '14px'
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          borderRadius: '12px',
+          transition: 'opacity 0.3s ease'
         }}
-      >
-        Descargar archivo
-      </a>
+      />
+      
+      {images.length > 1 && (
+        <>
+          {/* Botones de navegación */}
+          <button
+            onClick={prevImage}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              width: '40px',
+              height: '40px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              backdropFilter: 'blur(4px)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.8)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.6)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+            }}
+            aria-label="Imagen anterior"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={nextImage}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              width: '40px',
+              height: '40px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              backdropFilter: 'blur(4px)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.8)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.6)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+            }}
+            aria-label="Siguiente imagen"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          
+          {/* Indicadores */}
+          <div style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '10px',
+            padding: '8px 12px',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            borderRadius: '20px',
+            backdropFilter: 'blur(8px)'
+          }}>
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentImageIndex(index)}
+                style={{
+                  width: index === currentImageIndex ? '24px' : '8px',
+                  height: '8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: index === currentImageIndex ? 'white' : 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                aria-label={`Ir a imagen ${index + 1}`}
+              />
+            ))}
+          </div>
+          
+          {/* Contador */}
+          <div style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            color: 'white',
+            padding: '6px 12px',
+            borderRadius: '16px',
+            fontSize: '13px',
+            fontWeight: '500',
+            backdropFilter: 'blur(8px)'
+          }}>
+            {currentImageIndex + 1} / {images.length}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -94,8 +176,8 @@ export interface Project3DCardProps {
   description: string;
   cta?: string;
   icon?: string;
-  model: string | null;
-  tipoArchivo?: '3d' | 'imagen' | 'video' | 'cad' | 'none';
+  images: string[]; // Array de imágenes en lugar de model string
+  tipoArchivo?: 'imagen' | 'none';
   bgGray?: boolean;
   flip?: boolean;
   proyecto?: any;
@@ -105,8 +187,8 @@ export default function Project3DCard({
   title,
   subtitle,
   description,
-  model,
-  tipoArchivo = '3d',
+  images,
+  tipoArchivo = 'imagen',
   bgGray = false,
   flip = false,
 }: Project3DCardProps) {
@@ -114,29 +196,23 @@ export default function Project3DCard({
   const getButtonText = () => {
     switch (tipoArchivo) {
       case 'imagen':
-        return '🖼️ Ver Imagen';
-      case 'video':
-        return '🎥 Ver Video';
-      case 'cad':
-        return '📐 Ver CAD';
+        if (images.length === 1) {
+          return '📸 1 imagen';
+        } else {
+          return `📸 Galería (${images.length} imágenes)`;
+        }
       case 'none':
         return '📋 Ver detalles';
-      case '3d':
       default:
-        return '⟳ Modelo 3D';
+        return '📸 1 imagen';
     }
   };
 
   const renderMedia = () => {
     switch (tipoArchivo) {
       case 'imagen':
-        return model ? <ImageViewer src={model} alt={title} /> : null;
-      case 'video':
-        return model ? <VideoViewer src={model} /> : null;
-      case 'cad':
-        return model ? <CADViewer src={model} /> : null;
+        return <ImageSlider images={images} title={title} />;
       case 'none':
-        // No mostrar nada cuando no hay render
         return (
           <div style={{
             width: '100%',
@@ -149,41 +225,11 @@ export default function Project3DCard({
             color: '#999',
             fontSize: '14px'
           }}>
-            Sin render disponible
+            Sin imágenes disponibles
           </div>
         );
-      case '3d':
       default:
-        // Solo renderizar Canvas si hay un modelo válido
-        if (!model) {
-          return (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#f5f5f5',
-              borderRadius: '12px',
-              color: '#999',
-              fontSize: '14px'
-            }}>
-              Modelo 3D no disponible
-            </div>
-          );
-        }
-        return (
-          <Canvas
-            camera={{ position: [2, 2, 4], fov: 40 }}
-            style={{ background: "#fff" }}
-          >
-            <ambientLight intensity={0.7} />
-            <Stage environment={null} intensity={0.8}>
-              <HouseModel model={model} />
-            </Stage>
-            <OrbitControls enablePan={false} enableZoom={false} />
-          </Canvas>
-        );
+        return <ImageSlider images={images} title={title} />;
     }
   };
   return (

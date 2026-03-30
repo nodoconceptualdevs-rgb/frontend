@@ -117,16 +117,7 @@ export default function EditarProyectoPage() {
       ? proyecto.gerentes.map(g => typeof g === 'number' ? g : g.id)
       : [];
 
-    if (clientesIds.length === 0) {
-      alerts.error('⚠️ Debes asignar al menos un cliente al proyecto');
-      return;
-    }
-
-    if (gerentesIds.length === 0) {
-      alerts.error('⚠️ Debes asignar al menos un gerente al proyecto');
-      return;
-    }
-
+    // Los clientes y gerentes ya no son obligatorios
     if (!proyecto.nombre_proyecto || proyecto.nombre_proyecto.trim() === '') {
       alerts.error('⚠️ El nombre del proyecto es obligatorio');
       return;
@@ -144,8 +135,8 @@ export default function EditarProyectoPage() {
         nombre_proyecto: proyecto.nombre_proyecto,
         estado_general: proyecto.estado_general,
         fecha_inicio: proyecto.fecha_inicio,
-        clientes: clientesIds,
-        gerentes: gerentesIds,
+        clientes: clientesIds, // Puede ser array vacío
+        gerentes: gerentesIds, // Puede ser array vacío
         es_publico: proyecto.es_publico
       });
       

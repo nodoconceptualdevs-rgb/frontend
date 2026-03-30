@@ -61,13 +61,13 @@ export async function getClientes() {
     
     const usuarios: any[] = Array.isArray(res.data) ? res.data : [];
     
-    // Filtrar usuarios que tengan rol 'authenticated' o que incluya 'client' en el nombre
+    // Filtrar usuarios que tengan rol 'client' o que incluya 'client' en el nombre
     const clientes = usuarios.filter((user: any) => {
       const roleType = user.role?.type?.toLowerCase() || '';
       const roleName = user.role?.name?.toLowerCase() || '';
       
-      // Buscar roles que sean 'authenticated' o contengan 'client' o 'cliente'
-      return roleType === 'authenticated' || 
+      // Buscar roles que sean 'client' o contengan 'cliente'
+      return roleType === 'client' || 
              roleName.includes('client') || 
              roleName.includes('cliente');
     });

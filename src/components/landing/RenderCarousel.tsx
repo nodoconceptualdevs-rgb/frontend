@@ -1,7 +1,5 @@
 "use client";
-import { useRef, useEffect, useState } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Stage, useGLTF } from "@react-three/drei";
+import { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -9,12 +7,10 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { FaArrowRight, FaArrowLeft } from "react-icons/fa";
 import styles from "./RenderCarousel.module.css";
-import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import { getTrabajosRealizados } from "@/services/landing";
+import { getTrabajosRealizados, getProyectosPortafolio } from "@/services/landing";
 import { getStrapiMediaUrl } from "@/lib/strapi";
 import { fixCloudinaryURL } from "@/lib/cloudinary";
-import type { ProyectoItem } from "@/types/landing";
+import type { ProyectoItem, ProyectoPortafolioItem } from "@/types/landing";
 
 /**
  * Procesa URL de imagen para determinar la fuente correcta
@@ -44,24 +40,33 @@ interface ProjectSlide {
   title: string;
   subtitle: string;
   description: string;
-  renderUrl: string | null;
-  model: "house1" | "house2";
+  images: string[]; // Array de URLs de imágenes
 }
 
 /**
- * Componente de modelo 3D con rotación automática
+ * Componente de slider de imágenes para un proyecto
  */
-function HouseModel({ model }: { model: "house1" | "house2" }) {
-  const { scene } = useGLTF(model === "house1" ? "/House1.glb" : "/House2.glb");
-  const ref = useRef<THREE.Group>(null);
+interface ImageSliderProps {
+  images: string[];
+  title: string;
+}
 
-  useFrame(() => {
-    if (ref.current) {
-      ref.current.rotation.y += 0.003;
-    }
-  });
+function ImageSlider({ images, title }: ImageSliderProps) {
+  // En la landing, solo mostrar la primera imagen sin controles
+  if (!images || images.length === 0) {
+    return <ProjectPlaceholder />;
+  }
 
-  return <primitive ref={ref} object={scene} scale={1.2} />;
+  // Siempre mostrar solo la primera imagen en la landing
+  return (
+    <div className={styles.threeWrapper} style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
+      <img
+        src={images[0]}
+        alt={`${title} - Imagen principal`}
+        className={styles.projectImage}
+      />
+    </div>
+  );
 }
 
 /**
@@ -84,41 +89,6 @@ function RenderSkeleton() {
   );
 }
 
-/**
- * Componente para visualizar modelo 3D
- */
-interface Model3DViewerProps {
-  model: "house1" | "house2";
-  onClose: () => void;
-}
-
-function Model3DViewer({ model, onClose }: Model3DViewerProps) {
-  return (
-    <div className={styles.modelOverlay}>
-      <button 
-        onClick={onClose}
-        className={styles.closeButton}
-      >
-        ✕
-      </button>
-      
-      <div className={styles.modelLabel}>
-        Modelo 3D
-      </div>
-      
-      <Canvas
-        camera={{ position: [2, 2, 4], fov: 40 }}
-        style={{ background: "#fff" }}
-      >
-        <ambientLight intensity={0.7} />
-        <Stage environment={null} intensity={0.8}>
-          <HouseModel model={model} />
-        </Stage>
-        <OrbitControls enablePan={false} enableZoom={true} />
-      </Canvas>
-    </div>
-  );
-}
 
 /**
  * Componente de placeholder para renderizar cuando no hay imagen
@@ -127,13 +97,13 @@ function ProjectPlaceholder() {
   return (
     <div className={styles.placeholderContainer}>
       <div className={styles.placeholderIcon}>
-        🏠
+        📸
       </div>
       <p className={styles.placeholderTitle}>
-        Render no disponible
+        Sin imágenes disponibles
       </p>
       <p className={styles.placeholderText}>
-        Proyecto destacado de nuestro portafolio
+        Trabajo realizado de nuestro portafolio
       </p>
     </div>
   );
@@ -150,10 +120,10 @@ function NoProjects() {
           📦
         </div>
         <h3 className={styles.noDataTitle}>
-          No hay proyectos disponibles
+          No hay trabajos realizados disponibles
         </h3>
         <p className={styles.noDataText}>
-          En este momento no hay proyectos para mostrar. Vuelve pronto para ver nuestros trabajos destacados.
+          En este momento no hay trabajos realizados para mostrar. Vuelve pronto para ver nuestros proyectos destacados.
         </p>
       </div>
     </div>
@@ -166,7 +136,6 @@ function NoProjects() {
 export default function RenderCarousel() {
   const [slides, setSlides] = useState<ProjectSlide[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModel, setShowModel] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,43 +147,53 @@ export default function RenderCarousel() {
         
         if (data && Array.isArray(data.proyectos) && data.proyectos.length > 0) {
           const items = data.proyectos as ProyectoItem[];
-          const models: Array<"house1" | "house2"> = ["house1", "house2"];
           
-          // Solo mostrar los primeros 2 en landing
-          const parsed: ProjectSlide[] = items.slice(0, 2).map((item, idx) => {
-            // Procesar URL de render si existe
-            let renderUrl = null;
-            if (item.Render && item.Render.url) {
-              renderUrl = processImageUrl(item.Render.url);
-              // Verificación adicional para asegurar que no se muestra imagen cuando no corresponde
-              console.log(`Procesando render para proyecto ${item.Titulo}:`, {
-                original: item.Render.url,
-                procesada: renderUrl
+          // Solo mostrar los primeros 4 en landing
+          const parsed: ProjectSlide[] = items.slice(0, 4).map((item) => {
+            // Procesar URLs de imágenes si existen
+            const images: string[] = [];
+            
+            if (item.Imagenes && Array.isArray(item.Imagenes)) {
+              item.Imagenes.forEach((imagen: any) => {
+                if (imagen && imagen.url) {
+                  const processedUrl = processImageUrl(imagen.url);
+                  if (processedUrl) {
+                    images.push(processedUrl);
+                  }
+                }
               });
-            } else {
-              console.log(`Proyecto ${item.Titulo || "sin título"} sin imagen de render`);
             }
             
+            console.log(`Procesando imágenes para trabajo realizado ${item.Titulo}:`, {
+              cantidad: images.length,
+              urls: images
+            });
+            
             return {
-              title: item.Titulo || "Proyecto",
-              subtitle: item.subtitulo || "Proyecto Destacado",
+              title: item.Titulo || "Trabajo Realizado",
+              subtitle: item.subtitulo || "Trabajo Destacado",
               description: item.Descripcion || "",
-              renderUrl: renderUrl,
-              model: models[idx % models.length],
+              images: images,
+              cta: "Ver más detalles", // Valor fijo ya que ProyectoItem no tiene CTA
+              model: null,
+              tipoArchivo: images.length > 0 ? 'imagen' : 'none'
             };
           });
           
           setSlides(parsed);
         } else {
+          console.warn('No se encontraron trabajos realizados o el formato es incorrecto');
           setSlides([]);
         }
       } catch (error) {
+        console.error('Error fetching trabajos realizados:', error);
         setSlides([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
-    
     fetchProyectos();
     return () => { cancelled = true; };
   }, []);
@@ -245,27 +224,12 @@ export default function RenderCarousel() {
             <div className={styles.carouselContainer}>
               <div className={styles.left3d}>
                 <button className={styles.btn360} type="button">
-                  <span className={styles.icon360}>⟳</span> Imagen 360°
+                  <span className={styles.icon360}>📸</span> {slide.images.length === 1 ? '1 imagen' : `Galería (${slide.images.length} imágenes)`}
                 </button>
-                <div className={styles.threeWrapper}>
-                  {slide.renderUrl ? (
-                    <img
-                      src={slide.renderUrl}
-                      alt={slide.title}
-                      className={styles.projectImage}
-                    />
-                  ) : (
-                    <ProjectPlaceholder />
-                  )}
-                  
-                  {/* Mostrar modelo 3D cuando se haga clic en el botón */}
-                  {showModel === idx && (
-                    <Model3DViewer 
-                      model={slide.model}
-                      onClose={() => setShowModel(null)}
-                    />
-                  )}
-                </div>
+                <ImageSlider 
+                  images={slide.images}
+                  title={slide.title}
+                />
               </div>
               <div className={styles.rightText}>
                 <div className={styles.subtitle}>{slide.subtitle}</div>

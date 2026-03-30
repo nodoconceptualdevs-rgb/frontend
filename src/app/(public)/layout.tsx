@@ -11,11 +11,13 @@ export default function PublicLayout({
 }) {
   const pathname = usePathname();
   const hideCta = pathname === "/login" || pathname === "/registro";
+  const hideFooter = pathname === "/login"; // Ocultar footer completamente en login
+  
   return (
     <>
       <Menu />
       {children}
-      <Footer showCta={!hideCta} />
+      {!hideFooter && <Footer showCta={!hideCta} />}
     </>
   );
 }
