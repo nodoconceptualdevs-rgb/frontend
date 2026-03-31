@@ -15,7 +15,7 @@ const ROLES = {
  * Verifica si un rol tiene permisos administrativos
  */
 function isAdminRole(role: string | undefined): boolean {
-  return role === ROLES.ADMIN || role === ROLES.GERENTE_PROYECTO;
+  return role === ROLES.ADMIN;
 }
 
 /**
@@ -31,6 +31,9 @@ function isClientRole(role: string | undefined): boolean {
 function getDefaultRouteByRole(role: string | undefined): string {
   if (isAdminRole(role)) {
     return '/admin/proyectos';
+  }
+  if (role === ROLES.GERENTE_PROYECTO) {
+    return '/dashboard/mi-proyecto';
   }
   if (isClientRole(role)) {
     return '/dashboard/cursos';
@@ -83,18 +86,6 @@ export function middleware(req: NextRequest) {
       // Rol no autorizado: redirect a su dashboard
       const defaultRoute = getDefaultRouteByRole(cookieRole);
       return NextResponse.redirect(new URL(defaultRoute, req.url));
-    }
-    
-    // Restricciones para gerente de proyecto
-    // Solo puede acceder a: /admin/proyectos y /admin/mi-perfil
-    if (cookieRole === ROLES.GERENTE_PROYECTO) {
-      const allowedPaths = ["/admin/proyectos", "/admin/mi-perfil"];
-      const isAllowed = allowedPaths.some(path => pathname.startsWith(path));
-      
-      if (!isAllowed) {
-        // Redirigir a proyectos si intenta acceder a otra ruta
-        return NextResponse.redirect(new URL("/admin/proyectos", req.url));
-      }
     }
     
     return NextResponse.next();

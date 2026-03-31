@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import HitoEditor from "@/components/admin/HitoEditor";
 import AdminHeader from "@/components/admin/AdminHeader";
-import { getProyectoById, updateProyecto } from "@/services/proyectos";
+import TokenNFCCard from "@/components/proyectos/TokenNFCCard";
+import { getProyectoById, updateProyecto, regenerarTokenNFC } from "@/services/proyectos";
 import { createHito, updateHito, deleteHito, reordenarHitos } from "@/services/hitos";
 import { alerts } from "@/lib/alerts";
 import { Toaster } from "react-hot-toast";
@@ -102,6 +103,28 @@ export default function EditarProyectoPage() {
       alerts.error(error.message || 'Error al actualizar el proyecto');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRegenerarToken = async () => {
+    if (!proyecto) return;
+    
+    if (!confirm('¿Estás seguro de regenerar el token NFC? El token actual dejará de funcionar.')) {
+      return;
+    }
+
+    try {
+      const loadingId = alerts.loading('Regenerando token...');
+      const response = await regenerarTokenNFC(proyecto.id);
+      alerts.dismiss();
+      
+      if (response && response.data) {
+        setProyecto({ ...proyecto, token_nfc: response.data.token_nfc });
+        alerts.success('Token regenerado exitosamente');
+      }
+    } catch (error: unknown) {
+      console.error('Error regenerando token:', error);
+      alerts.error('Error al regenerar el token');
     }
   };
 
@@ -247,9 +270,9 @@ export default function EditarProyectoPage() {
 
     return (
       <div ref={setNodeRef} style={style}>
-        <button
+        <div
           onClick={() => setSelectedHito(hito.id)}
-          className={`w-full text-left px-4 py-3 rounded-lg transition border-2 group ${
+          className={`w-full text-left px-4 py-3 rounded-lg transition border-2 group cursor-pointer ${
             selectedHito === hito.id
               ? "border-red-600 bg-red-50"
               : "border-gray-200 hover:border-gray-300"
@@ -314,7 +337,7 @@ export default function EditarProyectoPage() {
               </svg>
             </button>
           </div>
-        </button>
+        </div>
       </div>
     );
   }
@@ -417,7 +440,7 @@ export default function EditarProyectoPage() {
               <button
                 onClick={handleSaveProyecto}
                 disabled={saving}
-                className="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-8"
               >
                 {saving ? (
                   <>
@@ -432,6 +455,12 @@ export default function EditarProyectoPage() {
                 )}
               </button>
             </div>
+            
+            {/* Token NFC Card */}
+            <TokenNFCCard
+              tokenNfc={proyecto.token_nfc}
+              onRegenerar={handleRegenerarToken}
+            />
           </div>
         )}
 

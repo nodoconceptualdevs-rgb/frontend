@@ -79,6 +79,11 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
   const [showBiblioteca, setShowBiblioteca] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Actualizar localHito cuando el prop hito cambia
+  useEffect(() => {
+    setLocalHito(hito);
+  }, [hito]);
+
   // Cargar archivos existentes del hito
   useEffect(() => {
     const archivos: ArchivoSubido[] = [];

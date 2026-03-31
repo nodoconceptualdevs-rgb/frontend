@@ -16,10 +16,10 @@ export interface ProyectoCardProps {
       username?: string;
       email?: string;
     };
-    gerente_proyecto?: {
+    gerentes?: Array<{
       name?: string;
       username?: string;
-    };
+    }>;
     hitos?: Array<{
       estado_completado: boolean;
     }>;
@@ -56,7 +56,8 @@ export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, 
 
   const progreso = calcularProgreso();
   const clienteNombre = proyecto.cliente?.name || proyecto.cliente?.username || proyecto.cliente?.email || "Sin cliente asignado";
-  const gerenteNombre = proyecto.gerente_proyecto?.name || proyecto.gerente_proyecto?.username || "Sin gerente";
+  // gerentes es un array, tomamos el primer gerente
+  const gerenteNombre = proyecto.gerentes?.[0]?.name || proyecto.gerentes?.[0]?.username || "Sin gerente";
 
   const handleEdit = () => {
     // Si es cliente, abrir en nueva pestaña

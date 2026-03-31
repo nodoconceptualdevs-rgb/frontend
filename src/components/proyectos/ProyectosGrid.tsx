@@ -65,10 +65,10 @@ export default function ProyectosGrid({
           </p>
         </div>
 
-        {/* Solo admin puede crear proyectos */}
-        {showCreateButton && isAdmin && (
+        {/* Admin y gerentes pueden crear proyectos */}
+        {showCreateButton && (isAdmin || isGerente) && (
           <Link
-            href="/admin/proyectos/nuevo"
+            href={isAdmin ? "/admin/proyectos/nuevo" : "/dashboard/crear-proyecto"}
             className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg hover:shadow-xl flex items-center gap-2"
           >
             <svg

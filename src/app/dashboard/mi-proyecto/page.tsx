@@ -35,11 +35,14 @@ export default function MiProyectoPage() {
         loading={loading}
         isGerente={isGerente}
         isCliente={isCliente}
+        showCreateButton={isGerente} // Mostrar botón solo a gerentes
         editRoutePrefix={isGerente ? "/dashboard/mi-proyecto" : undefined}
         emptyMessage="No tienes proyectos asignados"
         emptyDescription={
           isCliente 
             ? "Aquí aparecerá tu proyecto cuando te sea asignado" 
+            : isGerente
+            ? "Crea tu primer proyecto usando el botón de arriba"
             : "Cuando se te asigne un proyecto, aparecerá aquí"
         }
       />
