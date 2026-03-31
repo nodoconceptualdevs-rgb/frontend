@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Table, Button, Input, Space, Tag, message, Switch, Tooltip, Select, Popconfirm } from "antd";
-import { SearchOutlined, PlusOutlined, UserSwitchOutlined, CheckCircleOutlined, StopOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined, UserSwitchOutlined, CheckCircleOutlined, StopOutlined, DeleteOutlined, ReloadOutlined } from "@ant-design/icons";
 import { User, Role } from "@/services/users";
 import { getUsers, getRoles } from "@/services/users";
 import { toggleBlockUser, deleteUser } from "@/services/adminUsers";
+import { adminResetUserPassword } from "@/services/auth";
 import { alerts } from "@/lib/alerts";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AddUserModal from "@/components/admin/AddUserModal";
-import EditUserModal from "@/components/admin/EditUserModal";
 
 // Componente para manejar la selección de roles de usuarios
 interface RoleSelectorProps {
@@ -127,8 +127,6 @@ export default function UsuariosPage() {
   const [searchText, setSearchText] = useState("");
   const [updatingRole, setUpdatingRole] = useState<number | null>(null);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [showEditUserModal, setShowEditUserModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
     // Primero cargar los roles, luego los usuarios
@@ -231,9 +229,14 @@ export default function UsuariosPage() {
     }
   };
 
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setShowEditUserModal(true);
+  const handleResetPassword = async (userId: number, email: string) => {
+    try {
+      await adminResetUserPassword(userId);
+      alerts.success(`Contraseña temporal enviada a ${email}`);
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      alerts.error(error?.response?.data?.error?.message || "Error al restablecer la contraseña");
+    }
   };
 
   const filteredUsers = users.filter((user) =>
@@ -329,14 +332,23 @@ export default function UsuariosPage() {
         
         return (
           <Space>
-            <Tooltip title="Editar usuario">
-              <Button
-                type="link"
-                icon={<EditOutlined />}
-                onClick={() => handleEditUser(record)}
-                style={{ color: "#f5b940" }}
-              />
-            </Tooltip>
+            {!isAdmin && (
+              <Popconfirm
+                title="¿Restablecer contraseña?"
+                description="Se enviará una contraseña temporal por email"
+                onConfirm={() => handleResetPassword(record.id, record.email)}
+                okText="Sí, restablecer"
+                cancelText="Cancelar"
+              >
+                <Tooltip title="Restablecer contraseña">
+                  <Button
+                    type="link"
+                    icon={<ReloadOutlined />}
+                    style={{ color: "#1890ff" }}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            )}
             
             {!isAdmin && (
               <Popconfirm
@@ -450,30 +462,15 @@ export default function UsuariosPage() {
         </div>
       </main>
 
-      {/* Modal para agregar usuario */}
-      <AddUserModal
+      <AddUserModal 
         visible={showAddUserModal}
-        onCancel={() => setShowAddUserModal(false)}
-        onSuccess={() => {
-          setShowAddUserModal(false);
-          loadUsers(); // Recargar la lista de usuarios
-        }}
-        roles={roles}
-      />
-
-      {/* Modal para editar usuario */}
-      <EditUserModal
-        visible={showEditUserModal}
         onCancel={() => {
-          setShowEditUserModal(false);
-          setSelectedUser(null);
+          setShowAddUserModal(false);
         }}
         onSuccess={() => {
-          setShowEditUserModal(false);
-          setSelectedUser(null);
-          loadUsers(); // Recargar la lista de usuarios
+          loadUsers();
+          setShowAddUserModal(false);
         }}
-        user={selectedUser}
         roles={roles}
       />
     </div>

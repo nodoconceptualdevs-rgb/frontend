@@ -44,6 +44,14 @@ const PUBLIC_ROUTES = [
 
   '/auth/reset-password',
 
+  '/email-auth/forgot-password',
+
+  '/email-auth/reset-password',
+
+  '/email-auth/send-confirmation',
+
+  '/email-auth/confirm-email',
+
 ];
 
 

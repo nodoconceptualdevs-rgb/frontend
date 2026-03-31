@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProyectosGrid from "@/components/proyectos/ProyectosGrid";
 
 export default function AdminProyectosPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isGerente } = useAuth();
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +38,11 @@ export default function AdminProyectosPage() {
     fetchProyectos();
   }, [isAdmin]);
 
+  // Función para actualizar la lista de proyectos
+  const handleProyectosChange = (nuevosProyectos: any[]) => {
+    setProyectos(nuevosProyectos as Proyecto[]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -51,10 +56,12 @@ export default function AdminProyectosPage() {
           proyectos={proyectos as any}
           loading={loading}
           isAdmin={isAdmin}
+          isGerente={isGerente}
           showCreateButton={true}
           editRoutePrefix="/admin/proyectos"
           emptyMessage="No hay proyectos creados"
           emptyDescription="Comienza creando tu primer proyecto"
+          onProyectosChange={handleProyectosChange}
         />
       </main>
     </div>

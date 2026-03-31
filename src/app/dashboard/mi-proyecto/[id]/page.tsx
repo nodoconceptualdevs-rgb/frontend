@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import HitoEditor from "@/components/admin/HitoEditor";
 import AdminHeader from "@/components/admin/AdminHeader";
+import ProyectoInfoForm from "@/components/proyectos/ProyectoInfoForm";
 import TokenNFCCard from "@/components/proyectos/TokenNFCCard";
 import { getProyectoById, updateProyecto, regenerarTokenNFC } from "@/services/proyectos";
+import { getClientes, getGerentes } from "@/services/usuarios";
 import { createHito, updateHito, deleteHito, reordenarHitos } from "@/services/hitos";
 import { alerts } from "@/lib/alerts";
 import { Toaster } from "react-hot-toast";
 import { useAuthToken } from "@/hooks/useAuthToken";
+import { useAuth } from "@/context/AuthContext";
 import {
   DndContext,
   closestCenter,
@@ -55,6 +58,9 @@ export default function EditarProyectoPage() {
   
   const [proyecto, setProyecto] = useState<any>(null);
   const [hitos, setHitos] = useState<Hito[]>([]);
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [gerentes, setGerentes] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Cargar datos del proyecto
   useEffect(() => {
@@ -83,7 +89,27 @@ export default function EditarProyectoPage() {
     cargarProyecto();
   }, [params.id, router]);
 
-  const handleUpdateProyecto = (field: string, value: string | number) => {
+  // Cargar clientes y gerentes
+  useEffect(() => {
+    async function cargarUsuarios() {
+      try {
+        setLoadingUsers(true);
+        const [clientesData, gerentesData] = await Promise.all([
+          getClientes(),
+          getGerentes()
+        ]);
+        setClientes(Array.isArray(clientesData) ? clientesData : []);
+        setGerentes(Array.isArray(gerentesData) ? gerentesData : []);
+      } catch (error) {
+        console.error('Error cargando usuarios:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    cargarUsuarios();
+  }, []);
+
+  const handleUpdateProyecto = (field: string, value: string | number | boolean | any[] | number[]) => {
     setProyecto({ ...proyecto, [field]: value });
   };
 
@@ -91,10 +117,21 @@ export default function EditarProyectoPage() {
     try {
       setSaving(true);
       
+      // Preparar IDs de clientes y gerentes
+      const clientesIds = Array.isArray(proyecto.clientes) 
+        ? proyecto.clientes.map((c: any) => typeof c === 'number' ? c : c.id)
+        : [];
+      
+      const gerentesIds = Array.isArray(proyecto.gerentes)
+        ? proyecto.gerentes.map((g: any) => typeof g === 'number' ? g : g.id)
+        : [];
+      
       await updateProyecto(proyecto.id, {
         nombre_proyecto: proyecto.nombre_proyecto,
         estado_general: proyecto.estado_general,
         fecha_inicio: proyecto.fecha_inicio,
+        clientes: clientesIds,
+        gerentes: gerentesIds,
       });
       
       alerts.success('Proyecto actualizado exitosamente');
@@ -383,85 +420,23 @@ export default function EditarProyectoPage() {
         
         {/* Información General */}
         {activeTab === "info" && (
-          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 md:p-8 max-w-3xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Información del Proyecto
-            </h2>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre del Proyecto
-                </label>
-                <input
-                  type="text"
-                  value={proyecto.nombre_proyecto}
-                  onChange={(e) =>
-                    handleUpdateProyecto("nombre_proyecto", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
-              </div>
-
-              {/* Estado y Fecha */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Estado
-                  </label>
-                  <select
-                    value={proyecto.estado_general}
-                    onChange={(e) =>
-                      handleUpdateProyecto("estado_general", e.target.value)
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                  >
-                    <option value="En Planificación">En Planificación</option>
-                    <option value="En Ejecución">En Ejecución</option>
-                    <option value="Completado">Completado</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Fecha de Inicio
-                  </label>
-                  <input
-                    type="date"
-                    value={proyecto.fecha_inicio}
-                    onChange={(e) =>
-                      handleUpdateProyecto("fecha_inicio", e.target.value)
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleSaveProyecto}
-                disabled={saving}
-                className="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-8"
-              >
-                {saving ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar Cambios'
-                )}
-              </button>
-            </div>
+          <>
+            <ProyectoInfoForm
+              proyecto={proyecto}
+              clientes={clientes}
+              gerentes={gerentes}
+              loadingUsers={loadingUsers}
+              onUpdate={handleUpdateProyecto}
+              onSave={handleSaveProyecto}
+              saving={saving}
+            />
             
             {/* Token NFC Card */}
             <TokenNFCCard
               tokenNfc={proyecto.token_nfc}
               onRegenerar={handleRegenerarToken}
             />
-          </div>
+          </>
         )}
 
         {/* Gestión de Hitos */}

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Form, Input, Select, Button, message, Tooltip } from "antd";
-import { UserOutlined, MailOutlined, LockOutlined, IdcardOutlined } from "@ant-design/icons";
-import { createUser, CreateUserPayload } from "@/services/adminUsers";
+import React, { useState } from "react";
+import { Modal, Form, Input, Select, Button, message, Checkbox } from "antd";
+import { UserOutlined, MailOutlined, IdcardOutlined, SendOutlined } from "@ant-design/icons";
+import { adminCreateUserWithEmail } from "@/services/auth";
+import { alerts } from "@/lib/alerts";
 import { Role } from "@/services/users";
 
 interface AddUserModalProps {
@@ -34,20 +35,21 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
     setLoading(true);
     try {
-      const userData: CreateUserPayload = {
+      await adminCreateUserWithEmail({
         username: values.username,
         email: values.email,
-        password: values.password,
         name: values.name,
         role: selectedRole,
-      };
+        sendEmail: true, // Siempre envía email
+      });
 
-      await createUser(userData);
+      alerts.success("Usuario creado y credenciales enviadas por email");
       form.resetFields();
       setSelectedRole(undefined);
       onSuccess();
-    } catch (error) {
-      // El error ya se maneja en el servicio
+    } catch (error: any) {
+      const msg = error?.response?.data?.error?.message || "Error al crear el usuario";
+      alerts.error(msg);
     } finally {
       setLoading(false);
     }
@@ -124,20 +126,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item
-          label="Contraseña"
-          name="password"
-          rules={[
-            { required: true, message: "Por favor ingresa una contraseña" },
-            { min: 6, message: "Mínimo 6 caracteres" }
-          ]}
-        >
-          <Input.Password
-            prefix={<LockOutlined />}
-            placeholder="Mínimo 6 caracteres"
-            size="large"
-          />
-        </Form.Item>
+        <div style={{ background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#0958d9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+            <SendOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            <strong style={{ color: '#0958d9' }}>Envío automático de credenciales</strong>
+          </div>
+          Se generará una contraseña temporal automáticamente y las credenciales se enviarán por correo electrónico al usuario.
+        </div>
 
         <Form.Item
           label="Rol del Usuario"

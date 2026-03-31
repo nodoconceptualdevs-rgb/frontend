@@ -11,7 +11,7 @@ export default function PublicLayout({
 }) {
   const pathname = usePathname();
   const hideCta = pathname === "/login" || pathname === "/registro";
-  const hideFooter = pathname === "/login"; // Ocultar footer completamente en login
+  const hideFooter = pathname === "/login" || pathname === "/olvide-contrasena" || pathname === "/restablecer-contrasena" || pathname === "/confirmar-email" || pathname === "/registro"; // Ocultar footer en páginas de autenticación
   
   return (
     <>

@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ProyectoCard, { ProyectoCardProps } from "./ProyectoCard";
+import { deleteProyecto } from "@/services/proyectos";
+import { alerts } from "@/lib/alerts";
 
 interface ProyectosGridProps {
   proyectos: ProyectoCardProps["proyecto"][];
@@ -13,6 +15,7 @@ interface ProyectosGridProps {
   editRoutePrefix?: string;
   emptyMessage?: string;
   emptyDescription?: string;
+  onProyectosChange?: (proyectos: ProyectoCardProps["proyecto"][]) => void;
 }
 
 export default function ProyectosGrid({
@@ -24,10 +27,33 @@ export default function ProyectosGrid({
   showCreateButton = false,
   editRoutePrefix,
   emptyMessage = "No tienes proyectos asignados",
-  emptyDescription = "Cuando se te asigne un proyecto, aparecerá aquí"
+  emptyDescription = "Cuando se te asigne un proyecto, aparecerá aquí",
+  onProyectosChange
 }: ProyectosGridProps) {
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
+
+  // Función para eliminar proyecto (solo admin)
+  const handleDeleteProyecto = async (proyectoId: number, proyectoName: string) => {
+    try {
+      const loadingId = alerts.loading('Eliminando proyecto...');
+      await deleteProyecto(proyectoId);
+      alerts.dismiss();
+      alerts.success('Proyecto eliminado exitosamente');
+      
+      // Actualizar la lista localmente eliminando el proyecto eliminado
+      if (onProyectosChange) {
+        const proyectosActualizados = proyectos.filter(p => p.id !== proyectoId);
+        onProyectosChange(proyectosActualizados);
+      } else {
+        // Fallback: recargar la página si no hay función de actualización
+        router.refresh();
+      }
+    } catch (error) {
+      console.error('Error eliminando proyecto:', error);
+      alerts.error('Error al eliminar el proyecto');
+    }
+  };
 
   // Filtrar proyectos por búsqueda
   const proyectosFiltrados = useMemo(() => {
@@ -37,9 +63,11 @@ export default function ProyectosGrid({
     return proyectos.filter((proyecto) => {
       const nombre = proyecto.nombre_proyecto?.toLowerCase() || "";
       const cliente = proyecto.cliente?.name?.toLowerCase() || proyecto.cliente?.username?.toLowerCase() || "";
-      const gerente = proyecto.gerente_proyecto?.name?.toLowerCase() || proyecto.gerente_proyecto?.username?.toLowerCase() || "";
+      const gerente = proyecto.gerentes && proyecto.gerentes.length > 0 
+    ? proyecto.gerentes[0].name?.toLowerCase() || proyecto.gerentes[0].username?.toLowerCase() 
+    : "";
       
-      return nombre.includes(search) || cliente.includes(search) || gerente.includes(search);
+      return nombre.includes(search) || cliente.includes(search) || (gerente && gerente.includes(search));
     });
   }, [proyectos, searchText]);
 
@@ -161,6 +189,7 @@ export default function ProyectosGrid({
                 isGerente={isGerente}
                 isCliente={isCliente}
                 editRoute={editRoute}
+                onDelete={isAdmin ? handleDeleteProyecto : undefined}
               />
             );
           })}

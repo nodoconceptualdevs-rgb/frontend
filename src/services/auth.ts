@@ -120,6 +120,60 @@ export async function login(data: LoginPayload): Promise<AuthResponse> {
 }
 
 /**
+ * Solicitar restablecimiento de contraseña
+ */
+export async function forgotPassword(email: string) {
+  const res = await api.post("/email-auth/forgot-password", { email });
+  return res.data;
+}
+
+/**
+ * Restablecer contraseña con token
+ */
+export async function resetPassword(code: string, password: string, passwordConfirmation: string) {
+  const res = await api.post("/email-auth/reset-password", { code, password, passwordConfirmation });
+  return res.data;
+}
+
+/**
+ * Enviar email de confirmación
+ */
+export async function sendConfirmationEmail(email: string) {
+  const res = await api.post("/email-auth/send-confirmation", { email });
+  return res.data;
+}
+
+/**
+ * Confirmar email con token
+ */
+export async function confirmEmail(token: string) {
+  const res = await api.get(`/email-auth/confirm-email?token=${token}`);
+  return res.data;
+}
+
+/**
+ * Admin: Crear usuario y enviar credenciales por email
+ */
+export async function adminCreateUserWithEmail(data: {
+  username: string;
+  email: string;
+  name?: string;
+  role: number;
+  sendEmail?: boolean;
+}) {
+  const res = await api.post("/email-auth/admin-create-user", data);
+  return res.data;
+}
+
+/**
+ * Admin: Restablecer contraseña de un usuario
+ */
+export async function adminResetUserPassword(userId: number) {
+  const res = await api.post("/email-auth/admin-reset-password", { userId });
+  return res.data;
+}
+
+/**
  * Obtener sesión actual del usuario
  */
 export async function getSession() {

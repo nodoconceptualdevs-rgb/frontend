@@ -1,5 +1,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { 
+  PencilIcon, 
+  EyeIcon, 
+  TrashIcon,
+  ArrowTopRightOnSquareIcon 
+} from '@heroicons/react/24/outline';
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 export interface ProyectoCardProps {
   proyecto: {
@@ -28,11 +35,13 @@ export interface ProyectoCardProps {
   isGerente?: boolean;
   isCliente?: boolean;
   editRoute?: string;
+  onDelete?: (proyectoId: number, proyectoName: string) => void;
 }
 
-export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, editRoute }: ProyectoCardProps) {
+export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, editRoute, onDelete }: ProyectoCardProps) {
   const router = useRouter();
   const [showToken, setShowToken] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -71,6 +80,24 @@ export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, 
     } else if (isAdmin || isGerente) {
       const route = isAdmin ? `/admin/proyectos/${proyecto.id}` : `/dashboard/mi-proyecto/${proyecto.id}`;
       router.push(route);
+    }
+  };
+
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (onDelete) {
+      onDelete(proyecto.id, proyecto.nombre_proyecto);
+    }
+  };
+
+  const handleViewClient = () => {
+    if (isAdmin) {
+      window.open(`/proyecto/${proyecto.token_nfc}`, "_blank");
+    } else {
+      router.push(`/proyecto/${proyecto.token_nfc}`);
     }
   };
 
@@ -234,7 +261,7 @@ export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, 
       {/* Actions */}
       <div className="px-6 py-4 border-t border-gray-100">
         {isCliente ? (
-          // Cliente: Un solo botón centrado
+          // Cliente: Un solo botón centrado con icono
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -242,55 +269,69 @@ export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, 
             }}
             className="w-full px-6 py-3 bg-red-600 text-white text-base font-bold rounded-lg hover:bg-red-700 transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
+            <EyeIcon className="w-5 h-5" />
             Ver Mi Proyecto
           </button>
         ) : (
-          // Admin y Gerente: Dos botones
-          <div className="flex gap-2">
+          // Admin y Gerente: Iconos de acción
+          <div className="flex justify-center items-center gap-4">
+            {/* Icono de Editar */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleEdit();
               }}
-              className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition"
+              className="p-3 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors group relative"
+              title="Editar proyecto"
             >
-              Editar
+              <PencilIcon className="w-5 h-5" />
             </button>
+            
+            {/* Icono de Vista Cliente */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (isAdmin) {
-                  window.open(`/proyecto/${proyecto.token_nfc}`, "_blank");
-                } else {
-                  router.push(`/proyecto/${proyecto.token_nfc}`);
-                }
+                handleViewClient();
               }}
-              className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:border-red-600 hover:text-red-600 transition"
+              className="p-3 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors group relative"
+              title={isAdmin ? "Ver vista cliente (abre en nueva pestaña)" : "Ver vista cliente"}
             >
-              Vista Cliente
+              <EyeIcon className="w-5 h-5" />
+              {isAdmin && (
+                <ArrowTopRightOnSquareIcon className="w-3 h-3 absolute -top-1 -right-1 text-green-500" />
+              )}
             </button>
+            
+            {/* Icono de Eliminar (solo admin) */}
+            {isAdmin && onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="p-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors group relative"
+                title="Eliminar proyecto (esta acción no se puede deshacer)"
+              >
+                <TrashIcon className="w-5 h-5" />
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Modal de Confirmación para Eliminar */}
+      {isAdmin && onDelete && (
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={confirmDelete}
+          title="Eliminar Proyecto"
+          message={`¿Estás seguro de que deseas eliminar el proyecto "${proyecto.nombre_proyecto}"? Esta acción no se puede deshacer.`}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          type="danger"
+        />
+      )}
     </div>
   );
 }

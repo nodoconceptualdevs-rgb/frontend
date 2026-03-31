@@ -414,28 +414,6 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
           </p>
         </div>
 
-        {/* Tour 360 */}
-        {(localHito.orden === 3 || localHito.nombre.includes("Visualización")) && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-              </svg>
-              Enlace Tour Virtual 360°
-            </label>
-            <input
-              type="url"
-              value={localHito.enlace_tour_360}
-              onChange={(e) => handleChange("enlace_tour_360", e.target.value)}
-              placeholder="https://my.matterport.com/show/?m=..."
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              URL del recorrido virtual 3D (Matterport, Kuula, etc.)
-            </p>
-          </div>
-        )}
-
         {/* Upload de Archivos - Dropbox Elegante */}
         <div className="relative">
           <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">

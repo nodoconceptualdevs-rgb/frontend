@@ -87,6 +87,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading, error }) => {
       >
         Iniciar sesión
       </RedButton>
+      <div style={{ width: "100%", textAlign: "right", marginTop: 8 }}>
+        <Link href="/olvide-contrasena" style={{ color: "#f5b940", fontWeight: 500, fontSize: 14, textDecoration: "none" }}>
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
       <div className={styles.registerLink}>
         ¿No tienes una cuenta? <Link href="/registro">Regístrate</Link>
       </div>
