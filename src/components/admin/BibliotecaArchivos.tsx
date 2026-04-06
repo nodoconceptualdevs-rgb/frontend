@@ -14,6 +14,7 @@ import {
   type MediaFilter,
 } from "@/services/mediaLibrary";
 import { alerts } from "@/lib/alerts";
+import { rotateCloudinaryImage, rotateAndUploadImage } from "@/lib/cloudinary";
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface BibliotecaArchivosProps {
@@ -82,6 +83,12 @@ const IconEye = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>
 );
+const IconRotate = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.49 9A9 9 0 005.64 5.64L4 4m16 16l-1.64-1.64A9 9 0 019 20.49" />
+  </svg>
+);
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 const FILTERS: { key: MediaFilter; label: string }[] = [
@@ -132,6 +139,8 @@ export default function BibliotecaArchivos({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [imageRotations, setImageRotations] = useState<Record<number, number>>({});
+  const [uploadingRotations, setUploadingRotations] = useState<Set<number>>(new Set());
   const uploadRef = useRef<HTMLInputElement>(null);
 
   // ── Fetch files on open ──
@@ -213,6 +222,97 @@ export default function BibliotecaArchivos({
     } catch {
       alerts.error("Error al eliminar archivo");
     }
+  };
+
+  const handleRotate = async (fileId: number) => {
+    const file = allFiles.find(f => f.id === fileId);
+    if (!file || !file.mime.startsWith('image/')) return;
+
+    const angle = ((imageRotations[fileId] || 0) + 90) % 360;
+    
+    // Update visual rotation immediately
+    setImageRotations(prev => ({
+      ...prev,
+      [fileId]: angle
+    }));
+
+    // If angle is 0, don't upload (back to original)
+    if (angle === 0) {
+      setUploadingRotations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+      return;
+    }
+
+    try {
+      // Mark as uploading
+      setUploadingRotations(prev => new Set(prev).add(fileId));
+      
+      // Rotate and upload the image permanently
+      const rotatedFile = await rotateAndUploadImage(file.url, angle, file.name);
+      const uploadedFiles = await uploadMediaFile(rotatedFile);
+      const uploadedFile = uploadedFiles[0]; // Get the first (and only) uploaded file
+      
+      if (!uploadedFile) {
+        throw new Error('No se recibió el archivo subido');
+      }
+      
+      // Update the file in allFiles with the new uploaded file
+      setAllFiles(prev => prev.map(f => 
+        f.id === fileId ? uploadedFile : f
+      ));
+      
+      // Clear rotation state since the file is now permanently rotated
+      setImageRotations(prev => {
+        const newRotations = { ...prev };
+        delete newRotations[fileId];
+        return newRotations;
+      });
+      
+      // Update selection if this file was selected
+      setSelected(prev => {
+        if (prev.has(fileId)) {
+          const newSet = new Set(prev);
+          newSet.delete(fileId);
+          newSet.add(uploadedFile.id);
+          return newSet;
+        }
+        return prev;
+      });
+      
+      alerts.success('Imagen rotada y guardada permanentemente');
+      
+    } catch (error) {
+      console.error('Error rotando imagen:', error);
+      alerts.error('Error al rotar la imagen permanentemente');
+      
+      // Revert visual rotation on error
+      setImageRotations(prev => ({
+        ...prev,
+        [fileId]: ((prev[fileId] || 0) - 90 + 360) % 360
+      }));
+    } finally {
+      setUploadingRotations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+    }
+  };
+
+  const getDisplayUrl = (file: MediaFile): string => {
+    const angle = imageRotations[file.id] || 0;
+    const baseUrl = getThumbnailUrl(file);
+    if (angle === 0) return baseUrl;
+    return rotateCloudinaryImage(baseUrl, angle);
+  };
+
+  const getRotatedUrl = (file: MediaFile): string => {
+    const angle = imageRotations[file.id] || 0;
+    if (angle === 0) return file.url;
+    return rotateCloudinaryImage(file.url, angle);
   };
 
   const handleConfirm = () => {
@@ -382,7 +482,7 @@ export default function BibliotecaArchivos({
                     <div className="aspect-square bg-gray-50 relative overflow-hidden">
                       {isImage ? (
                         <img
-                          src={getThumbnailUrl(file)}
+                          src={getDisplayUrl(file)}
                           alt={file.name}
                           className="w-full h-full object-cover"
                           loading="lazy"
@@ -407,8 +507,35 @@ export default function BibliotecaArchivos({
                         </div>
                       )}
 
+                      {/* Rotation badge */}
+                      {isImage && imageRotations[file.id] > 0 && (
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded shadow">
+                          {imageRotations[file.id]}°
+                        </div>
+                      )}
+
                       {/* Hover actions */}
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isImage && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRotate(file.id); }}
+                            disabled={uploadingRotations.has(file.id)}
+                            className={`p-1.5 rounded-lg shadow transition ${
+                              uploadingRotations.has(file.id)
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-white/90 hover:bg-white text-gray-600'
+                            }`}
+                            title={uploadingRotations.has(file.id) ? 'Rotando...' : 'Rotar 90° permanentemente'}
+                          >
+                            {uploadingRotations.has(file.id) ? (
+                              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            ) : (
+                              <IconRotate />
+                            )}
+                          </button>
+                        )}
                         {isImage && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
@@ -460,7 +587,7 @@ export default function BibliotecaArchivos({
                     <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-50 flex-shrink-0 relative">
                       {isImage ? (
                         <img
-                          src={getThumbnailUrl(file)}
+                          src={getDisplayUrl(file)}
                           alt={file.name}
                           className="w-full h-full object-cover"
                           loading="lazy"
@@ -560,7 +687,7 @@ export default function BibliotecaArchivos({
               <IconX />
             </button>
             <img
-              src={previewFile.url}
+              src={previewFile.mime.startsWith('image/') ? getDisplayUrl(previewFile) : previewFile.url}
               alt={previewFile.name}
               className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
             />

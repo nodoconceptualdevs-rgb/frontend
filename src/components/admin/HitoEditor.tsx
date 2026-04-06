@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { alerts } from "@/lib/alerts";
-import { determinarTipoArchivo } from "@/lib/fileUtils";
 import BibliotecaArchivos from "@/components/admin/BibliotecaArchivos";
 import type { MediaFile } from "@/services/mediaLibrary";
 
@@ -42,42 +41,11 @@ interface HitoEditorProps {
   onUpdate: (hito: Hito) => void;
 }
 
-interface PreviewUrl {
-  file: File;
-  url: string;
-}
-
-// Función para formatear tamaño de archivo
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-// Función para obtener icono según tipo de archivo
-const getFileIcon = (file: File): string => {
-  const type = file.type;
-  if (type.startsWith('image/')) return '📸';
-  if (type.startsWith('video/')) return '🎥';
-  if (type.includes('pdf')) return '📄';
-  if (type.includes('document') || type.includes('word')) return '📝';
-  if (type.includes('sheet') || type.includes('excel')) return '📊';
-  if (file.name.endsWith('.glb') || file.name.endsWith('.gltf')) return '🧊';
-  return '📁';
-};
-
 export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
   const [localHito, setLocalHito] = useState(hito);
   const [saving, setSaving] = useState(false);
-  const [uploadingFiles, setUploadingFiles] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [archivosPendientes, setArchivosPendientes] = useState<File[]>([]);
   const [archivosSubidos, setArchivosSubidos] = useState<ArchivoSubido[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<PreviewUrl[]>([]);
   const [showBiblioteca, setShowBiblioteca] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Actualizar localHito cuando el prop hito cambia
   useEffect(() => {
@@ -136,12 +104,6 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
     setArchivosSubidos(archivos);
   }, [hito]);
 
-  // Limpiar URLs de preview al desmontar
-  useEffect(() => {
-    return () => {
-      previewUrls.forEach(p => URL.revokeObjectURL(p.url));
-    };
-  }, [previewUrls]);
 
   const handleChange = (field: string, value: string | boolean) => {
     if (field === 'descripcion_avance' || field === 'enlace_tour_360') {
@@ -161,19 +123,15 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
     setSaving(true);
     
     try {
-      // Subir archivos pendientes primero
-      if (archivosPendientes.length > 0) {
-        await uploadPendingFiles();
-      }
-      
       // Actualizar el contenido del hito con los archivos subidos
+      // Strapi espera solo IDs para campos de tipo media
       const contenidoActualizado: ContenidoHito = {
         id: localHito.contenido?.id,
-        descripcion_avance: localHito.descripcion_avance,
-        enlace_tour_360: localHito.enlace_tour_360,
-        galeria_fotos: archivosSubidos.filter(f => f.tipo === 'imagen'),
-        videos_walkthrough: archivosSubidos.filter(f => f.tipo === 'video'),
-        documentacion: archivosSubidos.filter(f => f.tipo === 'documento')
+        descripcion_avance: localHito.contenido?.descripcion_avance ?? localHito.descripcion_avance,
+        enlace_tour_360: localHito.contenido?.enlace_tour_360 ?? localHito.enlace_tour_360,
+        galeria_fotos: archivosSubidos.filter(f => f.tipo === 'imagen').map(f => f.id) as any[],
+        videos_walkthrough: archivosSubidos.filter(f => f.tipo === 'video').map(f => f.id) as any[],
+        documentacion: archivosSubidos.filter(f => f.tipo === 'documento').map(f => f.id) as any[]
       };
       
       // Actualizar el hito local con el contenido nuevo
@@ -202,115 +160,9 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
     }
   };
 
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    
-    const newFiles = Array.from(files);
-    const newPreviews: PreviewUrl[] = [];
-    
-    newFiles.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        newPreviews.push({
-          file,
-          url: URL.createObjectURL(file)
-        });
-      }
-    });
-    
-    setArchivosPendientes(prev => [...prev, ...newFiles]);
-    setPreviewUrls(prev => [...prev, ...newPreviews]);
-  };
-
-  const handleRemovePendingFile = (index: number) => {
-    const file = archivosPendientes[index];
-    const preview = previewUrls.find(p => p.file === file);
-    if (preview) {
-      URL.revokeObjectURL(preview.url);
-    }
-    
-    setArchivosPendientes(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => prev.filter(p => p.file !== file));
-  };
-
-  const uploadPendingFiles = async () => {
-    if (archivosPendientes.length === 0) return;
-    
-    setUploadingFiles(true);
-    
-    try {
-      for (const file of archivosPendientes) {
-        const formData = new FormData();
-        formData.append('files', file);
-        formData.append('ref', 'api::hito.hito');
-        formData.append('refId', hito.id.toString());
-        
-        // Determinar el campo según el tipo de archivo
-        const tipo = determinarTipoArchivo(file);
-        let field = 'contenido.documentacion';
-        if (tipo === 'imagen') field = 'contenido.galeria_fotos';
-        else if (tipo === 'video') field = 'contenido.videos_walkthrough';
-        
-        formData.append('field', field);
-        
-        const response = await api.post<any[]>('/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        
-        if (response.data && Array.isArray(response.data) && response.data[0]) {
-          const uploaded = response.data[0];
-          setArchivosSubidos(prev => [...prev, {
-            id: uploaded.id,
-            name: uploaded.name,
-            url: uploaded.url,
-            size: uploaded.size,
-            tipo: tipo as 'imagen' | 'video' | 'documento',
-            mime: uploaded.mime
-          }]);
-        }
-      }
-      
-      // Limpiar archivos pendientes
-      previewUrls.forEach(p => URL.revokeObjectURL(p.url));
-      setArchivosPendientes([]);
-      setPreviewUrls([]);
-      
-      alerts.success(`✅ ${archivosPendientes.length} archivo(s) subido(s)`);
-    } catch (error: any) {
-      console.error('Error subiendo archivos:', error);
-      alerts.error('❌ Error al subir archivos');
-      throw error;
-    } finally {
-      setUploadingFiles(false);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleFileSelect(e.dataTransfer.files);
-  };
-
-  const handleDeleteFile = async (fileId: number) => {
-    if (!confirm('¿Estás seguro de eliminar este archivo?')) return;
-    
-    try {
-      await api.delete(`/upload/files/${fileId}`);
-      setArchivosSubidos(prev => prev.filter(f => f.id !== fileId));
-      alerts.success('🗑️ Archivo eliminado');
-    } catch (error) {
-      console.error('Error eliminando archivo:', error);
-      alerts.error('❌ Error al eliminar archivo');
-    }
+  const handleRemoveFile = (fileId: number) => {
+    setArchivosSubidos(prev => prev.filter(f => f.id !== fileId));
+    alerts.success('Archivo quitado del hito');
   };
 
   const handleSelectFromLibrary = (files: MediaFile[]) => {
@@ -459,123 +311,20 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
             </div>
           </div>
 
-          {/* Dropbox para arrastrar archivos */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
-              isDragging
-                ? 'border-red-500 bg-red-50 scale-[1.02]'
-                : 'border-gray-300 hover:border-red-400 hover:bg-gray-50'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.glb,.gltf"
-              onChange={(e) => handleFileSelect(e.target.files)}
-              className="hidden"
-            />
-            
-            {uploadingFiles ? (
-              <div className="flex flex-col items-center gap-3">
-                <svg className="animate-spin h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <p className="text-sm font-medium text-gray-700">Subiendo archivos...</p>
-              </div>
-            ) : (
-              <>
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-base font-medium text-gray-900 mb-1">
-                  {isDragging ? '¡Suelta aquí!' : 'Arrastra archivos aquí'}
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  o haz click para seleccionar
-                </p>
-                
-                {/* Botón de Biblioteca */}
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setShowBiblioteca(true); }}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Biblioteca de Archivos
-                  </button>
-                </div>
-              </>
-            )}
+          {/* Botón de Biblioteca */}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowBiblioteca(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              Seleccionar de la Biblioteca
+            </button>
           </div>
         </div>
-
-        {/* Archivos Pendientes de Subir */}
-        {archivosPendientes.length > 0 && (
-          <div className="bg-yellow-50 rounded-xl border-2 border-yellow-300 p-6">
-            <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Archivos Pendientes ({archivosPendientes.length})
-            </h4>
-            <p className="text-sm text-gray-700 mb-4">
-              Estos archivos se subirán cuando presiones "Guardar Cambios"
-            </p>
-            <div className="space-y-2">
-              {archivosPendientes.map((file, index) => {
-                const preview = previewUrls.find(p => p.file === file);
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-3 bg-white rounded-lg border border-yellow-200 hover:shadow-md transition"
-                  >
-                    {/* Preview o Icono */}
-                    {preview ? (
-                      <img
-                        src={preview.url}
-                        alt={file.name}
-                        className="w-12 h-12 object-cover rounded-lg border-2 border-yellow-400"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center text-2xl">
-                        {getFileIcon(file)}
-                      </div>
-                    )}
-                    
-                    {/* Info del archivo */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatFileSize(file.size)}
-                      </p>
-                    </div>
-                    
-                    {/* Botón eliminar */}
-                    <button
-                      onClick={() => handleRemovePendingFile(index)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Eliminar de la cola"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Archivos Subidos */}
         {archivosSubidos.length > 0 && (
@@ -615,7 +364,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
                       {archivo.tipo === 'imagen' && '📸 Imagen'}
                       {archivo.tipo === 'video' && '🎥 Video'}
                       {archivo.tipo === 'documento' && '📄 Documento'}
-                      {archivo.size > 0 && ` • ${formatFileSize(archivo.size)}`}
+                      {archivo.size > 0 && ` • ${(archivo.size / 1024).toFixed(1)} KB`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -632,7 +381,7 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
                       </svg>
                     </a>
                     <button
-                      onClick={() => handleDeleteFile(archivo.id)}
+                      onClick={() => handleRemoveFile(archivo.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="Eliminar archivo"
                     >
@@ -648,13 +397,13 @@ export default function HitoEditor({ hito, onUpdate }: HitoEditorProps) {
         )}
 
         {/* Mensaje cuando no hay archivos */}
-        {archivosSubidos.length === 0 && archivosPendientes.length === 0 && (
+        {archivosSubidos.length === 0 && (
           <div className="bg-gray-50 rounded-lg p-6 text-center">
             <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-sm text-gray-500">
-              No hay archivos subidos aún. Arrastra archivos o haz click en el área de arriba.
+              No hay archivos aún. Usa la Biblioteca para agregar archivos.
             </p>
           </div>
         )}

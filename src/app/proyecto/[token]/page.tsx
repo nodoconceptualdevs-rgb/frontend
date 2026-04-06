@@ -872,7 +872,7 @@ function HitoCard({ hito, index }: { hito: any; index: number }) {
                     <VisorImagen 
                       key={foto.id || idx} 
                       url={url} 
-                      nombre={foto.name || `Foto ${idx + 1}`} 
+                      nombre={foto.name || `Foto ${idx + 1}`}
                     />
                   );
                 })}
