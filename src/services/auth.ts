@@ -144,10 +144,10 @@ export async function sendConfirmationEmail(email: string) {
 }
 
 /**
- * Confirmar email con token
+ * Confirmar email con token (endpoint nativo de Strapi)
  */
 export async function confirmEmail(token: string) {
-  const res = await api.get(`/email-auth/confirm-email?token=${token}`);
+  const res = await api.get(`/auth/email-confirmation?confirmation=${token}`);
   return res.data;
 }
 
