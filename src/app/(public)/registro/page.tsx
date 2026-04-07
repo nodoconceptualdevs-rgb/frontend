@@ -28,13 +28,6 @@ export default function RegistroPage() {
         email: data.email,
         password: data.password,
       });
-      
-      // Enviar email de confirmación
-      try {
-        await sendConfirmationEmail(data.email);
-      } catch (emailErr) {
-        console.error("Error enviando email de confirmación:", emailErr);
-      }
 
       setRegisteredEmail(data.email);
       setShowConfirmation(true);
