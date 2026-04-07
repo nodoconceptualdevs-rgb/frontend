@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import styles from "../login/loginPage.module.css";
 import formStyles from "@/components/LoginForm.module.css";
 
@@ -58,7 +59,13 @@ export default function ConfirmarEmailPage() {
     >
       <div className={styles.centeredBox} style={{ filter: "none" }}>
         <div className={formStyles.form}>
-          <ConfirmEmailContent />
+          <Suspense fallback={
+            <div style={{ textAlign: "center", padding: "40px" }}>
+              <div style={{ color: "#666" }}>Cargando...</div>
+            </div>
+          }>
+            <ConfirmEmailContent />
+          </Suspense>
         </div>
       </div>
     </div>
