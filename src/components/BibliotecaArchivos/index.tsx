@@ -64,6 +64,8 @@ export default function BibliotecaArchivos({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [imageRotations, setImageRotations] = useState<Record<number, number>>(
@@ -134,6 +136,18 @@ export default function BibliotecaArchivos({
       : allFiles;
 
   const filtered = searchFiles(filterByType(filteredByTag, filter), query);
+
+  // Paginación
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedFiles = filtered.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, query, currentTag]);
+
   const selectedFiles = allFiles.filter((f) => selected.has(f.id));
 
   const toggleSelect = (id: number) => {
@@ -501,6 +515,15 @@ export default function BibliotecaArchivos({
             </button>
           </div>
 
+          {selected.size > 0 && (
+            <button
+              onClick={() => setSelected(new Set())}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm"
+            >
+              Deseleccionar Todo ({selected.size})
+            </button>
+          )}
+
           <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition shadow-sm">
             <IconUpload />
             {uploading ? "Subiendo..." : "Subir Archivo"}
@@ -565,40 +588,100 @@ export default function BibliotecaArchivos({
                   Sube archivos o cambia los filtros
                 </p>
               </div>
-            ) : viewMode === "grid" ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {filtered.map((file) => (
-                  <FileCardGrid
-                    key={file.id}
-                    file={file}
-                    isSelected={selected.has(file.id)}
-                    imageRotation={imageRotations[file.id] || 0}
-                    isRotating={uploadingRotations.has(file.id)}
-                    fileTag={getFileTag(file.id, allTags)}
-                    onSelect={() => toggleSelect(file.id)}
-                    onRotate={() => handleRotate(file.id)}
-                    onPreview={() => setPreviewFile(file)}
-                    onDelete={() => setConfirmDelete(file.id)}
-                    onDragStart={() => handleDragStart(file)}
-                  />
-                ))}
-              </div>
             ) : (
-              <div className="space-y-2">
-                {filtered.map((file) => (
-                  <FileCardList
-                    key={file.id}
-                    file={file}
-                    isSelected={selected.has(file.id)}
-                    imageRotation={imageRotations[file.id] || 0}
-                    fileTag={getFileTag(file.id, allTags)}
-                    onSelect={() => toggleSelect(file.id)}
-                    onPreview={() => setPreviewFile(file)}
-                    onDelete={() => setConfirmDelete(file.id)}
-                    onDragStart={() => handleDragStart(file)}
-                  />
-                ))}
-              </div>
+              <>
+                {viewMode === "grid" ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {paginatedFiles.map((file) => (
+                      <FileCardGrid
+                        key={file.id}
+                        file={file}
+                        isSelected={selected.has(file.id)}
+                        imageRotation={imageRotations[file.id] || 0}
+                        isRotating={uploadingRotations.has(file.id)}
+                        fileTag={getFileTag(file.id, allTags)}
+                        onSelect={() => toggleSelect(file.id)}
+                        onRotate={() => handleRotate(file.id)}
+                        onPreview={() => setPreviewFile(file)}
+                        onDelete={() => setConfirmDelete(file.id)}
+                        onDragStart={() => handleDragStart(file)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {paginatedFiles.map((file) => (
+                      <FileCardList
+                        key={file.id}
+                        file={file}
+                        isSelected={selected.has(file.id)}
+                        imageRotation={imageRotations[file.id] || 0}
+                        fileTag={getFileTag(file.id, allTags)}
+                        onSelect={() => toggleSelect(file.id)}
+                        onPreview={() => setPreviewFile(file)}
+                        onDelete={() => setConfirmDelete(file.id)}
+                        onDragStart={() => handleDragStart(file)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Paginación */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Anterior
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          // Mostrar primera, última, actual y páginas cercanas
+                          return (
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(page - currentPage) <= 1
+                          );
+                        })
+                        .map((page, idx, arr) => {
+                          // Agregar "..." entre páginas no consecutivas
+                          const prevPage = arr[idx - 1];
+                          const showEllipsis = prevPage && page - prevPage > 1;
+
+                          return (
+                            <div key={page} className="flex items-center gap-1">
+                              {showEllipsis && (
+                                <span className="px-2 text-gray-400">...</span>
+                              )}
+                              <button
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-8 h-8 text-sm font-medium rounded-lg transition ${
+                                  currentPage === page
+                                    ? "bg-red-600 text-white"
+                                    : "text-gray-700 hover:bg-gray-100"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            </div>
+                          );
+                        })}
+                    </div>
+                    <button
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
