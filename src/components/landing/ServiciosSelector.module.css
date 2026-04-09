@@ -1,0 +1,302 @@
+.container {
+  display: flex;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  width: 100%;
+  min-height: 40vh;
+  justify-content: space-between;
+  align-items: stretch;
+  margin-bottom: clamp(2rem, 5vw, 4rem);
+  padding: 0 clamp(1rem, 5vw, 5rem);
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  width: 50%;
+  flex-shrink: 0;
+}
+
+.right {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 2rem;
+  width: 50%;
+  flex-shrink: 0;
+}
+
+.mainImageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9; /* o el ratio que prefieras */
+  min-height: 200px;   /* opcional, para evitar colapso */
+}
+
+.servicioBtn {
+  display: flex;
+  align-items: center;
+  background: #ededed;
+  border: none;
+  border-radius: clamp(1.2rem, 3vw, 2rem);
+  padding: clamp(0.8rem, 2vw, 1.2rem) clamp(1.5rem, 3vw, 2.5rem) clamp(0.8rem, 2vw, 1.2rem) clamp(0.8rem, 2vw, 1.2rem);
+  font-size: clamp(1.1rem, 3vw, 2.2rem);
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  gap: clamp(0.8rem, 2vw, 1.5rem);
+  transition: background 0.2s, color 0.2s;
+  box-shadow: none;
+  outline: none;
+  width: 100%;
+}
+.servicioBtn:hover,
+.servicioBtn.selected {
+  background: #fff4f4;
+  color: #ab2731;
+}
+.servicioBtn.selected {
+  background: #ededed;
+  color: #ab2731;
+}
+.servicioBtn.dark {
+  background: #232323;
+  color: #fff;
+}
+.servicioBtn.dark .iconBox {
+  background: #ab2731;
+}
+.iconBox {
+  background: #ab2731;
+  border-radius: clamp(0.6rem, 1.5vw, 1rem);
+  padding: clamp(0.5rem, 1.2vw, 0.7rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: clamp(0.5rem, 1.5vw, 1.2rem);
+  flex-shrink: 0;
+}
+.icon {
+  width: clamp(1.8rem, 4vw, 2.5rem);
+  height: clamp(1.8rem, 4vw, 2.5rem);
+  object-fit: contain;
+}
+.label {
+  flex: 1;
+  text-align: left;
+}
+.arrow {
+  font-size: clamp(1.3rem, 3vw, 2.2rem);
+  margin-left: auto;
+  color: #ab2731;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.servicioBtn.dark .arrow {
+  color: #fff;
+}
+
+.mainImage {
+  border-radius: 2rem;
+  object-fit: cover;
+  width: 700px;
+  height: 400px;
+  box-shadow: 0 2px 16px #0001;
+}
+.ctaBox {
+  background: #fff;
+  border-radius: clamp(1.2rem, 3vw, 2rem);
+  box-shadow: 0px 0px 9px 0px rgba(112, 112, 112, 0.75);
+  padding: clamp(1rem, 2.5vw, 1.2rem) clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 3vw, 2rem);
+  min-width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.8rem, 2vw, 1.2rem);
+  align-items: flex-start;
+  position: absolute;
+  bottom: clamp(1rem, 5vw, 3.75rem);
+  right: clamp(-1rem, -3vw, -3.75rem);
+}
+.ctaText {
+  font-size: clamp(0.95rem, 2vw, 1.2rem);
+  color: #444;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+.ctaBtn {
+  background: #232323;
+  color: #fff;
+  border: none;
+  border-radius: clamp(1.2rem, 3vw, 2rem);
+  padding: clamp(0.8rem, 2vw, 1.1rem) clamp(1.5rem, 3vw, 2.2rem);
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.8rem, 2vw, 1.2rem);
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+.ctaBtn:hover {
+  background: #ab2731;
+}
+.ctaBtnIcon {
+  background: #ab2731;
+  border-radius: 50%;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 1.2rem;
+  color: #fff;
+  font-size: 1.3rem;
+}
+@media (max-width: 1024px) {
+  .container {
+    flex-direction: column;
+    gap: 2rem;
+    padding: 0 clamp(1rem, 3vw, 2rem);
+    align-items: stretch;
+  }
+  
+  .left,
+  .right {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .left {
+    min-height: 400px;
+  }
+  
+  .right {
+    justify-content: flex-start;
+    min-height: 400px;
+  }
+  
+  .mainImageWrapper {
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 400px;
+  }
+  
+  .mainImage {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    max-height: none;
+    object-fit: cover;
+  }
+  
+  .ctaBox {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    gap: 1.5rem;
+    padding: 0 1rem;
+    min-height: auto;
+  }
+  
+  .left {
+    min-height: 300px;
+  }
+  
+  .right {
+    min-height: 300px;
+  }
+  
+  .mainImageWrapper {
+    min-height: 300px;
+  }
+  
+  .mainImage {
+    height: 100%;
+    min-height: 300px;
+    border-radius: 1.5rem;
+  }
+  
+  .placeholderIcon {
+    font-size: 2rem;
+  }
+  
+  .placeholderText {
+    font-size: 0.8rem;
+  }
+}
+
+/* Estilos para placeholder de iconos */
+.iconPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  opacity: 0.7;
+}
+
+/* Estilos para placeholder de imágenes */
+.imagePlaceholder {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #2c2c2c, #3d3d3d);
+  border-radius: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.placeholderContent {
+  text-align: center;
+  padding: 20px;
+}
+
+.placeholderIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+
+.placeholderText {
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+
+/* Estilos para el estado vacío */
+.emptyState {
+  width: 100%;
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyStateTitle {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.emptyStateText {
+  font-size: 16px;
+  color: #666;
+  max-width: 500px;
+  margin: 0 auto;
+}

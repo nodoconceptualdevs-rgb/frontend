@@ -1,0 +1,6 @@
+feat: agregar sistema de carpetas al frontend
+
+- Crear componente FolderTree con navegación jerárquica
+- Implementar servicio de carpetas
+- Integrar árbol de carpetas en BibliotecaArchivos
+- Permitir crear carpetas a todos y eliminar solo admin

@@ -1,0 +1,123 @@
+.testimonialsBg {
+  width: 99vw;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+.mySwiper {
+  width: 100vw;
+  min-width: 0;
+}
+
+.swiper-slide {
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  background: #EDEDED;
+  border-radius: 24px;
+  padding: 48px 40px 32px 40px;
+  margin: 10px;
+  min-width: 420px;
+  max-width: 520px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.04);
+  position: relative;
+}
+
+.quoteIcon {
+  color: #B71C1C;
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 18px;
+}
+
+.text {
+  color: #232323;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 32px;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
+}
+
+.name {
+  color: #B71C1C;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.role {
+  color: #6B6B6B;
+  font-size: 0.92rem;
+  font-weight: 400;
+}
+
+@media (max-width: 1100px) {
+  .mySwiper {
+    max-width: 98vw;
+  }
+  .card {
+    min-width: 260px;
+    max-width: 98vw;
+    min-height: 220px;
+    padding: 32px 16px 24px 16px;
+  }
+}
+@media (max-width: 700px) {
+  .testimonialsBg {
+    border-radius: 0;
+    padding: 0 0 18px 0;
+    width: 100vw;
+    margin-left: -50vw;
+    margin-right: -50vw;
+  }
+  
+  .mySwiper {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .card {
+    min-width: calc(100vw - 3rem);
+    max-width: calc(100vw - 3rem);
+    min-height: auto;
+    padding: 32px 24px 24px 24px;
+    justify-content: flex-start;
+    gap: 16px;
+  }
+  
+  .text {
+    margin-bottom: 16px;
+  }
+  
+  .userRow {
+    margin-top: 0;
+  }
+}

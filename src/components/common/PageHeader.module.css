@@ -1,0 +1,18 @@
+.container {
+  background: #1f2937;
+  padding: 32px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.title {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.subtitle {
+  color: #d1d5db;
+  margin: 8px 0 0 0;
+}

@@ -1,0 +1,7 @@
+@import url('../bynodo-variables.css');
+
+.main {
+  min-height: 100vh;
+  background: var(--bynodo-bg-primary);
+  padding: 0;
+}

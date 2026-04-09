@@ -1,0 +1,20 @@
+/* ========================================
+   VARIABLES DE COLOR CENTRALIZADAS BYNODO
+   Modifica estos valores para cambiar toda la app
+   ======================================== */
+:root {
+  /* === FONDOS === */
+  --bynodo-bg-primary: #2a2a2a;      /* Fondo principal de la app */
+  --bynodo-bg-secondary: #424242;    /* Cards, contacto, secciones destacadas */
+  
+  /* === TEXTOS === */
+  --bynodo-text-primary: #ffffff;    /* Texto principal */
+  --bynodo-text-secondary: #e0e0e0;  /* Texto secundario */
+  --bynodo-text-muted: #c0c0c0;      /* Texto apagado/descripción */
+  --bynodo-text-label: #808080;      /* Labels y etiquetas */
+  
+  /* === ACENTOS === */
+  --bynodo-accent: #d4af6a;          /* Color de acento (dorado) */
+  --bynodo-accent-hover: #c9a569;    /* Color de acento hover */
+  --bynodo-accent-light: #e0bb76;    /* Acento claro */
+}

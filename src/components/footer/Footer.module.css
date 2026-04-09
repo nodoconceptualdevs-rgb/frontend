@@ -1,0 +1,168 @@
+.footer {
+  width: 100%;
+  background: #232323;
+  color: #fff;
+  padding: clamp(2rem, 6vw, 56px) clamp(1rem, 3vw, 0) 0 clamp(1rem, 3vw, 0);
+  position: relative;
+  font-family: inherit;
+  padding-top: 20px !important;
+}
+
+.grid {
+  display: flex;
+  justify-content: center;
+  gap: clamp(2rem, 6vw, 80px);
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+}
+.col {
+  min-width: 220px;
+  flex: 1 1 260px;
+}
+.col h3 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+.col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.col ul li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 1.18rem;
+  margin-bottom: 18px;
+  color: #fff;
+}
+.col ul li b {
+  color: #fff;
+  font-weight: 700;
+}
+.col ul li span {
+  color: #fff;
+  font-size: 1.08rem;
+}
+.col ul li svg {
+  font-size: 1.3em;
+}
+.links li {
+  margin-bottom: 14px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1.12rem;
+  transition: color 0.18s;
+}
+.links li:hover {
+  color: #FFD600;
+}
+.copyright {
+  text-align: center;
+  color: #fff;
+  font-size: clamp(0.85rem, 2vw, 1.18rem);
+  margin: clamp(2rem, 5vw, 48px) 0 0 0;
+  padding: clamp(1rem, 3vw, 24px) clamp(1rem, 2vw, 0) clamp(1.5rem, 4vw, 32px) clamp(1rem, 2vw, 0);
+  border-top: 1px solid #444;
+}
+.copyright b {
+  color: #fff;
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .footer {
+    padding: 2.5rem 0 0 0;
+  }
+  
+  .grid {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+  }
+  
+  .col {
+    min-width: 0;
+    width: auto;
+    max-width: none;
+    flex: 1 1 45%;
+  }
+  
+  .col:nth-child(3) {
+    display: none;
+  }
+  
+  .col h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1.2rem;
+    font-weight: 600;
+  }
+  
+  .col ul li {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .col ul li span {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  
+  .col ul li svg {
+    font-size: 1.15em;
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+  }
+  
+  .copyright {
+    font-size: 0.7rem;
+    padding: 1.2rem 1.5rem 1.5rem 1.5rem;
+    margin-top: 2.5rem;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer {
+    padding: 2rem 0 0 0;
+  }
+  
+  .grid {
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+  
+  .col h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.9rem;
+  }
+  
+  .col ul li {
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+    gap: 8px;
+  }
+  
+  .col ul li span {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  
+  .col ul li svg {
+    font-size: 1em;
+  }
+  
+  .copyright {
+    font-size: 0.6rem;
+    padding: 0.9rem 1rem 1.1rem 1rem;
+    margin-top: 1.75rem;
+  }
+}
+

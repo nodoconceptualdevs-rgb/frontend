@@ -1,0 +1,289 @@
+/* Ocultar botón en tablets y móviles - mismo breakpoint que hamburguesa */
+@media (max-width: 1100px) {
+  .buttonSection {
+    display: none !important;
+  }
+}
+
+/* Ajustes para móviles */
+@media (max-width: 768px) {
+  .logoSection img {
+    width: 120px !important;
+    height: auto !important;
+  }
+  
+  .menuContainer {
+    height: auto;
+    min-height: 60px;
+    padding: 0.5em 0.2em;
+    margin: 1em auto;
+  }
+  
+  .menuLinks {
+    padding: 1em 1.5em;
+  }
+  
+  .themeToggle {
+    margin-left: 0.5rem;
+  }
+  
+  .themeToggle svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+.menuContainer {
+  width: 100%;
+  background: #fafafa;
+  border-radius: 3em;
+  margin: 2em auto;
+  padding: 0.5em 0;
+  display: flex;
+  justify-content: center;
+  box-shadow: 0px 0px 9px 0px rgba(112, 112, 112, 0.75);
+  height: 10vh;
+  position: relative;
+  z-index: 1000; /* Asegurar que esté por encima del login */
+}
+.menuContent {
+  width: 95%;
+  max-width: 1600px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logoSection {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logoSection > div {
+  cursor: pointer;
+}
+.menuLinks {
+  list-style: none;
+  display: flex;
+  gap: 3em;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  justify-content: center;
+  align-items: center;
+   transition: all 0.2s;
+}
+.menuLinks li button {
+  background: none;
+  border: none;
+  color: #292929;
+  text-decoration: none;
+  font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+  font-weight: 400;
+  transition: color 0.2s;
+  cursor: pointer;
+  padding: 0.2em 0.7em;
+  border-radius: 0.5em;
+  white-space: nowrap;
+}
+.menuLinks li button:hover,
+.menuLinks li .active {
+  color: #ab2731;
+  background: #f3f3f3;
+}
+.buttonSection {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+/* Hamburguesa */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+}
+.hamburger span {
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin: 4px 0;
+  background: #292929;
+  border-radius: 2px;
+  transition: 0.3s;
+}
+
+/* Activar menú hamburguesa en tablets */
+@media (max-width: 1100px) {
+  .menuContainer {
+    border-radius: 1.5rem;
+    height: auto;
+    min-height: 60px;
+    z-index: 1000; /* Mantener por encima en móvil */
+  }
+  
+  .menuContent {
+    flex-direction: row;
+    padding: 0.5rem clamp(0.5rem, 2vw, 1rem);
+  }
+  
+  .menuLinks {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #fafafa;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5em;
+    padding: 1.5em 2em;
+    border-radius: 0 0 1.5em 1.5em;
+    box-shadow: 0 2px 12px #0002;
+    display: none;
+    z-index: 100;
+  }
+  
+  .menuLinks.open {
+    display: flex;
+  }
+  
+  .menuLinks li button {
+    font-size: 1rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.5em 1em;
+  }
+  
+  .hamburger {
+    display: flex;
+  }
+}
+
+/* Botón de login/register dentro del menú hamburguesa - oculto en desktop */
+.mobileButtonItem {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  .mobileButtonItem {
+    display: list-item !important;
+    width: 100%;
+    padding-top: 0.5em;
+    border-top: 1px solid #eee;
+  }
+}
+
+/* Ajustes para tablets (768px - 1100px) */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .menuLinks {
+    padding: 1.5em 2.5em;
+    gap: 1.2em;
+  }
+
+  .menuLinks li button,
+  .menuLinks li a {
+    font-size: 1.05rem;
+  }
+
+  .menuContainer {
+    margin: 1.5em auto;
+  }
+}
+
+/* Theme Toggle Button */
+.themeToggle {
+  margin-left: 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #2d2d2d;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.themeToggle:hover {
+  background: rgba(212, 175, 106, 0.1);
+  transform: rotate(180deg);
+}
+
+.themeToggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Dark Theme Styles */
+.darkTheme {
+  background: #2a2a2a;
+}
+
+.darkTheme .menuLinks button {
+  color: #e0e0e0;
+}
+
+.darkTheme .menuLinks button:hover {
+  color: #c9a569;
+}
+
+.darkTheme .menuLinks button.active {
+  color: #d4af6a;
+}
+
+.darkTheme .themeToggle {
+  color: #e0e0e0;
+}
+
+.darkTheme .themeToggle:hover {
+  background: rgba(201, 165, 105, 0.2);
+}
+
+.darkTheme .hamburger span {
+  background-color: #e0e0e0;
+}
+
+/* Ya incluido en el media query principal de 768px arriba */
+
+/* BYNODO Menu Styles - hereda background de .darkTheme */
+.bynodoMenu {
+  background: #424242 ;
+  justify-content: center;
+}
+
+.bynodoMenuContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: auto;
+  max-width: none;
+}
+
+.bynodoMenuContent > div {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .bynodoMenu {
+    min-height: 60px;
+    padding: 1rem 0;
+  }
+  
+  .bynodoMenuContent {
+    gap: 0.5rem;
+  }
+}
+
+/* Theme Toggle para BYNODO - hereda de .darkTheme */
+.bynodoMenu .themeToggle {
+  color: #e0e0e0;
+}

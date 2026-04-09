@@ -1,0 +1,90 @@
+.redButton {
+  background: #ab2731;
+  color: #fff;
+  border: none;
+  border-radius: 2em;
+  font-weight: 500;
+  height: 55px;
+}
+.blackButton {
+  background: #292929;
+  color: #fff;
+  border: none;
+  border-radius: 2em;
+  font-weight: 500;
+  height: 55px;
+}
+
+.redButton:hover {
+  background: #7e141e !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+.redOutlineButton {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 2em;
+  padding: 0 1.5em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  height: 55px;
+  box-shadow: none;
+}
+
+.redOutlineBlackButton {
+  background: transparent;
+  color: #000000;
+  border: 2px solid #000000;
+  border-radius: 2em;
+  padding: 0 1.5em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  height: 55px;
+  box-shadow: none;
+}
+
+.redButtonbgBlack {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid #000000;
+  background: #292929;
+  border-radius: 2em;
+  padding: 0 1.5em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  height: 55px;
+  box-shadow: none;
+}
+
+.arrowIcon {
+  font-size: 18px;
+  background-color: rgb(255, 255, 255);
+  color: #ab2731;
+  border-radius: 50;
+  height: 35px;
+  width: 35px;
+  text-align: center;
+  justify-content: center;
+}
+
+.arrowIconBg {
+  font-size: 18px;
+  background-color: #ab2731;
+  color: #ffffff;
+  border-radius: 50;
+  height: 35px;
+  width: 35px;
+  text-align: center;
+  justify-content: center;
+}
+
+/* Responsive - Se eliminó la regla que ocultaba todos los botones .redButton en móvil
+   Esta regla estaba ocultando incorrectamente todos los botones, incluidos login y registro */

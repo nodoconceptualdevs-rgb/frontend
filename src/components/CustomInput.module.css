@@ -1,0 +1,51 @@
+.inputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #7a7a7a;
+  margin-bottom: 2px;
+}
+
+.input {
+  border-radius: 8px !important;
+  font-size: 16px;
+  padding: 8px 12px;
+  border: 1px solid #e5e5e5;
+  background: #fafbfc;
+  transition: border 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus, .input-focused {
+  border-color: #f5b940 !important;
+  box-shadow: 0 0 0 2px rgba(245,185,64,0.15);
+}
+
+/* Estilos para el ícono de mostrar/ocultar contraseña */
+.input :global(.ant-input-password-icon) {
+  color: #7a7a7a;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.input :global(.ant-input-password-icon):hover {
+  color: #f5b940;
+}
+
+.error {
+  border-color: #ff4d4f !important;
+}
+
+.errorMsg {
+  color: #ff4d4f;
+  font-size: 13px;
+  margin-top: 2px;
+}

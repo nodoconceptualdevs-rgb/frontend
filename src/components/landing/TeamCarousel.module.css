@@ -1,0 +1,168 @@
+.teamCarouselWrapper {
+  width: 100%;
+  background: #232323;
+  padding: 0;
+  margin: 60px auto;
+  overflow: hidden;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mySwiper {
+  width: 100%;
+  padding: 0;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 440px;
+  background: #232323;
+  position: relative;
+  overflow: hidden;
+}
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) brightness(0.7);
+  display: block;
+}
+.infoBox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  text-align: center;
+}
+.name {
+  color: #FFD64D;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.2em;
+}
+.role {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 400;
+  opacity: 0.85;
+}
+@media (max-width: 1100px) {
+  .card {
+    height: 340px;
+  }
+}
+@media (max-width: 700px) {
+  .card {
+    height: 234px;
+  }
+  .name {
+    font-size: 0.95rem;
+  }
+  .role {
+    font-size: 0.8rem;
+  }
+}
+
+/* Estilos para el placeholder de imagen */
+.placeholderImage {
+  width: 100%;
+  height: 100%;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 3rem;
+}
+
+/* Estilos para el skeleton durante la carga */
+.skeletonContainer {
+  display: flex;
+  width: 100%;
+  padding: 20px;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.skeletonCard {
+  flex: 0 0 200px;
+  height: 300px;
+  background: #333;
+  position: relative;
+}
+
+.skeletonImage {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(110deg, #383838 8%, #444 18%, #383838 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+.skeletonInfo {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.skeletonName {
+  height: 16px;
+  width: 70%;
+  background: linear-gradient(110deg, #444 8%, #555 18%, #444 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: 4px;
+}
+
+.skeletonRole {
+  height: 12px;
+  width: 50%;
+  background: linear-gradient(110deg, #444 8%, #555 18%, #444 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: 4px;
+}
+
+/* Estilos para el estado vacío */
+.emptyStateContainer {
+  padding: 40px 20px;
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.emptyStateIcon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.emptyStateTitle {
+  font-size: 24px;
+  color: #FFD64D;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.emptyStateText {
+  font-size: 16px;
+  color: #fff;
+  opacity: 0.8;
+  max-width: 400px;
+  margin: 0 auto;
+}
