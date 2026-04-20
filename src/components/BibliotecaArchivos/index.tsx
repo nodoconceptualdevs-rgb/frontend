@@ -360,11 +360,7 @@ export default function BibliotecaArchivos({
   };
 
   const handleTagToggle = (tagId: number) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
-    );
+    setSelectedTagIds([tagId]);
   };
 
   const handleEditTag = (tag: MediaTag) => {
@@ -776,6 +772,7 @@ export default function BibliotecaArchivos({
         uploading={uploading}
         onTagToggle={handleTagToggle}
         onUpload={handleUploadWithTags}
+        onSelectNone={() => setSelectedTagIds([])}
         onClose={() => {
           setShowTagSelector(false);
           setSelectedTagIds([]);

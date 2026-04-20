@@ -2,30 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Table, Button, Modal, Form, Input, Upload, message, Space, Card, Tabs } from "antd";
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Upload,
+  message,
+  Space,
+  Card,
+  Tabs,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
   VideoCameraOutlined,
   UploadOutlined,
   ArrowLeftOutlined,
-  CommentOutlined
+  CommentOutlined,
 } from "@ant-design/icons";
-import { 
-  createContentCourse, 
-  updateContentCourse, 
+import {
+  createContentCourse,
+  updateContentCourse,
   deleteContentCourse,
-  ContentCourse 
+  ContentCourse,
 } from "@/services/courses";
 import { useAuth } from "@/context/AuthContext";
 import { ROLES } from "@/constants/roles";
-import type { UploadProps } from 'antd';
+import type { UploadProps } from "antd";
 import CommentsSection from "@/components/comments/CommentsSection";
-
-// Configuración de Cloudinary
-const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'your_cloud_name';
-const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'course_videos';
+import api from "@/lib/api";
 
 interface ContentFormValues {
   lesson_title: string;
@@ -38,22 +46,26 @@ export default function GerenteCourseContentPage() {
   const router = useRouter();
   const { user } = useAuth();
   const courseId = parseInt(params.id as string);
-  
+
   const [course, setCourse] = useState<any>(null);
   const [contents, setContents] = useState<ContentCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingContent, setEditingContent] = useState<ContentCourse | null>(null);
+  const [editingContent, setEditingContent] = useState<ContentCourse | null>(
+    null,
+  );
   const [uploading, setUploading] = useState(false);
   const [courseFromList, setCourseFromList] = useState<any>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-  const [selectedLesson, setSelectedLesson] = useState<ContentCourse | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<ContentCourse | null>(
+    null,
+  );
   const [activeTab, setActiveTab] = useState("1");
   const [form] = Form.useForm();
 
   useEffect(() => {
     // Intentar obtener el curso de sessionStorage (si viene de la lista)
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const cachedCourse = sessionStorage.getItem(`course_${courseId}`);
       if (cachedCourse) {
         try {
@@ -61,7 +73,7 @@ export default function GerenteCourseContentPage() {
           setCourseFromList(course);
           sessionStorage.removeItem(`course_${courseId}`);
         } catch (e) {
-          console.error('Error parsing cached course:', e);
+          console.error("Error parsing cached course:", e);
         }
       }
       setSessionChecked(true);
@@ -75,7 +87,7 @@ export default function GerenteCourseContentPage() {
       router.push("/dashboard");
       return;
     }
-    
+
     // Solo cargar datos si ya verificamos el sessionStorage
     if (sessionChecked) {
       loadCourseData();
@@ -85,15 +97,17 @@ export default function GerenteCourseContentPage() {
   const loadCourseData = async () => {
     try {
       setLoading(true);
-      
+
       // Usar SOLO los datos que vienen de la lista (sin petición HTTP)
       if (!courseFromList) {
-        message.error('No se encontraron los datos del curso. Regresando...');
-        router.push('/dashboard/gerente-cursos');
+        message.error("No se encontraron los datos del curso. Regresando...");
+        router.push("/dashboard/gerente-cursos");
         return;
       }
-      
-      console.log('✅ Usando datos del curso desde la lista (sin petición HTTP)');
+
+      console.log(
+        "✅ Usando datos del curso desde la lista (sin petición HTTP)",
+      );
       setCourse(courseFromList);
       setContents(courseFromList.content_courses || []);
     } catch (error: any) {
@@ -104,36 +118,29 @@ export default function GerenteCourseContentPage() {
     }
   };
 
-  const handleUploadVideo: UploadProps['customRequest'] = async (options: any) => {
+  const handleUploadVideo: UploadProps["customRequest"] = async (
+    options: any,
+  ) => {
     const { file, onSuccess, onError } = options;
     setUploading(true);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-    formData.append('resource_type', 'video');
-
     try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.secure_url) {
-        form.setFieldsValue({ video_url: data.secure_url });
-        message.success('Video subido exitosamente');
-        onSuccess(data);
+      const formData = new FormData();
+      formData.append("files", file as File);
+      const uploadResponse = await api.post<any[]>("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (uploadResponse.data && uploadResponse.data.length > 0) {
+        const uploadedFile = uploadResponse.data[0];
+        form.setFieldsValue({ video_url: uploadedFile.url });
+        message.success("Video subido exitosamente");
+        onSuccess(uploadedFile);
       } else {
-        throw new Error('Error al subir el video');
+        throw new Error("Error al subir el video");
       }
     } catch (error) {
-      console.error('Error uploading video:', error);
-      message.error('Error al subir el video');
+      console.error("Error uploading video:", error);
+      message.error("Error al subir el video");
       onError(error);
     } finally {
       setUploading(false);
@@ -203,11 +210,12 @@ export default function GerenteCourseContentPage() {
       title: "Video",
       dataIndex: "video_url",
       key: "video_url",
-      render: (url: string) => url ? (
-        <VideoCameraOutlined style={{ fontSize: 20, color: '#8b5cf6' }} />
-      ) : (
-        <span style={{ color: '#999' }}>Sin video</span>
-      ),
+      render: (url: string) =>
+        url ? (
+          <VideoCameraOutlined style={{ fontSize: 20, color: "#8b5cf6" }} />
+        ) : (
+          <span style={{ color: "#999" }}>Sin video</span>
+        ),
     },
     {
       title: "Acciones",
@@ -256,11 +264,7 @@ export default function GerenteCourseContentPage() {
               <h1 className="text-2xl font-bold text-gray-900">
                 Contenido del Curso
               </h1>
-              {course && (
-                <p className="text-gray-600 mt-1">
-                  {course.title}
-                </p>
-              )}
+              {course && <p className="text-gray-600 mt-1">{course.title}</p>}
             </div>
             <Button
               type="primary"
@@ -293,12 +297,19 @@ export default function GerenteCourseContentPage() {
       key: "2",
       label: "Comentarios de Lección",
       children: selectedLesson ? (
-        <div style={{ maxWidth: '900px' }}>
-          <div style={{ marginBottom: '16px', padding: '16px', background: '#f0f0f0', borderRadius: '8px' }}>
+        <div style={{ maxWidth: "900px" }}>
+          <div
+            style={{
+              marginBottom: "16px",
+              padding: "16px",
+              background: "#f0f0f0",
+              borderRadius: "8px",
+            }}
+          >
             <h3 style={{ margin: 0 }}>
               Comentarios de: {selectedLesson.lesson_title}
             </h3>
-            <p style={{ margin: '8px 0 0 0', color: '#666' }}>
+            <p style={{ margin: "8px 0 0 0", color: "#666" }}>
               Lección {selectedLesson.order}
             </p>
           </div>
@@ -310,10 +321,11 @@ export default function GerenteCourseContentPage() {
           />
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '60px' }}>
-          <CommentOutlined style={{ fontSize: 48, color: '#d0d0d0' }} />
-          <p style={{ marginTop: '16px', color: '#999' }}>
-            Selecciona una lección desde la pestaña "Lecciones y Contenido" para ver sus comentarios
+        <div style={{ textAlign: "center", padding: "60px" }}>
+          <CommentOutlined style={{ fontSize: 48, color: "#d0d0d0" }} />
+          <p style={{ marginTop: "16px", color: "#999" }}>
+            Selecciona una lección desde la pestaña "Lecciones y Contenido" para
+            ver sus comentarios
           </p>
         </div>
       ),
@@ -322,18 +334,18 @@ export default function GerenteCourseContentPage() {
 
   return (
     <div className="bg-gray-50 px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
-      <Button 
+      <Button
         icon={<ArrowLeftOutlined />}
-        onClick={() => router.push('/dashboard/gerente-cursos')}
+        onClick={() => router.push("/dashboard/gerente-cursos")}
         className="mb-4"
       >
         Volver a Cursos
       </Button>
 
       <Card>
-        <Tabs 
-          activeKey={activeTab} 
-          onChange={setActiveTab} 
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
           items={tabItems}
           size="large"
         />
@@ -351,11 +363,7 @@ export default function GerenteCourseContentPage() {
         footer={null}
         width={600}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             name="lesson_title"
             label="Título de la Lección"
@@ -372,12 +380,9 @@ export default function GerenteCourseContentPage() {
             <Input type="number" placeholder="1" />
           </Form.Item>
 
-          <Form.Item
-            name="video_url"
-            label="Video de la Lección"
-          >
+          <Form.Item name="video_url" label="Video de la Lección">
             <div>
-              <Input 
+              <Input
                 placeholder="URL del video (se llenará automáticamente al subir)"
                 disabled
                 className="mb-2"
@@ -387,11 +392,8 @@ export default function GerenteCourseContentPage() {
                 customRequest={handleUploadVideo}
                 showUploadList={false}
               >
-                <Button 
-                  icon={<UploadOutlined />}
-                  loading={uploading}
-                >
-                  {uploading ? 'Subiendo...' : 'Subir Video'}
+                <Button icon={<UploadOutlined />} loading={uploading}>
+                  {uploading ? "Subiendo..." : "Subir Video"}
                 </Button>
               </Upload>
               <p className="text-gray-500 text-sm mt-2">
@@ -405,7 +407,7 @@ export default function GerenteCourseContentPage() {
               <Button type="primary" htmlType="submit">
                 {editingContent ? "Actualizar" : "Crear"}
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setModalVisible(false);
                   form.resetFields();
