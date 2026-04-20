@@ -2,24 +2,40 @@
 const nextConfig = {
   // Optimizar imágenes
   images: {
-    formats: ['image/avif', 'image/webp'],
-    domains: ['localhost', '127.0.0.1', 'res.cloudinary.com', 'backend-production-2ce7.up.railway.app'],
+    formats: ["image/avif", "image/webp"],
+    domains: [
+      "localhost",
+      "127.0.0.1",
+      "res.cloudinary.com",
+      "upcdn.io",
+      "backend-production-2ce7.up.railway.app",
+    ],
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'backend-production-2ce7.up.railway.app',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "upcdn.io",
+        pathname: "/**",
       },
       {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '1337',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "*.bytescale.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "backend-production-2ce7.up.railway.app",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "1337",
+        pathname: "/**",
       },
     ],
   },

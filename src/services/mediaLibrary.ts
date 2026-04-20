@@ -51,7 +51,7 @@ export async function getMediaFiles(): Promise<MediaFile[]> {
 }
 
 /**
- * Subir un archivo a la Media Library de Strapi (se guarda en Cloudinary)
+ * Subir un archivo a la Media Library de Strapi (se guarda en Bytescale)
  */
 export async function uploadMediaFile(file: File): Promise<MediaFile[]> {
   const formData = new FormData();
