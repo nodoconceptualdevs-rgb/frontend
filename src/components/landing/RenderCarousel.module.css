@@ -89,6 +89,10 @@
   font-size: clamp(0.85rem, 1.5vw, 0.95rem);
   margin-bottom: 0.3rem;
 }
+
+body.dark-theme .subtitle {
+  color: #b0b0b0;
+}
 .title {
   color: #ab2731;
   font-size: clamp(1.5rem, 4vw, 2.3rem);
@@ -101,6 +105,10 @@
   font-size: clamp(0.9rem, 1.8vw, 1.05rem);
   line-height: 1.6;
   margin-bottom: 1.2rem;
+}
+
+body.dark-theme .description {
+  color: #c0c0c0;
 }
 .ctaBtn {
   background: #232323;
@@ -316,12 +324,21 @@
   margin: 0 0 10px;
   font-size: 24px;
   font-weight: 600;
+  color: #333;
+}
+
+body.dark-theme .noDataTitle {
+  color: #e0e0e0;
 }
 
 .noDataText {
   margin: 0;
   color: #666;
   max-width: 500px;
+}
+
+body.dark-theme .noDataText {
+  color: #b0b0b0;
 }
 
 .projectImage {

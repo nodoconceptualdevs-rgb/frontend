@@ -11,6 +11,12 @@
   align-items: center;
   gap: 0;
   font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-theme .form {
+  background: #222222;
+  color: #ffffff;
 }
 
 .logoWrapper {

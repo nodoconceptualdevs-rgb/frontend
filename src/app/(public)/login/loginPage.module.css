@@ -11,6 +11,11 @@
   overflow: hidden;
   background: #f5f6fa;
   padding: 16px;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-theme .bgContainer {
+  background: #1a1a1a;
 }
 
 .bgImg {

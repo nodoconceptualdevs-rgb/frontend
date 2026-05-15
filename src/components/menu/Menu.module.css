@@ -44,6 +44,12 @@
   height: 10vh;
   position: relative;
   z-index: 1000; /* Asegurar que esté por encima del login */
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+body.dark-theme .menuContainer {
+  background: #2a2a2a;
+  box-shadow: 0px 0px 9px 0px rgba(0, 0, 0, 0.75);
 }
 .menuContent {
   width: 95%;
@@ -73,23 +79,54 @@
   align-items: center;
    transition: all 0.2s;
 }
-.menuLinks li button {
+.menuLinks li button,
+.menuLinks li a {
   background: none;
   border: none;
   color: #292929;
   text-decoration: none;
   font-size: clamp(0.95rem, 1.8vw, 1.1rem);
   font-weight: 400;
-  transition: color 0.2s;
+  transition: color 0.2s, background-color 0.2s;
   cursor: pointer;
   padding: 0.2em 0.7em;
   border-radius: 0.5em;
   white-space: nowrap;
+  display: block;
 }
+
 .menuLinks li button:hover,
-.menuLinks li .active {
+.menuLinks li a:hover,
+.menuLinks li .active,
+.menuLinks li a.active {
   color: #ab2731;
   background: #f3f3f3;
+}
+
+/* Dark theme using global selector */
+:global(body.dark-theme) .menuLinks li button,
+:global(body.dark-theme) .menuLinks li a {
+  color: #e0e0e0 !important;
+}
+
+:global(body.dark-theme) .menuLinks li button:hover,
+:global(body.dark-theme) .menuLinks li a:hover,
+:global(body.dark-theme) .menuLinks li button.active,
+:global(body.dark-theme) .menuLinks li a.active {
+  color: #d4af6a !important;
+  background: #333333 !important;
+}
+
+:global(body.dark-theme) .menuContainer {
+  background: #2a2a2a !important;
+}
+
+:global(body.dark-theme) .themeToggle {
+  color: #e0e0e0 !important;
+}
+
+:global(body.dark-theme) .hamburger span {
+  background: #e0e0e0 !important;
 }
 .buttonSection {
   flex: 0 0 auto;

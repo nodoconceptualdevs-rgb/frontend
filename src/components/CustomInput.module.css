@@ -14,21 +14,38 @@
   font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 
+body.dark-theme .label {
+  color: #a0a0a0;
+}
+
 .input {
   border-radius: 8px !important;
   font-size: 16px;
   padding: 8px 12px;
   border: 1px solid #e5e5e5;
   background: #fafbfc;
-  transition: border 0.2s;
+  color: #171717;
+  transition: border 0.2s, background-color 0.2s, color 0.2s;
   width: 100%;
   box-sizing: border-box;
   font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 
+body.dark-theme .input {
+  background: #2a2a2a;
+  border-color: #404040;
+  color: #ffffff;
+}
+
 .input:focus, .input-focused {
   border-color: #f5b940 !important;
   box-shadow: 0 0 0 2px rgba(245,185,64,0.15);
+}
+
+body.dark-theme .input:focus, body.dark-theme .input-focused {
+  border-color: #f5b940 !important;
+  box-shadow: 0 0 0 2px rgba(245,185,64,0.25);
+  background: #333333;
 }
 
 /* Estilos para el ícono de mostrar/ocultar contraseña */

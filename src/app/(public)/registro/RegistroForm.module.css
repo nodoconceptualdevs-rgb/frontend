@@ -10,6 +10,12 @@
   flex-direction: column;
   align-items: center;
   gap: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-theme .form {
+  background: #222222;
+  color: #ffffff;
 }
 
 .logoWrapper {

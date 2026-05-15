@@ -1,0 +1,26 @@
+/* Menu Dark Theme Styles - Global */
+
+body.dark-theme nav {
+  background-color: #2a2a2a !important;
+}
+
+body.dark-theme nav button,
+body.dark-theme nav a {
+  color: #e0e0e0 !important;
+}
+
+body.dark-theme nav button:hover,
+body.dark-theme nav a:hover,
+body.dark-theme nav button.active,
+body.dark-theme nav a.active {
+  color: #d4af6a !important;
+  background-color: #333333 !important;
+}
+
+body.dark-theme .themeToggle {
+  color: #e0e0e0 !important;
+}
+
+body.dark-theme .hamburger span {
+  background-color: #e0e0e0 !important;
+}
