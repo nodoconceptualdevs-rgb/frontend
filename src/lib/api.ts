@@ -6,7 +6,9 @@ import Cookies from "js-cookie";
 
 // Usar variable de entorno o fallback a localhost para desarrollo
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337/api";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://backend-production-2ce7.up.railway.app/api";
 
 // Crear instancia de axios con configuración mejorada para producción
 
