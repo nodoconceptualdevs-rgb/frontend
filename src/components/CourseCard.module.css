@@ -44,6 +44,7 @@
   border-radius: 0 10px 0 10px;
   z-index: 2;
   box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 
 .infoRow {
@@ -70,6 +71,7 @@
   color: #6B6B6B;
   font-size: 0.98rem;
   font-weight: 500;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 
 .stars {
@@ -91,6 +93,7 @@
   margin: 18px 0 0 0;
   padding: 0 22px;
   line-height: 1.25;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 
 .description {
@@ -100,6 +103,7 @@
   padding: 0 22px;
   line-height: 1.35;
   min-height: 48px;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 
 .buyButton {
@@ -113,6 +117,7 @@
   padding: 12px 0;
   cursor: pointer;
   transition: background 0.18s;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 .buyButton:hover, .buyButton:focus {
   background: #B71C1C;

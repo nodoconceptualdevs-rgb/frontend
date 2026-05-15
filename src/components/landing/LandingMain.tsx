@@ -13,6 +13,7 @@ import ServiciosSelector from "./ServiciosSelector";
 import RenderCarousel from "./RenderCarousel";
 import TeamCarousel from "./TeamCarousel";
 import ByNodoSection from "./ByNodoSection";
+import WhatsAppButton from "./WhatsAppButton";
 import { RedButtonWithIcon } from "../CustomButtons";
 import styles from "./LandingMain.module.css";
 
@@ -66,9 +67,9 @@ export default function LandingMain() {
           <SectionTitle text="Quiénes Somos" alignRight={true} />
           <div className={styles.quienesSomosRight}>
             <Typography.Paragraph className={styles.quienesSomosText}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              Pellentesque euismod, urna eu tincidunt consectetur, nisi nisl
-              turpis egestas.
+              En Nodo Conceptual transformamos proyectos complejos en realidades
+              sólidas. Somos una constructora enfocada en la precisión técnica,
+              la eficiencia operativa y la excelencia en el diseño.
             </Typography.Paragraph>
           </div>
         </div>
@@ -80,7 +81,7 @@ export default function LandingMain() {
       </div>
       <CoursesCarousel />
 
-      <div className={styles.backgroundWhite} style={{ marginBottom: '6rem' }}>
+      <div className={styles.backgroundWhite} style={{ marginBottom: "6rem" }}>
         <div className={styles.containerPadding}>
           <SectionTitle
             text="Experiencia de nuestros clientes"
@@ -92,6 +93,7 @@ export default function LandingMain() {
       </div>
       <FooterCta />
       <Footer />
+      <WhatsAppButton />
     </>
   );
 }

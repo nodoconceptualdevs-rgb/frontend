@@ -25,6 +25,7 @@
   font-size: 1.6rem;
   font-weight: 700;
   margin-bottom: 24px;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 .col ul {
   list-style: none;
@@ -38,6 +39,7 @@
   font-size: 1.18rem;
   margin-bottom: 18px;
   color: #fff;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 .col ul li b {
   color: #fff;
@@ -56,6 +58,7 @@
   color: #fff;
   font-size: 1.12rem;
   transition: color 0.18s;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 .links li:hover {
   color: #FFD600;
@@ -67,6 +70,7 @@
   margin: clamp(2rem, 5vw, 48px) 0 0 0;
   padding: clamp(1rem, 3vw, 24px) clamp(1rem, 2vw, 0) clamp(1.5rem, 4vw, 32px) clamp(1rem, 2vw, 0);
   border-top: 1px solid #444;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 .copyright b {
   color: #fff;
