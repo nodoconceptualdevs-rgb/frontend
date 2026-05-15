@@ -20,7 +20,26 @@ export default function Menu() {
   const { isAuthenticated, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
-  
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  React.useEffect(() => {
+    // Detectar si está en dark mode
+    const checkDarkMode = () => {
+      setIsDarkMode(document.body.classList.contains("dark-theme"));
+    };
+
+    checkDarkMode();
+
+    // Observar cambios en las clases del body
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Determinar activo
   const isHome = pathname === "/" || pathname === "/#quienes-somos";
   const isPortafolio = pathname.startsWith("/portafolio");
@@ -37,13 +56,13 @@ export default function Menu() {
   const handleThemeToggle = () => {
     setShowOverlay(true);
     setIsTransitioning(true);
-    
+
     // Navegar durante la animación para transición suave
     setTimeout(() => {
-      if (theme === 'nodo') {
-        router.push('/bynodo');
+      if (theme === "nodo") {
+        router.push("/bynodo");
       } else {
-        router.push('/');
+        router.push("/");
       }
     }, 1500); // A mitad de la animación (3000ms / 2)
   };
@@ -60,16 +79,16 @@ export default function Menu() {
     if (isAuthenticated && user) {
       // Usuario logueado - ir al panel correspondiente según rol
       if (user.role.type === ROLES.ADMIN) {
-        router.push('/admin/proyectos');
+        router.push("/admin/proyectos");
       } else if (user.role.type === ROLES.GERENTE_PROYECTO) {
-        router.push('/dashboard/mi-proyecto');
+        router.push("/dashboard/mi-proyecto");
       } else {
         // Cliente o cualquier otro rol autenticado
-        router.push('/dashboard/cursos');
+        router.push("/dashboard/cursos");
       }
     } else {
       // Usuario no logueado - ir a login
-      router.push('/login');
+      router.push("/login");
     }
   };
 
@@ -77,12 +96,14 @@ export default function Menu() {
   if (isBynodo) {
     return (
       <>
-        <TransitionOverlay 
-          isVisible={showOverlay} 
-          onComplete={handleTransitionComplete} 
+        <TransitionOverlay
+          isVisible={showOverlay}
+          onComplete={handleTransitionComplete}
         />
         <div style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
-          <nav className={`${styles.menuContainer} ${styles.darkTheme} ${styles.bynodoMenu}`}>
+          <nav
+            className={`${styles.menuContainer} ${styles.darkTheme} ${styles.bynodoMenu}`}
+          >
             <div className={styles.bynodoMenuContent}>
               <Link href="/bynodo" onClick={() => setOpen(false)}>
                 <Image
@@ -112,12 +133,14 @@ export default function Menu() {
   // Menú normal de Nodo Conceptual
   return (
     <>
-      <TransitionOverlay 
-        isVisible={showOverlay} 
-        onComplete={handleTransitionComplete} 
+      <TransitionOverlay
+        isVisible={showOverlay}
+        onComplete={handleTransitionComplete}
       />
       <div style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
-        <nav className={styles.menuContainer}>
+        <nav
+          className={`${styles.menuContainer} ${isDarkMode ? styles.darkTheme : ""}`}
+        >
           <div className={styles.menuContent}>
             <div className={styles.logoSection}>
               <Link href="/" onClick={() => setOpen(false)}>
@@ -139,89 +162,93 @@ export default function Menu() {
                 <FaSync />
               </button>
             </div>
-          <button
-            className={styles.hamburger}
-            onClick={() => setOpen((v) => !v)}
-            aria-label="Abrir menú"
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-          <ul className={styles.menuLinks + (open ? " " + styles.open : "")}>
-            <li>
-              <Link
-                href="/"
-                className={isHome && !isQuienes ? styles.active : undefined}
-                onClick={() => setOpen(false)}
-              >
-                Inicio
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/portafolio"
-                className={isPortafolio ? styles.active : undefined}
-                onClick={() => setOpen(false)}
-              >
-                Portafolio
-              </Link>
-            </li>
-            <li>
-              <button
-                type="button"
-                className={isQuienes ? styles.active : undefined}
-                onClick={() => {
-                  setOpen(false);
-                  if (pathname === "/") {
-                    const section = document.getElementById("quienes-somos");
-                    if (section) {
-                      section.scrollIntoView({ behavior: "smooth" });
-                    }
-                  } else {
-                    router.push("/#quienes-somos");
-                  }
-                }}
-              >
-                Quiénes Somos
-              </button>
-            </li>
-            <li>
-              <Link
-                href="/cursos"
-                className={isCursos ? styles.active : undefined}
-                onClick={() => setOpen(false)}
-              >
-                Cursos y Formaciones
-              </Link>
-            </li>
-            {!isLoginPage && (
-              <li className={styles.mobileButtonItem}>
-                <RedButton 
-                  style={{ padding: "12px 32px", cursor: "pointer", width: "100%" }}
+            <button
+              className={styles.hamburger}
+              onClick={() => setOpen((v) => !v)}
+              aria-label="Abrir menú"
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <ul className={styles.menuLinks + (open ? " " + styles.open : "")}>
+              <li>
+                <Link
+                  href="/"
+                  className={isHome && !isQuienes ? styles.active : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  Inicio
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/portafolio"
+                  className={isPortafolio ? styles.active : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  Portafolio
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className={isQuienes ? styles.active : undefined}
                   onClick={() => {
                     setOpen(false);
-                    handleMainButtonClick();
+                    if (pathname === "/") {
+                      const section = document.getElementById("quienes-somos");
+                      if (section) {
+                        section.scrollIntoView({ behavior: "smooth" });
+                      }
+                    } else {
+                      router.push("/#quienes-somos");
+                    }
                   }}
+                >
+                  Quiénes Somos
+                </button>
+              </li>
+              <li>
+                <Link
+                  href="/cursos"
+                  className={isCursos ? styles.active : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  Cursos y Formaciones
+                </Link>
+              </li>
+              {!isLoginPage && (
+                <li className={styles.mobileButtonItem}>
+                  <RedButton
+                    style={{
+                      padding: "12px 32px",
+                      cursor: "pointer",
+                      width: "100%",
+                    }}
+                    onClick={() => {
+                      setOpen(false);
+                      handleMainButtonClick();
+                    }}
+                  >
+                    {isAuthenticated ? "Ir al Panel" : "Iniciar sesión"}
+                  </RedButton>
+                </li>
+              )}
+            </ul>
+            {!isLoginPage && (
+              <div className={styles.buttonSection}>
+                <RedButton
+                  style={{ padding: "0 60px", cursor: "pointer" }}
+                  onClick={handleMainButtonClick}
                 >
                   {isAuthenticated ? "Ir al Panel" : "Iniciar sesión"}
                 </RedButton>
-              </li>
+              </div>
             )}
-          </ul>
-          {!isLoginPage && (
-            <div className={styles.buttonSection}>
-              <RedButton 
-                style={{ padding: "0 60px", cursor: "pointer" }}
-                onClick={handleMainButtonClick}
-              >
-                {isAuthenticated ? "Ir al Panel" : "Iniciar sesión"}
-              </RedButton>
-            </div>
-          )}
-        </div>
-      </nav>
-    </div>
+          </div>
+        </nav>
+      </div>
     </>
   );
 }

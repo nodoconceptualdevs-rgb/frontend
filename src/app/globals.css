@@ -116,3 +116,122 @@ select {
 div, section {
   font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
+
+/* Dark mode styles for inputs */
+body.dark-theme input,
+body.dark-theme textarea,
+body.dark-theme select {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-color: #404040 !important;
+}
+
+body.dark-theme input::placeholder,
+body.dark-theme textarea::placeholder {
+  color: #888888 !important;
+}
+
+body.dark-theme input:focus,
+body.dark-theme textarea:focus,
+body.dark-theme select:focus {
+  background-color: #333333 !important;
+  border-color: #f5b940 !important;
+  outline: none !important;
+}
+
+/* Dark mode for Ant Design components */
+body.dark-theme .ant-input,
+body.dark-theme .ant-input-number,
+body.dark-theme .ant-picker,
+body.dark-theme .ant-select-selector {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+body.dark-theme .ant-input::placeholder {
+  color: #888888 !important;
+}
+
+body.dark-theme .ant-input:focus,
+body.dark-theme .ant-input-number:focus,
+body.dark-theme .ant-picker:focus,
+body.dark-theme .ant-select-selector:focus {
+  background-color: #333333 !important;
+  border-color: #f5b940 !important;
+}
+
+body.dark-theme .ant-select-item-option {
+  color: #ffffff !important;
+  background-color: #2a2a2a !important;
+}
+
+body.dark-theme .ant-select-item-option:hover {
+  background-color: #333333 !important;
+}
+
+body.dark-theme .ant-dropdown-menu {
+  background-color: #2a2a2a !important;
+}
+
+body.dark-theme .ant-dropdown-menu-item {
+  color: #ffffff !important;
+}
+
+body.dark-theme .ant-dropdown-menu-item:hover {
+  background-color: #333333 !important;
+}
+
+/* Dark mode for form containers */
+body.dark-theme .bg-white {
+  background-color: #222222 !important;
+  color: #ffffff !important;
+}
+
+body.dark-theme .bg-gray-50 {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+body.dark-theme .text-gray-700,
+body.dark-theme .text-gray-900 {
+  color: #ffffff !important;
+}
+
+body.dark-theme .text-gray-500 {
+  color: #a0a0a0 !important;
+}
+
+body.dark-theme .border-gray-300 {
+  border-color: #404040 !important;
+}
+
+body.dark-theme .border-gray-200 {
+  border-color: #333333 !important;
+}
+
+/* Menu Dark Theme Styles */
+body.dark-theme nav {
+  background-color: #2a2a2a !important;
+}
+
+body.dark-theme nav button,
+body.dark-theme nav a {
+  color: #e0e0e0 !important;
+}
+
+body.dark-theme nav button:hover,
+body.dark-theme nav a:hover,
+body.dark-theme nav button.active,
+body.dark-theme nav a.active {
+  color: #d4af6a !important;
+  background-color: #333333 !important;
+}
+
+body.dark-theme .themeToggle {
+  color: #e0e0e0 !important;
+}
+
+body.dark-theme .hamburger span {
+  background-color: #e0e0e0 !important;
+}

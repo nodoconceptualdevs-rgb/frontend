@@ -7,12 +7,28 @@ import "swiper/css";
 import styles from "./CoursesCarousel.module.css";
 import CourseCard, { CourseCardProps } from "@/components/CourseCard";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { getCourses as getCoursesFromAPI, Course } from "@/services/courses";
 
-// Esta función debería implementarse en services
+// Función para traer cursos de la API
 const getCourses = async (): Promise<CourseCardProps[]> => {
-  // Aquí se haría la llamada al API
-  // Por ahora retornamos un array vacío para probar el estado vacío
-  return [];
+  try {
+    const courses = await getCoursesFromAPI();
+
+    // Mapear los datos del API al formato esperado por CourseCard
+    return courses.map((course: Course) => ({
+      image:
+        course.cover?.url || "https://via.placeholder.com/300x200?text=Curso",
+      price: `$${course.price}`,
+      title: course.title,
+      description: course.description,
+      lessons: course.number_lessons || 0,
+      tests: 0, // Este valor no viene en el API actual
+      rating: 5, // Por defecto 5 estrellas
+    }));
+  } catch (error) {
+    console.error("Error al traer los cursos:", error);
+    return [];
+  }
 };
 
 // Componente para mostrar cuando no hay cursos
@@ -22,7 +38,8 @@ function EmptyCoursesState() {
       <div className={styles.emptyStateIcon}>📚</div>
       <h3 className={styles.emptyStateTitle}>Próximamente cursos</h3>
       <p className={styles.emptyStateText}>
-        Estamos preparando nuevos cursos para ti. ¡Vuelve pronto para descubrirlos!
+        Estamos preparando nuevos cursos para ti. ¡Vuelve pronto para
+        descubrirlos!
       </p>
     </div>
   );
@@ -49,10 +66,10 @@ export default function CoursesCarousel() {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseCardProps[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     let cancelled = false;
-    
+
     async function fetchCourses() {
       try {
         const data = await getCourses();
@@ -61,16 +78,18 @@ export default function CoursesCarousel() {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error cargando cursos:', error);
+        console.error("Error cargando cursos:", error);
         if (!cancelled) {
           setCourses([]);
           setLoading(false);
         }
       }
     }
-    
+
     fetchCourses();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Mostrar estado de carga

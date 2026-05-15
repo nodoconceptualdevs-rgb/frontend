@@ -8,7 +8,6 @@ import "@ant-design/v5-patch-for-react-19";
 import { Toaster } from "react-hot-toast";
 import ClientProviders from "@/app/ClientProviders";
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -35,9 +34,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ClientProviders>
-          {children}
-        </ClientProviders>
+        <ClientProviders>{children}</ClientProviders>
         <Toaster />
       </body>
     </html>
