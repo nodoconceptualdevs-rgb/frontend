@@ -2,9 +2,7 @@
  * Utilidades para trabajar con URLs de media de Strapi
  */
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://backend-production-2ce7.up.railway.app/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337/api";
 
 /** Obtiene la URL base del backend (sin /api) */
 function getBackendBaseUrl(): string {

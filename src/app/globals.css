@@ -40,10 +40,11 @@ body.dark-theme * {
   --font-mono: var(--font-geist-mono);
 } */
 
+/* No dark mode en esta página - mantener colores claros siempre */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #ffffff;
-    --foreground: #ededed;
+    --foreground: #171717;
   }
 }
 
@@ -115,6 +116,52 @@ select {
 /* Divs y secciones por defecto */
 div, section {
   font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+/* ========== ESTILOS GLOBALES PARA INPUTS - VISIBILIDAD ========== */
+/* Asegurar que los inputs siempre tengan texto oscuro legible */
+input,
+textarea,
+select {
+  color: #1a1a1a !important;
+  background-color: #ffffff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+/* Inputs con clases Tailwind de la plataforma */
+input.w-full,
+textarea.w-full,
+select.w-full {
+  color: #1a1a1a !important;
+  background-color: #ffffff !important;
+  font-weight: 400 !important;
+}
+
+input.w-full::placeholder,
+textarea.w-full::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+  font-weight: 300 !important;
+}
+
+/* Selects deben mostrar texto oscuro */
+select option {
+  color: #1a1a1a !important;
+  background-color: #ffffff !important;
+}
+
+/* Inputs deshabilitados */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  color: #6b7280 !important;
+  background-color: #f3f4f6 !important;
+  cursor: not-allowed !important;
 }
 
 /* Dark mode styles for inputs */
@@ -562,4 +609,220 @@ body.dark-theme form select:focus {
   background-color: #333333 !important;
   border-color: #f5b940 !important;
   color: #ffffff !important;
+}
+
+/* ========== DARK MODE - ADMIN / INTERNAL PAGES ========== */
+
+/* Contenedores principales de páginas admin */
+body.dark-theme .min-h-screen {
+  background-color: #1a1a1a !important;
+}
+
+body.dark-theme .min-h-screen.bg-gray-50 {
+  background-color: #1a1a1a !important;
+}
+
+/* Cards con shadow */
+body.dark-theme .shadow-md {
+  background-color: #222222 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.dark-theme .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-theme .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Green sections (archivos subidos) */
+body.dark-theme .bg-green-50 {
+  background-color: #1a2e1a !important;
+}
+
+body.dark-theme .border-green-300 {
+  border-color: #2d5a2d !important;
+}
+
+body.dark-theme .border-green-200 {
+  border-color: #2d5a2d !important;
+}
+
+body.dark-theme .text-green-600 {
+  color: #66bb6a !important;
+}
+
+body.dark-theme .text-green-800 {
+  color: #81c784 !important;
+}
+
+body.dark-theme .bg-green-100 {
+  background-color: #1e3a1e !important;
+}
+
+body.dark-theme .bg-green-500 {
+  background-color: #388e3c !important;
+}
+
+/* Red accents */
+body.dark-theme .text-red-500 {
+  color: #ef5350 !important;
+}
+
+body.dark-theme .text-red-600 {
+  color: #f44336 !important;
+}
+
+body.dark-theme .bg-red-50 {
+  background-color: #2e1a1a !important;
+}
+
+body.dark-theme .border-red-200 {
+  border-color: #5a2d2d !important;
+}
+
+body.dark-theme .text-red-700 {
+  color: #ef9a9a !important;
+}
+
+/* Purple accents */
+body.dark-theme .bg-purple-100 {
+  background-color: #2e1a3e !important;
+}
+
+body.dark-theme .text-purple-700 {
+  color: #ce93d8 !important;
+}
+
+/* Gray backgrounds adicionales */
+body.dark-theme .bg-gray-200 {
+  background-color: #333333 !important;
+}
+
+body.dark-theme .bg-gray-900 {
+  background-color: #111111 !important;
+}
+
+/* Text colors adicionales */
+body.dark-theme .text-gray-300 {
+  color: #888888 !important;
+}
+
+body.dark-theme .text-gray-400 {
+  color: #777777 !important;
+}
+
+body.dark-theme .text-gray-800 {
+  color: #e0e0e0 !important;
+}
+
+/* Border colors adicionales */
+body.dark-theme .border-gray-100 {
+  border-color: #2a2a2a !important;
+}
+
+/* Hover states para contenedores */
+body.dark-theme .hover\:border-gray-300:hover {
+  border-color: #555555 !important;
+}
+
+body.dark-theme .hover\:bg-red-50:hover {
+  background-color: #2e1a1a !important;
+}
+
+body.dark-theme .hover\:shadow-md:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Focus rings en dark mode */
+body.dark-theme .focus\:ring-red-200:focus {
+  --tw-ring-color: rgba(239, 83, 80, 0.3) !important;
+}
+
+/* Toggle switch dark mode */
+body.dark-theme .bg-gray-400 {
+  background-color: #555555 !important;
+}
+
+/* Placeholder mejorado para inputs internos */
+body.dark-theme .text-gray-400.italic,
+body.dark-theme .italic.text-gray-400 {
+  color: #888888 !important;
+}
+
+/* Dropdown menus y popups */
+body.dark-theme .shadow-xl.bg-white,
+body.dark-theme .bg-white.shadow-xl {
+  background-color: #2a2a2a !important;
+}
+
+/* Blue info boxes */
+body.dark-theme .bg-blue-100 {
+  background-color: #1a2a4a !important;
+}
+
+body.dark-theme .border-blue-200 {
+  border-color: #2a4a7a !important;
+}
+
+body.dark-theme .border-blue-100 {
+  border-color: #1a3a6a !important;
+}
+
+body.dark-theme .text-blue-600 {
+  color: #64b5f6 !important;
+}
+
+body.dark-theme .text-blue-700 {
+  color: #90caf9 !important;
+}
+
+body.dark-theme .border-blue-500 {
+  border-color: #42a5f5 !important;
+}
+
+/* Vista cliente - comment section y hito cards */
+body.dark-theme .bg-white.rounded-xl.shadow-md {
+  background-color: #222222 !important;
+}
+
+/* Scrollbar dark mode */
+body.dark-theme ::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.dark-theme ::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+body.dark-theme ::-webkit-scrollbar-thumb {
+  background: #444444;
+  border-radius: 4px;
+}
+
+body.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* Date input calendar icon en dark mode */
+body.dark-theme input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) !important;
+}
+
+/* Select arrow en dark mode */
+body.dark-theme select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+  background-position: right 0.5rem center !important;
+  background-repeat: no-repeat !important;
+  background-size: 1.5em 1.5em !important;
+}
+
+/* Footer en admin pages */
+body.dark-theme footer.bg-gray-900 {
+  background-color: #111111 !important;
+}
+
+body.dark-theme .text-gray-400 {
+  color: #888888 !important;
 }

@@ -9,7 +9,11 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
  * Este componente agrupa todos los providers del lado cliente
  * Separado para evitar errores de "Maximum update depth exceeded"
  */
-export default function ClientProviders({ children }: { children: React.ReactNode }) {
+export default function ClientProviders({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <AuthProvider>
       <ThemeProvider>
