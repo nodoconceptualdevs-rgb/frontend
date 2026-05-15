@@ -24,10 +24,10 @@ export default function Footer({ showCta = false }: FooterProps) {
             <h3>Contáctanos</h3>
             <ul>
               <li>
-                <FaPhoneAlt /> <span>+34 692 30 99 59</span>
+                <FaPhoneAlt /> <span>+58 414-7254403</span>
               </li>
               <li>
-                <FaEnvelope /> <span>comercial@nodo.com</span>
+                <FaEnvelope /> <span>nodo.conceptual@gmail.com</span>
               </li>
               <li>
                 <FaGlobe /> <span>www.nodoconceptual.com</span>
@@ -45,7 +45,8 @@ export default function Footer({ showCta = false }: FooterProps) {
                 <span>
                   <b>Dirección</b>
                   <br />
-                  Sit Amet. Edif. Consectetur
+                  Venezuela Tachira, Barrio Obrero. Torre Profesional Pirineos
+                  Piso 4 oficina 4-1
                 </span>
               </li>
               <li>
@@ -53,9 +54,7 @@ export default function Footer({ showCta = false }: FooterProps) {
                 <span>
                   <b>Horario:</b>
                   <br />
-                  Lunes a jueves: &nbsp;8:00 – 13:00 y 14:00 – 17:00
-                  <br />
-                  Viernes: 7:00 – 14:00
+                  Lunes a Domingo: &nbsp;9:00 – 18:00 –
                 </span>
               </li>
             </ul>
@@ -73,8 +72,7 @@ export default function Footer({ showCta = false }: FooterProps) {
           </div>
         </div>
         <div className={styles.copyright}>
-          Copyright Nodo Conceptual | Todos los derechos reservados |{" "}
-          <b>Política de calidad /Aviso Legal/ Política de cookies</b>
+          © 2026 Nodo Conceptual. Todos los derechos reservados
         </div>
       </footer>
     </>

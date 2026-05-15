@@ -45,6 +45,7 @@
   font-weight: 300;
   letter-spacing: 0.05em;
   margin: 0;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 
 .light .text {

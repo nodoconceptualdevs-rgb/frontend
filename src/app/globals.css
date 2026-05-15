@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Importar fuentes locales */
+@font-face {
+  font-family: 'Conthrax';
+  src: url('/fonts/Conthrax-SemiBold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -32,8 +47,72 @@ body.dark-theme * {
   }
 }
 
+/* Fuente por defecto para textos secundarios (lectura/escritura) */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif;
+}
+
+/* ===== TEXTOS PRIMARIOS - CONTHRAX ===== */
+/* Títulos y subtítulos */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
+}
+
+/* Botones (primarios) */
+button {
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
+}
+
+.ant-btn {
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
+}
+
+/* Labels y elementos de control */
+label {
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
+}
+
+/* Enlaces (elementos navegación principal) */
+a {
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
+}
+
+/* ===== TEXTOS SECUNDARIOS - POPPINS ===== */
+/* Párrafos y contenido */
+p {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+/* Inputs y áreas de texto (lectura/escritura) */
+input {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+.ant-input {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+textarea {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+/* Descripciones y texto auxiliar */
+span {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+/* Selectores y dropdowns */
+select {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+.ant-select {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
+}
+
+/* Divs y secciones por defecto */
+div, section {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }

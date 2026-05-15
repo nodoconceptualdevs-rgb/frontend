@@ -6,7 +6,7 @@
   font-size: clamp(1.8rem, 4vw, 2.5rem);
   font-weight: 400;
   color: #292929;
-  font-family: inherit;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
   gap: clamp(0.8rem, 2vw, 1.5rem);
   text-align: left;
 }
@@ -34,6 +34,7 @@
 .redText {
   color: #ab2731;
   font-weight: 400;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 .dash {
   flex: 1 1 0;

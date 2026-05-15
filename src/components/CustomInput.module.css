@@ -11,6 +11,7 @@
   font-weight: 500;
   color: #7a7a7a;
   margin-bottom: 2px;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 
 .input {
@@ -22,6 +23,7 @@
   transition: border 0.2s;
   width: 100%;
   box-sizing: border-box;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 
 .input:focus, .input-focused {
@@ -48,4 +50,5 @@
   color: #ff4d4f;
   font-size: 13px;
   margin-top: 2px;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }

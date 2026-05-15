@@ -10,9 +10,11 @@
   font-size: 28px;
   font-weight: 600;
   margin: 0;
+  font-family: 'Conthrax', Arial, Helvetica, sans-serif !important;
 }
 
 .subtitle {
   color: #d1d5db;
   margin: 8px 0 0 0;
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
