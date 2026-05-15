@@ -6,9 +6,7 @@ import Cookies from "js-cookie";
 
 // Usar variable de entorno o fallback a localhost para desarrollo
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://backend-production-2ce7.up.railway.app/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337/api";
 
 // Crear instancia de axios con configuración mejorada para producción
 
@@ -102,6 +100,25 @@ api.interceptors.response.use(
   (response) => response,
 
   (error) => {
+    if (error.response?.status === 401) {
+      console.warn(
+        "⚠️ Error 401: Token inválido o expirado - limpiando sesión",
+      );
+
+      // Limpiar token inválido automáticamente (previene el loop de 401)
+      if (typeof window !== "undefined") {
+        const hadToken = localStorage.getItem("token");
+        if (hadToken) {
+          console.info("🗑️ Eliminando token inválido del localStorage");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          localStorage.removeItem("userId");
+          localStorage.removeItem("role");
+          localStorage.removeItem("name");
+        }
+      }
+    }
+
     if (error.response?.status === 403) {
       console.error("❌ Error 403: Acceso denegado");
 
