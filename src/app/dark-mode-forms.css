@@ -1,0 +1,177 @@
+/* 
+ * Dark Mode Styles for Form Inputs
+ * Este archivo debe importarse DESPUÉS de todos los otros CSS para asegurar máxima especificidad
+ */
+
+/* Estilos base para inputs en dark mode */
+body.dark-theme input,
+body.dark-theme textarea,
+body.dark-theme select {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-color: #404040 !important;
+}
+
+/* Estados focus */
+body.dark-theme input:focus,
+body.dark-theme textarea:focus,
+body.dark-theme select:focus {
+  background-color: #333333 !important;
+  border-color: #f5b940 !important;
+  color: #ffffff !important;
+}
+
+/* Placeholders */
+body.dark-theme input::placeholder,
+body.dark-theme textarea::placeholder {
+  color: #888888 !important;
+}
+
+/* Disabled states */
+body.dark-theme input:disabled,
+body.dark-theme textarea:disabled,
+body.dark-theme select:disabled {
+  background-color: #1f1f1f !important;
+  color: #666666 !important;
+  border-color: #333333 !important;
+}
+
+/* Options en selects */
+body.dark-theme option {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+body.dark-theme option:checked {
+  background-color: #f5b940 !important;
+  color: #000000 !important;
+}
+
+/* Labels en dark mode */
+body.dark-theme label {
+  color: #ffffff !important;
+}
+
+/* Form containers */
+body.dark-theme form {
+  color: #ffffff !important;
+}
+
+/* Form groups/divs */
+body.dark-theme .block {
+  color: #ffffff !important;
+}
+
+body.dark-theme .py-8 {
+  background-color: #222222 !important;
+}
+
+body.dark-theme .p-8 {
+  background-color: #222222 !important;
+}
+
+/* Rounded containers */
+body.dark-theme .rounded-xl {
+  background-color: #222222 !important;
+}
+
+/* Párrafos en forms */
+body.dark-theme p {
+  color: #ffffff !important;
+}
+
+/* Títulos en forms */
+body.dark-theme h1,
+body.dark-theme h2,
+body.dark-theme h3,
+body.dark-theme h4 {
+  color: #ffffff !important;
+}
+
+/* Spans y elementos inline */
+body.dark-theme span {
+  color: #ffffff !important;
+}
+
+/* Info boxes en blue */
+body.dark-theme .bg-blue-50 {
+  background-color: #1a3a4a !important;
+  border-color: #2a5a7a !important;
+}
+
+body.dark-theme .text-blue-900 {
+  color: #87ceeb !important;
+}
+
+body.dark-theme .text-blue-800 {
+  color: #87ceeb !important;
+}
+
+body.dark-theme .bg-green-700 {
+  color: #66bb6a !important;
+}
+
+/* Input type específico para text */
+body.dark-theme input[type="text"] {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-color: #404040 !important;
+}
+
+body.dark-theme input[type="text"]:focus {
+  background-color: #333333 !important;
+  border-color: #f5b940 !important;
+}
+
+/* Input type date */
+body.dark-theme input[type="date"] {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-color: #404040 !important;
+}
+
+body.dark-theme input[type="date"]:focus {
+  background-color: #333333 !important;
+  border-color: #f5b940 !important;
+}
+
+/* Checkboxes */
+body.dark-theme input[type="checkbox"] {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  accent-color: #f5b940;
+}
+
+body.dark-theme input[type="checkbox"]:checked {
+  background-color: #f5b940 !important;
+}
+
+/* Botones */
+body.dark-theme button {
+  transition: all 0.2s ease;
+}
+
+body.dark-theme .border-gray-300 {
+  border-color: #404040 !important;
+}
+
+body.dark-theme .border-2 {
+  border-width: 2px !important;
+}
+
+/* Fallback for any text-gray that wasn't caught */
+body.dark-theme .text-gray-600,
+body.dark-theme .text-gray-700,
+body.dark-theme .text-gray-900 {
+  color: #ffffff !important;
+}
+
+/* Fallback for backgrounds */
+body.dark-theme .bg-white {
+  background-color: #222222 !important;
+}
+
+body.dark-theme .bg-gray-50,
+body.dark-theme .bg-gray-100 {
+  background-color: #2a2a2a !important;
+}
