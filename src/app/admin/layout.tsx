@@ -7,6 +7,7 @@ import {
   TeamOutlined,
   UserOutlined,
   BarChartOutlined,
+  ShoppingCartOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -31,6 +32,11 @@ export default function AdminLayout({
         key: "/admin/productividad",
         icon: <BarChartOutlined />,
         label: "Productividad",
+      },
+      {
+        key: "/admin/inventario",
+        icon: <ShoppingCartOutlined />,
+        label: "Inventario",
       },
       {
         key: "/admin/cursos",
