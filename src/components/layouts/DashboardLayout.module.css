@@ -24,6 +24,12 @@
 
 .sidebarContent {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.collapsed .sidebarContent {
+  align-items: center;
 }
 
 .header {
@@ -36,9 +42,13 @@
 }
 
 .collapsed .header {
-  padding: 0 0 24px;
+  padding: 0;
   justify-content: center;
-  gap: 8px;
+  align-items: center;
+  gap: 0;
+  height: auto;
+  flex-direction: column;
+  margin-bottom: 16px;
 }
 
 .logoWrapper {
@@ -82,12 +92,53 @@
 
 .collapsed .toggleButton {
   margin-left: 0;
+  margin-top: 8px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
 }
 
 .menu {
   border: none;
   background: transparent;
   font-size: 16px;
+  padding: 0 8px;
+}
+
+.sidebar.collapsed .menu {
+  padding: 0;
+}
+
+/* Estilos para items del menú colapsado */
+:global(.sidebar.collapsed .ant-menu-item),
+:global(.sidebar.collapsed .ant-menu-submenu) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  height: 48px !important;
+  margin: 4px 0 !important;
+  width: 48px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+:global(.sidebar.collapsed .ant-menu-item-icon),
+:global(.sidebar.collapsed .ant-menu-submenu-title-icon) {
+  font-size: 18px !important;
+  margin: 0 !important;
+}
+
+:global(.sidebar.collapsed .ant-menu-item-title),
+:global(.sidebar.collapsed .ant-menu-submenu-title) {
+  display: none !important;
+}
+
+:global(.sidebar.collapsed .ant-menu) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0 !important;
 }
 
 .footer {
@@ -99,7 +150,8 @@
 }
 
 .collapsed .footer {
-  padding: 0 0 24px;
+  padding: 16px 0 24px;
+  border-top: 1px solid #eee;
 }
 
 .logoutButton {

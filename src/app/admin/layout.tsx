@@ -6,6 +6,7 @@ import {
   DollarOutlined,
   TeamOutlined,
   UserOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -25,6 +26,11 @@ export default function AdminLayout({
         key: "/admin/proyectos",
         icon: <ProjectOutlined />,
         label: "Proyectos",
+      },
+      {
+        key: "/admin/productividad",
+        icon: <BarChartOutlined />,
+        label: "Productividad",
       },
       {
         key: "/admin/cursos",
@@ -53,6 +59,11 @@ export default function AdminLayout({
         key: "/admin/proyectos",
         icon: <ProjectOutlined />,
         label: "Proyectos",
+      },
+      {
+        key: "/admin/productividad",
+        icon: <BarChartOutlined />,
+        label: "Productividad",
       },
       {
         key: "/admin/mi-perfil",

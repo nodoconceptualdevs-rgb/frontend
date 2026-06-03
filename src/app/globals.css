@@ -826,3 +826,13 @@ body.dark-theme footer.bg-gray-900 {
 body.dark-theme .text-gray-400 {
   color: #888888 !important;
 }
+
+/* Hide scrollbar utility class */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
