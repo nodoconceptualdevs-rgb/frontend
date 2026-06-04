@@ -425,3 +425,11 @@ export async function createCategoria(nombre: string, etiqueta: string): Promise
   CATEGORIAS.push(nueva);
   return delay(nueva);
 }
+
+// ─── Helper para Obras (side effect de reporte diario) ───────────────────────
+
+export function decrementarStock(materialId: number, cantidad: number): void {
+  const material = MATERIALES.find((m) => m.id === materialId);
+  if (!material) throw new Error(`Material ${materialId} no encontrado`);
+  material.stockActual = Math.max(0, material.stockActual - cantidad);
+}

@@ -6,6 +6,8 @@ import {
   UserOutlined,
   ProjectOutlined,
   VideoCameraOutlined,
+  BarChartOutlined,
+  BuildOutlined,
 } from "@ant-design/icons";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -22,7 +24,7 @@ export default function ClientDashboardLayout({
   const menuItems = React.useMemo(() => {
     const items = [];
 
-    // Gerente de Proyecto ve Mi Proyecto, Gestión de Cursos y Mi Perfil
+    // Gerente de Proyecto ve Mi Proyecto, Productividad, Obras, Gestión de Cursos y Mi Perfil
     if (user?.role.type === ROLES.GERENTE_PROYECTO) {
       items.push(
         {
@@ -31,9 +33,19 @@ export default function ClientDashboardLayout({
           label: "Mi Proyecto",
         },
         {
+          key: "/dashboard/productividad",
+          icon: <BarChartOutlined />,
+          label: "Mis Tareas",
+        },
+        {
+          key: "/dashboard/obras",
+          icon: <BuildOutlined />,
+          label: "Obras",
+        },
+        {
           key: "/dashboard/gerente-cursos",
           icon: <VideoCameraOutlined />,
-          label: "Gestión de Cursos",
+          label: "Cursos",
         },
         {
           key: "/dashboard/mi-perfil",
