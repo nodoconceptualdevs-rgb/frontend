@@ -65,6 +65,10 @@ export interface MaterialCatalogo {
   precioPromedio: number; // promedio ponderado de compras
   ultimaCompra?: string; // ISO
   historialPrecios?: HistorialPrecio[]; // historial de precios con fechas
+  proyectoId?: number; // opcional: proyecto al que está asignado
+  proyectoNombre?: string; // desnormalizado
+  obraId?: number; // opcional: obra específica al que está asignado
+  obraNombre?: string; // desnormalizado
 }
 
 export interface MaterialConEstado extends MaterialCatalogo {
@@ -102,6 +106,8 @@ export interface FacturaCompra {
   estado: EstadoFactura;
   proyectoId?: number;
   proyectoNombre?: string;
+  obraId?: number;
+  obraNombre?: string;
   items: LineaFactura[];
   subtotal: number;
   impuesto?: number; // % ej: 19
@@ -117,6 +123,7 @@ export interface FacturaFormValues {
   fecha: string;
   fechaRecepcion?: string;
   proyectoId?: number;
+  obraId?: number;
   items: LineaFacturaFormValues[];
   impuesto?: number;
   notas?: string;
@@ -139,6 +146,30 @@ export interface UnidadDeMedida {
   id: number;
   nombre: string; // "bolsa", "tonelada", "m³", "unidad", etc.
   abreviatura: string; // "bol", "ton", "m³", "u", etc.
+}
+
+// --- Herramientas ---
+
+export interface Herramienta {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  categoria: string; // "Mano de obra", "Equipo pesado", etc.
+  fechaAdquisicion?: string; // ISO
+  estado: "DISPONIBLE" | "EN_USO" | "MANTENIMIENTO" | "DESCARTADA";
+  ultimoUsoDatos?: {
+    fecha: string; // ISO
+    obraId: number;
+    obraNombre: string;
+  };
+}
+
+export interface HerramientaFormValues {
+  nombre: string;
+  descripcion?: string;
+  categoria: string;
+  fechaAdquisicion?: string;
+  estado: Herramienta["estado"];
 }
 
 // --- Filtros ---

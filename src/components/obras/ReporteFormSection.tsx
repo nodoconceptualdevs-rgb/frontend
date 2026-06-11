@@ -1,25 +1,20 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   Input,
   InputNumber,
   Select,
   DatePicker,
   Button,
-  Table,
   Empty,
-  Tag,
-  Divider,
-  Card,
-  Space,
+  Tabs,
 } from "antd";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Users, Package } from "lucide-react";
 import type {
   Obra,
   MaterialDisponible,
   Personal,
   ReporteFormValues,
 } from "@/types/obras";
-import { calcularCostoManoObra, calcularCostoMateriales } from "@/lib/obras";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 
@@ -32,6 +27,26 @@ interface Props {
   onSubmit: (values: ReporteFormValues) => Promise<void>;
 }
 
+interface LineaPartida {
+  id: string;
+  partidaId?: number;
+  avanceLogrado: number;
+  personal: { id: string; personalId?: number; horasTrabajadas: number }[];
+  materiales: {
+    id: string;
+    materialId?: number;
+    cantidad: number;
+    precioUnitario: number;
+  }[];
+  herramientas: {
+    id: string;
+    nombre: string;
+    descripcion?: string;
+    cantidad: number;
+    costoUnitario: number;
+  }[];
+}
+
 export default function ReporteFormSection({
   obra,
   personal,
@@ -39,116 +54,180 @@ export default function ReporteFormSection({
   onSubmit,
 }: Props) {
   const [loading, setLoading] = useState(false);
-
-  // Info general
   const [fecha, setFecha] = useState<string>(dayjs().toISOString());
   const [observaciones, setObservaciones] = useState<string>("");
-
-  // Partidas trabajadas
-  const [partidasTrabajadas, setPartidasTrabajadas] = useState<
-    { id: string; partidaId?: number; avanceLogrado: number }[]
-  >([]);
-
-  // Personal
-  const [personasAgregar, setPersonasAgregar] = useState<
-    { id: string; personalId?: number; horasTrabajadas: number }[]
-  >([]);
-
-  // Materiales
-  const [materialesAgregar, setMaterialesAgregar] = useState<
-    {
-      id: string;
-      materialId?: number;
-      cantidad: number;
-      precioUnitario: number;
-    }[]
-  >([]);
-
-  const lineasPersonalCalc = useMemo(
-    () =>
-      personasAgregar
-        .map((lp) => {
-          const p = personal.find((x) => x.id === lp.personalId);
-          if (!p) return null;
-          return {
-            personalId: lp.personalId!,
-            personalNombre: p.nombre,
-            cargo: p.cargo,
-            horasTrabajadas: lp.horasTrabajadas,
-            costoPorHora: p.costoPorHora,
-            subtotal: lp.horasTrabajadas * p.costoPorHora,
-          };
-        })
-        .filter(Boolean) as any[],
-    [personasAgregar, personal]
-  );
-
-  const lineasMaterialCalc = useMemo(
-    () =>
-      materialesAgregar
-        .map((lm) => {
-          const m = materiales.find((x) => x.materialId === lm.materialId);
-          if (!m) return null;
-          return {
-            materialId: lm.materialId!,
-            materialNombre: m.materialNombre,
-            unidad: m.unidad,
-            cantidad: lm.cantidad,
-            precioUnitario: lm.precioUnitario,
-            subtotal: lm.cantidad * lm.precioUnitario,
-          };
-        })
-        .filter(Boolean) as any[],
-    [materialesAgregar, materiales]
-  );
-
-  const costoManoObra = calcularCostoManoObra(lineasPersonalCalc);
-  const costoMateriales = calcularCostoMateriales(lineasMaterialCalc);
-  const costoTotal = costoManoObra + costoMateriales;
+  const [partidasLineas, setPartidasLineas] = useState<LineaPartida[]>([]);
+  const [activeTabPartida, setActiveTabPartida] = useState<string | null>(null);
 
   const handleAgregarPartida = () => {
-    setPartidasTrabajadas([
-      ...partidasTrabajadas,
-      { id: uuidLocal(), partidaId: undefined, avanceLogrado: 0 },
-    ]);
-  };
-
-  const handleAgregarPersona = () => {
-    setPersonasAgregar([
-      ...personasAgregar,
-      { id: uuidLocal(), personalId: undefined, horasTrabajadas: 8 },
-    ]);
-  };
-
-  const handleAgregarMaterial = () => {
-    setMaterialesAgregar([
-      ...materialesAgregar,
-      { id: uuidLocal(), materialId: undefined, cantidad: 0, precioUnitario: 0 },
-    ]);
+    const newPartida: LineaPartida = {
+      id: uuidLocal(),
+      partidaId: undefined,
+      avanceLogrado: 0,
+      personal: [],
+      materiales: [],
+      herramientas: [],
+    };
+    setPartidasLineas([...partidasLineas, newPartida]);
+    setActiveTabPartida(newPartida.id);
   };
 
   const handleEliminarPartida = (id: string) => {
-    setPartidasTrabajadas(partidasTrabajadas.filter((p) => p.id !== id));
+    setPartidasLineas(partidasLineas.filter((p) => p.id !== id));
+    if (activeTabPartida === id) {
+      setActiveTabPartida(null);
+    }
   };
 
-  const handleEliminarPersona = (id: string) => {
-    setPersonasAgregar(personasAgregar.filter((p) => p.id !== id));
+  const handleAgregarPersonaAPartida = (partidaId: string) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      newPartidas[idx].personal.push({
+        id: uuidLocal(),
+        personalId: undefined,
+        horasTrabajadas: 8,
+      });
+      setPartidasLineas(newPartidas);
+    }
   };
 
-  const handleEliminarMaterial = (id: string) => {
-    setMaterialesAgregar(materialesAgregar.filter((m) => m.id !== id));
+  const handleAgregarMaterialAPartida = (partidaId: string) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      newPartidas[idx].materiales.push({
+        id: uuidLocal(),
+        materialId: undefined,
+        cantidad: 0,
+        precioUnitario: 0,
+      });
+      setPartidasLineas(newPartidas);
+    }
   };
+
+  const handleAgregarHerramientaAPartida = (partidaId: string) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      newPartidas[idx].herramientas.push({
+        id: uuidLocal(),
+        nombre: "",
+        descripcion: "",
+        cantidad: 1,
+        costoUnitario: 0,
+      });
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleEliminarPersonaDePartida = (partidaId: string, personaId: string) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      newPartidas[idx].personal = newPartidas[idx].personal.filter((p) => p.id !== personaId);
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleEliminarMaterialDePartida = (partidaId: string, materialId: string) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      newPartidas[idx].materiales = newPartidas[idx].materiales.filter((m) => m.id !== materialId);
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleEliminarHerramientaDePartida = (partidaId: string, herramientaId: string) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      newPartidas[idx].herramientas = newPartidas[idx].herramientas.filter((h) => h.id !== herramientaId);
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleUpdatePartida = (partidaId: string, field: string, value: any) => {
+    const idx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (idx >= 0) {
+      const newPartidas = [...partidasLineas];
+      (newPartidas[idx] as any)[field] = value;
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleUpdatePersonaEnPartida = (
+    partidaId: string,
+    personaIdx: number,
+    field: string,
+    value: any
+  ) => {
+    const pIdx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (pIdx >= 0) {
+      const newPartidas = [...partidasLineas];
+      (newPartidas[pIdx].personal[personaIdx] as any)[field] = value;
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleUpdateMaterialEnPartida = (
+    partidaId: string,
+    materialIdx: number,
+    field: string,
+    value: any
+  ) => {
+    const pIdx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (pIdx >= 0) {
+      const newPartidas = [...partidasLineas];
+      (newPartidas[pIdx].materiales[materialIdx] as any)[field] = value;
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const handleUpdateHerramientaEnPartida = (
+    partidaId: string,
+    herramientaIdx: number,
+    field: string,
+    value: any
+  ) => {
+    const pIdx = partidasLineas.findIndex((p) => p.id === partidaId);
+    if (pIdx >= 0) {
+      const newPartidas = [...partidasLineas];
+      (newPartidas[pIdx].herramientas[herramientaIdx] as any)[field] = value;
+      setPartidasLineas(newPartidas);
+    }
+  };
+
+  const calcularCostoPartida = (partida: LineaPartida) => {
+    const costoMO = partida.personal.reduce((s, p) => {
+      const pers = personal.find((x) => x.id === p.personalId);
+      return s + (pers ? p.horasTrabajadas * pers.costoPorHora : 0);
+    }, 0);
+
+    const costoMat = partida.materiales.reduce((s, m) => {
+      return s + (m.cantidad * m.precioUnitario);
+    }, 0);
+
+    const costoHer = partida.herramientas.reduce((s, h) => {
+      return s + (h.cantidad * h.costoUnitario);
+    }, 0);
+
+    return costoMO + costoMat + costoHer;
+  };
+
+  const costoTotalReporte = partidasLineas.reduce((s, p) => s + calcularCostoPartida(p), 0);
 
   const handleSubmit = async () => {
     if (!fecha) {
       toast.error("Fecha es requerida");
       return;
     }
-    if (partidasTrabajadas.length === 0) {
+    if (partidasLineas.length === 0) {
       toast.error("Debe agregar al menos una partida");
       return;
     }
-    if (partidasTrabajadas.some((p) => !p.partidaId || p.avanceLogrado <= 0)) {
+    if (partidasLineas.some((p) => !p.partidaId || p.avanceLogrado <= 0)) {
       toast.error("Todas las partidas deben tener partida seleccionada y avance > 0");
       return;
     }
@@ -156,20 +235,20 @@ export default function ReporteFormSection({
     try {
       setLoading(true);
 
-      for (const partida of partidasTrabajadas) {
+      for (const partida of partidasLineas) {
         const values: ReporteFormValues = {
           obraId: obra.id,
           partidaId: partida.partidaId!,
           fecha,
           avanceLogrado: partida.avanceLogrado,
           observaciones: observaciones || undefined,
-          personal: personasAgregar
+          personal: partida.personal
             .map((p) => ({
               personalId: p.personalId!,
               horasTrabajadas: p.horasTrabajadas,
             }))
             .filter((p) => p.personalId),
-          materiales: materialesAgregar
+          materiales: partida.materiales
             .map((m) => ({
               materialId: m.materialId!,
               cantidad: m.cantidad,
@@ -182,469 +261,563 @@ export default function ReporteFormSection({
 
       setFecha(dayjs().toISOString());
       setObservaciones("");
-      setPartidasTrabajadas([]);
-      setPersonasAgregar([]);
-      setMaterialesAgregar([]);
+      setPartidasLineas([]);
+      setActiveTabPartida(null);
       toast.success("Reportes guardados exitosamente");
     } finally {
       setLoading(false);
     }
   };
 
-  const partidasColumns = [
-    {
-      title: "Partida",
-      dataIndex: "partidaId",
-      key: "partidaId",
-      render: (val: number | undefined, record: any) => {
-        const partida = obra.partidas.find((p) => p.id === val);
-        return (
-          <Select
-            placeholder="Seleccionar partida"
-            value={val}
-            onChange={(v) => {
-              const idx = partidasTrabajadas.findIndex((p) => p.id === record.id);
-              const newPartidas = [...partidasTrabajadas];
-              newPartidas[idx].partidaId = v;
-              setPartidasTrabajadas(newPartidas);
-            }}
-            options={obra.partidas.map((p) => ({
-              label: `${p.codigo} - ${p.descripcion}`,
-              value: p.id,
-            }))}
-            style={{ width: "100%" }}
-            size="small"
-          />
-        );
-      },
-    },
-    {
-      title: "Avance %",
-      dataIndex: "avanceLogrado",
-      key: "avanceLogrado",
-      width: 80,
-      render: (val: number, record: any) => (
-        <InputNumber
-          value={val}
-          onChange={(v) => {
-            const idx = partidasTrabajadas.findIndex((p) => p.id === record.id);
-            const newPartidas = [...partidasTrabajadas];
-            newPartidas[idx].avanceLogrado = v || 0;
-            setPartidasTrabajadas(newPartidas);
-          }}
-          min={0}
-          max={100}
-          step={5}
-          size="small"
-          style={{ width: "100%" }}
-        />
-      ),
-    },
-    {
-      title: "",
-      key: "acciones",
-      width: 40,
-      render: (_, record: any) => (
-        <Button
-          type="text"
-          size="small"
-          danger
-          icon={<Trash2 size={14} />}
-          onClick={() => handleEliminarPartida(record.id)}
-        />
-      ),
-    },
-  ];
-
-  const personalColumns = [
-    {
-      title: "Personal",
-      dataIndex: "personalId",
-      key: "personalId",
-      render: (val: number | undefined, record: any) => (
-        <Select
-          placeholder="Seleccionar"
-          value={val}
-          onChange={(v) => {
-            const idx = personasAgregar.findIndex((p) => p.id === record.id);
-            const newPersonas = [...personasAgregar];
-            newPersonas[idx].personalId = v;
-            setPersonasAgregar(newPersonas);
-          }}
-          options={personal.map((p) => ({ label: p.nombre, value: p.id }))}
-          size="small"
-          style={{ width: "100%" }}
-        />
-      ),
-    },
-    {
-      title: "Cargo",
-      key: "cargo",
-      width: 100,
-      render: (_, record: any) => {
-        const p = personal.find((x) => x.id === record.personalId);
-        return <span style={{ fontSize: "12px" }}>{p?.cargo || "-"}</span>;
-      },
-    },
-    {
-      title: "Horas",
-      dataIndex: "horasTrabajadas",
-      key: "horasTrabajadas",
-      width: 70,
-      render: (val: number, record: any) => (
-        <InputNumber
-          value={val}
-          onChange={(v) => {
-            const idx = personasAgregar.findIndex((p) => p.id === record.id);
-            const newPersonas = [...personasAgregar];
-            newPersonas[idx].horasTrabajadas = v || 0;
-            setPersonasAgregar(newPersonas);
-          }}
-          min={0}
-          step={0.5}
-          size="small"
-          style={{ width: "100%" }}
-        />
-      ),
-    },
-    {
-      title: "Costo/Hr",
-      key: "costoPorHora",
-      width: 90,
-      render: (_, record: any) => {
-        const p = personal.find((x) => x.id === record.personalId);
-        return (
-          <span style={{ fontSize: "12px" }}>
-            ${p?.costoPorHora.toLocaleString("es-CO", { maximumFractionDigits: 0 }) || "-"}
-          </span>
-        );
-      },
-    },
-    {
-      title: "Total",
-      key: "total",
-      width: 100,
-      render: (_, record: any) => {
-        const p = personal.find((x) => x.id === record.personalId);
-        if (!p) return "-";
-        const total = record.horasTrabajadas * p.costoPorHora;
-        return (
-          <span style={{ fontSize: "12px", fontWeight: "600" }}>
-            ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-          </span>
-        );
-      },
-    },
-    {
-      title: "",
-      key: "acciones",
-      width: 40,
-      render: (_, record: any) => (
-        <Button
-          type="text"
-          size="small"
-          danger
-          icon={<Trash2 size={14} />}
-          onClick={() => handleEliminarPersona(record.id)}
-        />
-      ),
-    },
-  ];
-
-  const materialColumns = [
-    {
-      title: "Material",
-      dataIndex: "materialId",
-      key: "materialId",
-      render: (val: number | undefined, record: any) => {
-        const mat = materiales.find((m) => m.materialId === val);
-        return (
-          <div className="flex items-center gap-2">
-            <Select
-              placeholder="Seleccionar"
-              value={val}
-              onChange={(v) => {
-                const idx = materialesAgregar.findIndex((m) => m.id === record.id);
-                const newMateriales = [...materialesAgregar];
-                const mat = materiales.find((x) => x.materialId === v);
-                newMateriales[idx].materialId = v;
-                newMateriales[idx].precioUnitario = mat?.precioPromedio || 0;
-                setMaterialesAgregar(newMateriales);
-              }}
-              options={materiales.map((m) => ({
-                label: m.materialNombre,
-                value: m.materialId,
-              }))}
-              size="small"
-              style={{ width: "130px" }}
-            />
-            {mat && (
-              <Tag
-                color={
-                  mat.estadoStock === "NORMAL"
-                    ? "green"
-                    : mat.estadoStock === "BAJO"
-                    ? "orange"
-                    : "red"
-                }
-                style={{ fontSize: "10px" }}
-              >
-                {mat.estadoStock}
-              </Tag>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: "Unidad",
-      key: "unidad",
-      width: 70,
-      render: (_, record: any) => {
-        const m = materiales.find((x) => x.materialId === record.materialId);
-        return <span style={{ fontSize: "12px" }}>{m?.unidad || "-"}</span>;
-      },
-    },
-    {
-      title: "Cant.",
-      dataIndex: "cantidad",
-      key: "cantidad",
-      width: 70,
-      render: (val: number, record: any) => (
-        <InputNumber
-          value={val}
-          onChange={(v) => {
-            const idx = materialesAgregar.findIndex((m) => m.id === record.id);
-            const newMateriales = [...materialesAgregar];
-            newMateriales[idx].cantidad = v || 0;
-            setMaterialesAgregar(newMateriales);
-          }}
-          min={0}
-          step={0.1}
-          size="small"
-          style={{ width: "100%" }}
-        />
-      ),
-    },
-    {
-      title: "P. Unit.",
-      dataIndex: "precioUnitario",
-      key: "precioUnitario",
-      width: 90,
-      render: (val: number, record: any) => (
-        <InputNumber
-          value={val}
-          onChange={(v) => {
-            const idx = materialesAgregar.findIndex((m) => m.id === record.id);
-            const newMateriales = [...materialesAgregar];
-            newMateriales[idx].precioUnitario = v || 0;
-            setMaterialesAgregar(newMateriales);
-          }}
-          min={0}
-          step={1000}
-          size="small"
-          style={{ width: "100%" }}
-        />
-      ),
-    },
-    {
-      title: "Total",
-      key: "subtotal",
-      width: 100,
-      render: (_, record: any) => {
-        const total = (record.cantidad || 0) * (record.precioUnitario || 0);
-        return (
-          <span style={{ fontSize: "12px", fontWeight: "600" }}>
-            ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-          </span>
-        );
-      },
-    },
-    {
-      title: "",
-      key: "acciones",
-      width: 40,
-      render: (_, record: any) => (
-        <Button
-          type="text"
-          size="small"
-          danger
-          icon={<Trash2 size={14} />}
-          onClick={() => handleEliminarMaterial(record.id)}
-        />
-      ),
-    },
-  ];
-
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col" style={{ maxHeight: "80vh" }}>
-      {/* Contenedor con scroll oculto */}
-      <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-        <style>{`
-          div::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
+    <div className="flex flex-col h-full bg-white">
+      <style>{`
+        .partida-header {
+          display: grid;
+          grid-template-columns: 28px 1fr 60px 50px 50px;
+          gap: 12px;
+          align-items: start;
+        }
+        .partida-num {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          background: #1e3a5f;
+          color: white;
+          border-radius: 4px;
+          font-weight: 700;
+          font-size: 12px;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+        .partida-item {
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          padding: 12px;
+          margin-bottom: 8px;
+        }
+        .partida-item:hover {
+          border-color: #1e3a5f;
+          background: #f9fafb;
+        }
+        .fila-input {
+          display: grid;
+          grid-template-columns: 1.5fr 60px 70px 70px 80px 50px;
+          gap: 8px;
+          align-items: end;
+          padding: 8px;
+          background: #f9fafb;
+          border-radius: 4px;
+          margin-bottom: 4px;
+          font-size: 12px;
+        }
+        .fila-herramienta {
+          display: grid;
+          grid-template-columns: 1.5fr 1fr 60px 70px 80px 50px;
+          gap: 8px;
+          align-items: end;
+          padding: 8px;
+          background: #f9fafb;
+          border-radius: 4px;
+          margin-bottom: 4px;
+          font-size: 12px;
+        }
+        .label-small {
+          font-size: 10px;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+          display: block;
+        }
+        .scroll-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scroll-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
-        {/* Encabezado estilo factura */}
-        <div className="p-6 border-b border-gray-200">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Reporte Diario de Obra</h2>
-            <p className="text-sm text-gray-500">{obra.nombre}</p>
-          </div>
-        </div>
+      {/* Header compacto */}
+      <div className="px-5 py-4 border-b border-gray-200">
+        <h2 className="text-base font-bold text-gray-900 mb-3">Reporte Diario: {obra.nombre}</h2>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">
-              Fecha *
-            </label>
+            <span className="label-small">Fecha</span>
             <DatePicker
               value={dayjs(fecha)}
               onChange={(val) =>
                 setFecha(val ? val.toISOString() : dayjs().toISOString())
               }
               style={{ width: "100%" }}
+              size="small"
             />
           </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">
-              Observaciones
-            </label>
+          <div className="col-span-3">
+            <span className="label-small">Observaciones</span>
             <Input.TextArea
-              placeholder="Observaciones del día de trabajo"
+              placeholder="..."
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              rows={2}
+              rows={1}
+              style={{ fontSize: "12px" }}
             />
           </div>
         </div>
       </div>
 
-      {/* Tabla de Partidas */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900 text-sm">Partidas Trabajadas</h3>
+      {/* Partidas */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 scroll-hide">
+        {partidasLineas.map((partida, idx) => {
+          const costoPartida = calcularCostoPartida(partida);
+          const isActive = activeTabPartida === partida.id;
+
+          return (
+            <div key={partida.id} className="partida-item">
+              {/* Header Partida */}
+              <div className="partida-header mb-3">
+                <div className="partida-num">{idx + 1}</div>
+                <Select
+                  placeholder="Partida..."
+                  value={partida.partidaId}
+                  onChange={(v) => handleUpdatePartida(partida.id, "partidaId", v)}
+                  options={obra.partidas.map((p) => ({
+                    label: `${p.codigo} - ${p.descripcion}`,
+                    value: p.id,
+                  }))}
+                  size="small"
+                  style={{ fontSize: "12px" }}
+                />
+                <div className="text-center">
+                  <span className="label-small">Avance</span>
+                  <InputNumber
+                    value={partida.avanceLogrado}
+                    onChange={(v) => handleUpdatePartida(partida.id, "avanceLogrado", v)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    size="small"
+                    style={{ width: "100%", fontSize: "12px" }}
+                  />
+                </div>
+                <div>
+                  <span className="label-small">%</span>
+                </div>
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  icon={<Trash2 size={14} />}
+                  onClick={() => handleEliminarPartida(partida.id)}
+                />
+              </div>
+
+              {/* Tabs */}
+              <Tabs
+                activeKey={isActive ? "personal" : undefined}
+                onChange={() => setActiveTabPartida(isActive ? null : partida.id)}
+                size="small"
+                items={[
+                  {
+                    key: "personal",
+                    label: (
+                      <span className="text-xs flex items-center gap-1">
+                        <Users size={12} />
+                        Personal ({partida.personal.length})
+                      </span>
+                    ),
+                    children: (
+                      <div className="mt-2">
+                        {partida.personal.length === 0 ? (
+                          <div className="text-xs text-gray-400 py-2">Sin personal</div>
+                        ) : (
+                          <div className="space-y-1">
+                            {partida.personal.map((p, idx) => {
+                              const pers = personal.find((x) => x.id === p.personalId);
+                              const total = p.horasTrabajadas * (pers?.costoPorHora || 0);
+                              return (
+                                <div key={p.id} className="fila-input">
+                                  <div>
+                                    <span className="label-small">Trabajador</span>
+                                    <Select
+                                      placeholder="..."
+                                      value={p.personalId}
+                                      onChange={(v) =>
+                                        handleUpdatePersonaEnPartida(partida.id, idx, "personalId", v)
+                                      }
+                                      options={personal.map((x) => ({
+                                        label: x.nombre,
+                                        value: x.id,
+                                      }))}
+                                      size="small"
+                                      style={{ fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="label-small">Horas</span>
+                                    <InputNumber
+                                      value={p.horasTrabajadas}
+                                      onChange={(v) =>
+                                        handleUpdatePersonaEnPartida(partida.id, idx, "horasTrabajadas", v)
+                                      }
+                                      min={0}
+                                      step={0.5}
+                                      size="small"
+                                      style={{ width: "100%", fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="label-small">Cargo</span>
+                                    <div className="text-xs text-gray-700">{pers?.cargo || "-"}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="label-small">$/Hr</span>
+                                    <div className="text-xs text-gray-700">
+                                      ${pers?.costoPorHora.toLocaleString("es-CO", {
+                                        maximumFractionDigits: 0,
+                                      }) || "-"}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="label-small">Total</span>
+                                    <div className="text-xs font-semibold text-gray-900">
+                                      ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="text"
+                                    danger
+                                    size="small"
+                                    icon={<Trash2 size={12} />}
+                                    onClick={() => handleEliminarPersonaDePartida(partida.id, p.id)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<Plus size={12} />}
+                          onClick={() => handleAgregarPersonaAPartida(partida.id)}
+                          className="mt-2"
+                          style={{ fontSize: "11px" }}
+                        >
+                          Agregar
+                        </Button>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "materials",
+                    label: (
+                      <span className="text-xs flex items-center gap-1">
+                        <Package size={12} />
+                        Materiales ({partida.materiales.length})
+                      </span>
+                    ),
+                    children: (
+                      <div className="mt-2">
+                        {partida.materiales.length === 0 ? (
+                          <div className="text-xs text-gray-400 py-2">Sin materiales</div>
+                        ) : (
+                          <div className="space-y-1">
+                            {partida.materiales.map((m, idx) => {
+                              const mat = materiales.find((x) => x.materialId === m.materialId);
+                              const total = m.cantidad * m.precioUnitario;
+                              return (
+                                <div key={m.id} className="fila-input">
+                                  <div>
+                                    <span className="label-small">Material</span>
+                                    <Select
+                                      placeholder="..."
+                                      value={m.materialId}
+                                      onChange={(v) => {
+                                        const material = materiales.find((x) => x.materialId === v);
+                                        handleUpdateMaterialEnPartida(partida.id, idx, "materialId", v);
+                                        if (material) {
+                                          handleUpdateMaterialEnPartida(
+                                            partida.id,
+                                            idx,
+                                            "precioUnitario",
+                                            material.precioPromedio
+                                          );
+                                        }
+                                      }}
+                                      options={materiales.map((x) => ({
+                                        label: x.materialNombre,
+                                        value: x.materialId,
+                                      }))}
+                                      size="small"
+                                      style={{ fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="label-small">Cant.</span>
+                                    <InputNumber
+                                      value={m.cantidad}
+                                      onChange={(v) =>
+                                        handleUpdateMaterialEnPartida(partida.id, idx, "cantidad", v)
+                                      }
+                                      min={0}
+                                      step={0.1}
+                                      size="small"
+                                      style={{ width: "100%", fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="label-small">Ud.</span>
+                                    <div className="text-xs text-gray-700">{mat?.unidad || "-"}</div>
+                                  </div>
+                                  <div>
+                                    <span className="label-small">P.Unit.</span>
+                                    <InputNumber
+                                      value={m.precioUnitario}
+                                      onChange={(v) =>
+                                        handleUpdateMaterialEnPartida(partida.id, idx, "precioUnitario", v)
+                                      }
+                                      min={0}
+                                      step={1000}
+                                      size="small"
+                                      style={{ width: "100%", fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="label-small">Total</span>
+                                    <div className="text-xs font-semibold text-gray-900">
+                                      ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="text"
+                                    danger
+                                    size="small"
+                                    icon={<Trash2 size={12} />}
+                                    onClick={() => handleEliminarMaterialDePartida(partida.id, m.id)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<Plus size={12} />}
+                          onClick={() => handleAgregarMaterialAPartida(partida.id)}
+                          className="mt-2"
+                          style={{ fontSize: "11px" }}
+                        >
+                          Agregar
+                        </Button>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "tools",
+                    label: (
+                      <span className="text-xs flex items-center gap-1">
+                        🔧 Herramientas ({partida.herramientas.length})
+                      </span>
+                    ),
+                    children: (
+                      <div className="mt-2">
+                        {partida.herramientas.length === 0 ? (
+                          <div className="text-xs text-gray-400 py-2">Sin herramientas</div>
+                        ) : (
+                          <div className="space-y-1">
+                            {partida.herramientas.map((h, idx) => {
+                              const total = h.cantidad * h.costoUnitario;
+                              return (
+                                <div key={h.id} className="fila-herramienta">
+                                  <div>
+                                    <span className="label-small">Nombre</span>
+                                    <Input
+                                      placeholder="..."
+                                      value={h.nombre}
+                                      onChange={(e) =>
+                                        handleUpdateHerramientaEnPartida(partida.id, idx, "nombre", e.target.value)
+                                      }
+                                      size="small"
+                                      style={{ fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="label-small">Descripción</span>
+                                    <Input
+                                      placeholder="..."
+                                      value={h.descripcion || ""}
+                                      onChange={(e) =>
+                                        handleUpdateHerramientaEnPartida(partida.id, idx, "descripcion", e.target.value)
+                                      }
+                                      size="small"
+                                      style={{ fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="label-small">Cant.</span>
+                                    <InputNumber
+                                      value={h.cantidad}
+                                      onChange={(v) =>
+                                        handleUpdateHerramientaEnPartida(partida.id, idx, "cantidad", v)
+                                      }
+                                      min={0}
+                                      step={0.5}
+                                      size="small"
+                                      style={{ width: "100%", fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="label-small">Costo Unit.</span>
+                                    <InputNumber
+                                      value={h.costoUnitario}
+                                      onChange={(v) =>
+                                        handleUpdateHerramientaEnPartida(partida.id, idx, "costoUnitario", v)
+                                      }
+                                      min={0}
+                                      step={1000}
+                                      size="small"
+                                      style={{ width: "100%", fontSize: "11px" }}
+                                    />
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="label-small">Total</span>
+                                    <div className="text-xs font-semibold text-gray-900">
+                                      ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="text"
+                                    danger
+                                    size="small"
+                                    icon={<Trash2 size={12} />}
+                                    onClick={() => handleEliminarHerramientaDePartida(partida.id, h.id)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<Plus size={12} />}
+                          onClick={() => handleAgregarHerramientaAPartida(partida.id)}
+                          className="mt-2"
+                          style={{ fontSize: "11px" }}
+                        >
+                          Agregar
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+
+              {/* Subtotal compacto */}
+              {isActive && (
+                <div className="mt-2 pt-2 border-t border-gray-200 grid grid-cols-4 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-600">MO:</span>
+                    <div className="font-semibold text-gray-900">
+                      ${partida.personal
+                        .reduce((s, p) => {
+                          const pers = personal.find((x) => x.id === p.personalId);
+                          return s + (pers ? p.horasTrabajadas * pers.costoPorHora : 0);
+                        }, 0)
+                        .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Mat:</span>
+                    <div className="font-semibold text-gray-900">
+                      ${partida.materiales
+                        .reduce((s, m) => s + m.cantidad * m.precioUnitario, 0)
+                        .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Her:</span>
+                    <div className="font-semibold text-gray-900">
+                      ${partida.herramientas
+                        .reduce((s, h) => s + h.cantidad * h.costoUnitario, 0)
+                        .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-gray-600">Sub:</span>
+                    <div className="font-bold text-gray-900">
+                      ${costoPartida.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Botón agregar partida */}
+        {partidasLineas.length === 0 ? (
+          <div className="text-center py-6">
+            <Button
+              type="primary"
+              size="large"
+              icon={<Plus size={18} />}
+              onClick={handleAgregarPartida}
+              className="mb-2"
+            >
+              Agregar Primera Partida
+            </Button>
+            <p className="text-xs text-gray-400">Comienza a registrar trabajo</p>
+          </div>
+        ) : (
           <Button
-            type="primary"
+            type="dashed"
+            block
             size="small"
-            icon={<Plus size={16} />}
+            icon={<Plus size={14} />}
             onClick={handleAgregarPartida}
+            className="mt-2"
+            style={{ fontSize: "12px" }}
           >
             Agregar Partida
           </Button>
-        </div>
-        {partidasTrabajadas.length > 0 ? (
-          <Table
-            columns={partidasColumns}
-            dataSource={partidasTrabajadas}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            bordered={false}
-            style={{ fontSize: "12px" }}
-          />
-        ) : (
-          <Empty description="Sin partidas" />
         )}
       </div>
 
-      {/* Tabla de Personal */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900 text-sm">Personal</h3>
-          <Button
-            type="primary"
-            size="small"
-            icon={<Plus size={16} />}
-            onClick={handleAgregarPersona}
-          >
-            Agregar Trabajador
-          </Button>
-        </div>
-        {personasAgregar.length > 0 ? (
-          <Table
-            columns={personalColumns}
-            dataSource={personasAgregar}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            bordered={false}
-            style={{ fontSize: "12px" }}
-          />
-        ) : (
-          <Empty description="Sin personal" />
-        )}
-      </div>
-
-      {/* Tabla de Materiales */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900 text-sm">Materiales Consumidos</h3>
-          <Button
-            type="primary"
-            size="small"
-            icon={<Plus size={16} />}
-            onClick={handleAgregarMaterial}
-          >
-            Agregar Material
-          </Button>
-        </div>
-        {materialesAgregar.length > 0 ? (
-          <Table
-            columns={materialColumns}
-            dataSource={materialesAgregar}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            bordered={false}
-            style={{ fontSize: "12px" }}
-          />
-        ) : (
-          <Empty description="Sin materiales" />
-        )}
-      </div>
-
-        {/* Resumen Totales - Estilo factura */}
-        <div className="p-6 bg-gray-50 border-t border-gray-200">
-          <div className="flex justify-end">
-            <div className="w-full max-w-xs space-y-2">
-              <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                <span className="text-sm text-gray-700">Costo Mano de Obra:</span>
-                <span className="font-semibold text-gray-900">
-                  ${costoManoObra.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                <span className="text-sm text-gray-700">Costo Materiales:</span>
-                <span className="font-semibold text-gray-900">
-                  ${costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-3 bg-white px-3 rounded border-2 border-gray-300">
-                <span className="font-bold text-gray-900">Total Reporte:</span>
-                <span className="text-2xl font-bold text-green-600">
-                  ${costoTotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-                </span>
-              </div>
+      {/* Footer */}
+      <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
+        {partidasLineas.length > 0 && (
+          <div className="mb-3 p-3 bg-white rounded border border-gray-200">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-gray-600">Total Reporte:</span>
+              <span className="text-lg font-black text-gray-900">
+                ${costoTotalReporte.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+              </span>
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {partidasLineas.length}P · {partidasLineas.reduce((s, p) => s + p.personal.length, 0)}T · {partidasLineas.reduce((s, p) => s + p.materiales.length, 0)}M · {partidasLineas.reduce((s, p) => s + p.herramientas.length, 0)}H
+            </p>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Botones */}
-      <div className="p-6 flex justify-end gap-3 bg-white border-t border-gray-200">
-        <Button size="large">Cancelar</Button>
-        <Button
-          type="primary"
-          size="large"
-          loading={loading}
-          onClick={handleSubmit}
-          style={{ minWidth: "150px" }}
-        >
-          Guardar Reporte
-        </Button>
+        <div className="flex justify-end gap-2">
+          <Button size="small">Cancelar</Button>
+          <Button
+            type="primary"
+            size="small"
+            loading={loading}
+            onClick={handleSubmit}
+            style={{ fontSize: "12px" }}
+          >
+            Guardar Reporte
+          </Button>
+        </div>
       </div>
     </div>
   );

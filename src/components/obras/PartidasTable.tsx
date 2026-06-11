@@ -33,7 +33,17 @@ export default function PartidasTable({
       title: "Código",
       dataIndex: "codigo",
       key: "codigo",
-      width: 80,
+      width: 110,
+      render: (text: string, record: Partida) => (
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">{text}</span>
+          {record.esExtra && (
+            <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">
+              Extra
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       title: "Descripción",
@@ -51,7 +61,7 @@ export default function PartidasTable({
       dataIndex: "cantidadPresupuestada",
       key: "cantidadPresupuestada",
       width: 100,
-      render: (val: number) => val.toFixed(2),
+      render: (val: number, record: Partida) => record.esExtra ? "—" : val.toFixed(2),
       align: "right" as const,
     },
     {

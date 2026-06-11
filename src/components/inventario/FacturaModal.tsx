@@ -14,6 +14,7 @@ interface FacturaModalProps {
   onSubmit: (values: FacturaFormValues) => Promise<void>;
   materiales: MaterialCatalogo[];
   proyectos?: Array<{ id: number; nombre: string }>;
+  obras?: Array<{ id: number; nombre: string; proyectoId: number }>;
 }
 
 interface LineaEditando extends LineaFacturaFormValues {
@@ -29,6 +30,7 @@ export default function FacturaModal({
   onSubmit,
   materiales,
   proyectos = [],
+  obras = [],
 }: FacturaModalProps) {
   const [numero, setNumero] = useState("");
   const [proveedorNombre, setProveedorNombre] = useState("");
@@ -36,6 +38,7 @@ export default function FacturaModal({
   const [fecha, setFecha] = useState<any>(dayjs());
   const [fechaRecepcion, setFechaRecepcion] = useState<any>(null);
   const [proyectoId, setProyectoId] = useState<number | undefined>();
+  const [obraId, setObraId] = useState<number | undefined>();
   const [impuesto, setImpuesto] = useState(19);
   const [notas, setNotas] = useState("");
 
@@ -241,6 +244,7 @@ export default function FacturaModal({
         fecha: fecha.toISOString(),
         fechaRecepcion: fechaRecepcion?.toISOString(),
         proyectoId,
+        obraId,
         items: lineas.map((l) => ({
           materialId: l.materialId,
           cantidad: l.cantidad,
@@ -345,12 +349,37 @@ export default function FacturaModal({
             </label>
             <Select
               value={proyectoId}
-              onChange={setProyectoId}
+              onChange={(val) => {
+                setProyectoId(val);
+                setObraId(undefined); // reset obra when project changes
+              }}
               placeholder="Selecciona proyecto"
               options={proyectos.map((p) => ({
                 value: p.id,
                 label: p.nombre,
               }))}
+              allowClear
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Obra (opcional)
+            </label>
+            <Select
+              value={obraId}
+              onChange={(val) => {
+                setObraId(val);
+                // auto-fill proyecto if not set
+                if (val && !proyectoId) {
+                  const obra = obras.find((o) => o.id === val);
+                  if (obra) setProyectoId(obra.proyectoId);
+                }
+              }}
+              placeholder="Selecciona obra"
+              options={(proyectoId
+                ? obras.filter((o) => o.proyectoId === proyectoId)
+                : obras
+              ).map((o) => ({ value: o.id, label: o.nombre }))}
               allowClear
             />
           </div>

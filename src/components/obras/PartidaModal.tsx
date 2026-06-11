@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Input, InputNumber, Select, Spin } from "antd";
+import { Modal, Input, InputNumber, Switch } from "antd";
 import type { Partida, PartidaFormValues } from "@/types/obras";
 import toast from "react-hot-toast";
 
@@ -7,6 +7,7 @@ interface Props {
   open: boolean;
   obraId: number;
   partida: Partida | null;
+  defaultEsExtra?: boolean;
   onClose: () => void;
   onSubmit: (values: PartidaFormValues) => Promise<void>;
 }
@@ -15,6 +16,7 @@ export default function PartidaModal({
   open,
   obraId,
   partida,
+  defaultEsExtra = false,
   onClose,
   onSubmit,
 }: Props) {
@@ -25,6 +27,7 @@ export default function PartidaModal({
     unidad: "",
     cantidadPresupuestada: 0,
     precioUnitario: 0,
+    esExtra: defaultEsExtra,
   });
 
   useEffect(() => {
@@ -35,6 +38,7 @@ export default function PartidaModal({
         unidad: partida.unidad,
         cantidadPresupuestada: partida.cantidadPresupuestada,
         precioUnitario: partida.precioUnitario,
+        esExtra: partida.esExtra,
       });
     } else {
       setForm({
@@ -43,9 +47,10 @@ export default function PartidaModal({
         unidad: "",
         cantidadPresupuestada: 0,
         precioUnitario: 0,
+        esExtra: defaultEsExtra,
       });
     }
-  }, [partida, open]);
+  }, [partida, open, defaultEsExtra]);
 
   const handleSubmit = async () => {
     if (!form.codigo) {
@@ -60,7 +65,7 @@ export default function PartidaModal({
       toast.error("La unidad es requerida");
       return;
     }
-    if (!form.cantidadPresupuestada || form.cantidadPresupuestada === 0) {
+    if (!form.esExtra && (!form.cantidadPresupuestada || form.cantidadPresupuestada === 0)) {
       toast.error("La cantidad debe ser mayor a 0");
       return;
     }
@@ -80,9 +85,20 @@ export default function PartidaModal({
   const montoPresupuestado =
     (form.cantidadPresupuestada || 0) * (form.precioUnitario || 0);
 
+  const esExtra = form.esExtra ?? false;
+
   return (
     <Modal
-      title={partida ? "Editar Partida" : "Nueva Partida"}
+      title={
+        <div className="flex items-center gap-3">
+          <span>{partida ? "Editar Partida" : "Nueva Partida"}</span>
+          {esExtra && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">
+              OBRA EXTRA
+            </span>
+          )}
+        </div>
+      }
       open={open}
       onCancel={onClose}
       onOk={handleSubmit}
@@ -91,13 +107,26 @@ export default function PartidaModal({
       width={600}
       confirmLoading={loading}
     >
-      <div className="space-y-4">
+      <div className="space-y-4 pt-2">
+        {/* Toggle obra extra */}
+        <div className={`flex items-center justify-between p-3 rounded-lg border ${esExtra ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Obra Extra</p>
+            <p className="text-xs text-gray-500">Partida no contemplada en el presupuesto original</p>
+          </div>
+          <Switch
+            checked={esExtra}
+            onChange={(checked) => setForm({ ...form, esExtra: checked })}
+            style={{ backgroundColor: esExtra ? "#16a34a" : undefined }}
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Código *
           </label>
           <Input
-            placeholder="Ej: 01.01"
+            placeholder={esExtra ? "Ej: OE-01" : "Ej: 01.01"}
             value={form.codigo || ""}
             onChange={(e) => setForm({ ...form, codigo: e.target.value })}
           />
@@ -128,7 +157,7 @@ export default function PartidaModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Cantidad *
+              {esExtra ? "Cantidad Estimada" : "Cantidad *"}
             </label>
             <InputNumber
               value={form.cantidadPresupuestada}
@@ -138,6 +167,7 @@ export default function PartidaModal({
               min={0}
               step={0.1}
               style={{ width: "100%" }}
+              placeholder={esExtra ? "0 (opcional)" : "0"}
             />
           </div>
         </div>
@@ -161,15 +191,16 @@ export default function PartidaModal({
           />
         </div>
 
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className={`p-4 rounded-lg border ${esExtra ? "bg-green-50 border-green-200" : "bg-blue-50 border-blue-200"}`}>
           <p className="text-sm text-gray-600">
-            Monto Presupuestado:{" "}
-            <span className="font-bold text-blue-600">
-              ${montoPresupuestado.toLocaleString("es-CO", {
-                maximumFractionDigits: 0,
-              })}
+            {esExtra ? "Monto Estimado" : "Monto Presupuestado"}:{" "}
+            <span className={`font-bold ${esExtra ? "text-green-700" : "text-blue-600"}`}>
+              ${montoPresupuestado.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
             </span>
           </p>
+          {esExtra && (
+            <p className="text-xs text-green-600 mt-1">Esta partida aparecerá en la columna "Obras Extras" de las valuaciones</p>
+          )}
         </div>
       </div>
     </Modal>

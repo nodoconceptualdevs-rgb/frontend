@@ -94,6 +94,23 @@ export default function MaterialesTable({ materiales }: MaterialesTableProps) {
       render: (unit: string) => <span className="text-sm text-gray-600">{unit}</span>,
     },
     {
+      title: "Proyecto/Obra",
+      dataIndex: "proyectoNombre",
+      key: "proyecto",
+      width: 140,
+      render: (nombre: string | undefined, record: MaterialConEstado) => {
+        if (!nombre && !record.obraNombre) {
+          return <span className="text-gray-400">Sin asignar</span>;
+        }
+        return (
+          <div className="text-sm">
+            {nombre && <div className="font-medium text-gray-900">{nombre}</div>}
+            {record.obraNombre && <div className="text-gray-500 text-xs">Obra: {record.obraNombre}</div>}
+          </div>
+        );
+      },
+    },
+    {
       title: "Stock",
       dataIndex: "stockActual",
       key: "stock",

@@ -13,3 +13,6 @@ export { default as PersonalTable } from "./PersonalTable";
 export { default as PersonalModal } from "./PersonalModal";
 export { default as ValuacionResumen } from "./ValuacionResumen";
 export { default as EstadoSegmented } from "./EstadoSegmented";
+export { default as ValuacionesTab } from "./ValuacionesTab";
+export { default as AnaliticaTab } from "./AnaliticaTab";
+export { default as InventarioTab } from "./InventarioTab";

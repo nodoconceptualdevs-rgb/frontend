@@ -49,6 +49,7 @@ export interface Partida {
   cantidadEjecutada: number;
   montoEjecutado: number;
   avancePorcentaje: number;
+  esExtra: boolean; // true = obra extra, no estaba en presupuesto original
 }
 
 export interface PartidaFormValues {
@@ -57,6 +58,7 @@ export interface PartidaFormValues {
   unidad: string;
   cantidadPresupuestada: number;
   precioUnitario: number;
+  esExtra?: boolean;
 }
 
 // ─── Líneas de Reporte Diario ─────────────────────────────────────────────────
@@ -99,6 +101,7 @@ export interface ReporteDiario {
   costoMateriales: number;
   costoTotal: number;
   creadoEn: string;
+  valuacionId?: number;  // undefined = pendiente, número = concretado en esa valuación
 }
 
 export interface ReporteFormValues {
@@ -171,6 +174,44 @@ export interface MaterialDisponible {
   stockActual: number;
   precioPromedio: number;
   estadoStock: EstadoStock;
+}
+
+// ─── Valuación Documental (snapshot por corte) ────────────────────────────────
+
+export interface ValuacionLineaPartida {
+  partidaId: number;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  esExtra: boolean;
+  cantidadPresupuestada: number;   // 0 para obras extras
+  precioUnitario: number;
+  montoPresupuestado: number;      // 0 para obras extras
+  cantidadEjecutada: number;
+  montoEjecutado: number;
+  aumento?: number;                // cantidad adicional ejecutada sobre el presupuesto
+  montoAumento?: number;
+  disminucion?: number;            // cantidad no ejecutada del presupuesto
+  montoDisminucion?: number;
+}
+
+export interface ValuacionDoc {
+  id: number;
+  obraId: number;
+  numero: number;
+  fecha: string;                   // ISO – fecha de concreción
+  lineas: ValuacionLineaPartida[];
+  totalPresupuesto: number;
+  totalEjecutado: number;
+  totalAumentos: number;
+  totalDisminuciones: number;
+  totalExtras: number;
+  presupuestoModificado: number;   // base + aumentos − disminuciones + extras
+  notas?: string;
+}
+
+export interface ValuacionFormValues {
+  notas?: string;
 }
 
 // ─── Valuación Final ──────────────────────────────────────────────────────────

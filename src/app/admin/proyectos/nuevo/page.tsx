@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { createProyecto } from "@/services/proyectos";
+import { createObra } from "@/services/obras";
 import { getClientes, getGerentes } from "@/services/usuarios";
 import { alerts } from "@/lib/alerts";
 import { Toaster } from "react-hot-toast";
@@ -27,6 +28,8 @@ export default function NuevoProyectoPage() {
     gerente_proyecto: "",
     estado_general: "En Planificación",
     fecha_inicio: new Date().toISOString().split("T")[0],
+    fecha_fin_planificada: "",
+    presupuesto_total: "",
     es_publico: true,
   });
 
@@ -59,28 +62,46 @@ export default function NuevoProyectoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.presupuesto_total || !formData.fecha_fin_planificada) {
+      alerts.error("El presupuesto y la fecha de fin son requeridos");
+      return;
+    }
     setLoading(true);
 
     try {
-      await alerts.promise(
+      // 1. Crear el proyecto
+      const result = await alerts.promise(
         createProyecto({
           nombre_proyecto: formData.nombre_proyecto,
           fecha_inicio: formData.fecha_inicio,
           estado_general: formData.estado_general,
           cliente: formData.cliente ? parseInt(formData.cliente) : undefined,
           gerente_proyecto: formData.gerente_proyecto ? parseInt(formData.gerente_proyecto) : undefined,
-          es_publico: formData.es_publico
+          es_publico: formData.es_publico,
         }),
         {
-          loading: 'Creando proyecto...',
-          success: 'Proyecto creado exitosamente',
-          error: 'Error al crear el proyecto'
+          loading: "Creando proyecto...",
+          success: "Proyecto creado exitosamente",
+          error: "Error al crear el proyecto",
         }
       );
-      
-      // Esperar un poco para que se vea la alerta de éxito
+
+      // 2. Crear la obra automáticamente vinculada al proyecto
+      const proyectoId = (result as any)?.data?.id ?? (result as any)?.id;
+      if (proyectoId) {
+        await createObra({
+          nombre: formData.nombre_proyecto,
+          proyectoId,
+          estado: "PREPARACION",
+          fechaInicio: new Date(formData.fecha_inicio).toISOString(),
+          fechaFinPlanificada: new Date(formData.fecha_fin_planificada).toISOString(),
+          presupuestoTotal: parseFloat(formData.presupuesto_total),
+          notas: "Obra generada automáticamente al crear el proyecto",
+        });
+      }
+
       setTimeout(() => {
-        router.push("/admin/proyectos");
+        router.push("/admin/obras");
       }, 1000);
     } catch (error: any) {
       console.error("Error creando proyecto:", error);
@@ -216,6 +237,44 @@ export default function NuevoProyectoPage() {
               </div>
             </div>
 
+            {/* Obra — Presupuesto y Fecha Fin */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Presupuesto de Obra *
+                </label>
+                <input
+                  type="number"
+                  name="presupuesto_total"
+                  value={formData.presupuesto_total}
+                  onChange={handleChange}
+                  required
+                  min={0}
+                  placeholder="Ej: 45000000"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Monto total del contrato de obra
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fecha Fin Planificada *
+                </label>
+                <input
+                  type="date"
+                  name="fecha_fin_planificada"
+                  value={formData.fecha_fin_planificada}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Fecha estimada de entrega de la obra
+                </p>
+              </div>
+            </div>
+
             {/* Privacidad del Proyecto */}
             <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
               <div className="flex items-center justify-between">
@@ -289,12 +348,14 @@ export default function NuevoProyectoPage() {
                       • Se generará automáticamente un <strong>token NFC único</strong>
                     </li>
                     <li>
+                      • Se creará automáticamente la <strong>obra vinculada</strong> al proyecto
+                    </li>
+                    <li>
                       • Podrás <strong>crear los hitos</strong> del proyecto manualmente
                     </li>
                     <li>
                       • El proyecto estará disponible para gestión inmediata
                     </li>
-                    <li>• Podrás agregar contenido multimedia a cada hito creado</li>
                   </ul>
                 </div>
               </div>

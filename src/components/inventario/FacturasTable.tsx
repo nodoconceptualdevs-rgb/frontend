@@ -66,8 +66,22 @@ export default function FacturasTable({
       title: "Proyecto",
       dataIndex: "proyectoNombre",
       key: "proyecto",
-      width: 180,
+      width: 150,
       render: (texto: string | undefined) => texto || "—",
+    },
+    {
+      title: "Obra",
+      dataIndex: "obraNombre",
+      key: "obra",
+      width: 150,
+      render: (texto: string | undefined) =>
+        texto ? (
+          <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+            {texto}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        ),
     },
     {
       title: "Ítems",

@@ -11,6 +11,8 @@ import FacturasTable from "@/components/inventario/FacturasTable";
 import MaterialesTable from "@/components/inventario/MaterialesTable";
 import FacturaModal from "@/components/inventario/FacturaModal";
 import FacturaDetalleModal from "@/components/inventario/FacturaDetalleModal";
+import HerramientasTable from "@/components/inventario/HerramientasTable";
+import HerramientaModal from "@/components/inventario/HerramientaModal";
 import PeriodoSelector from "@/components/kpi/PeriodoSelector";
 import type { Granularidad } from "@/lib/periodo";
 import { rangoPeriodo } from "@/lib/periodo";
@@ -19,6 +21,8 @@ import type {
   FacturaFormValues,
   MaterialConEstado,
   InventarioResumen,
+  Herramienta,
+  HerramientaFormValues,
 } from "@/types/inventario";
 import {
   getFacturas,
@@ -27,17 +31,27 @@ import {
   anularFactura,
   getMateriales,
   getResumenInventario,
+  getHerramientas,
+  createHerramienta,
+  updateHerramienta,
+  deleteHerramienta,
 } from "@/services/inventario";
+import { getObras } from "@/services/obras";
+import type { Obra } from "@/types/obras";
 
 export default function InventarioPage() {
   const [facturas, setFacturas] = useState<FacturaCompra[]>([]);
   const [materiales, setMateriales] = useState<MaterialConEstado[]>([]);
+  const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
+  const [obras, setObras] = useState<Obra[]>([]);
   const [resumen, setResumen] = useState<InventarioResumen | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalFacturaOpen, setModalFacturaOpen] = useState(false);
   const [modalMaterialOpen, setModalMaterialOpen] = useState(false);
+  const [modalHerramientaOpen, setModalHerramientaOpen] = useState(false);
   const [facturaDetalleOpen, setFacturaDetalleOpen] = useState(false);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaCompra | null>(null);
+  const [herramientaSeleccionada, setHerramientaSeleccionada] = useState<Herramienta | null>(null);
 
   // Período para filtro de facturas
   const [hoyIso] = useState(() => new Date().toISOString());
@@ -53,14 +67,18 @@ export default function InventarioPage() {
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
-      const [f, m, r] = await Promise.all([
+      const [f, m, r, h, o] = await Promise.all([
         getFacturas(),
         getMateriales(),
         getResumenInventario(),
+        getHerramientas(),
+        getObras(),
       ]);
       setFacturas(f);
       setMateriales(m);
       setResumen(r);
+      setHerramientas(h);
+      setObras(o);
     } catch (error) {
       console.error(error);
       toast.error("Error al cargar datos");
@@ -168,6 +186,44 @@ export default function InventarioPage() {
     await cargarDatos();
     setModalMaterialOpen(false);
     toast.success("Material agregado al catálogo");
+  };
+
+  const handleCrearHerramienta = async (values: HerramientaFormValues) => {
+    try {
+      await createHerramienta(values);
+      await cargarDatos();
+      setModalHerramientaOpen(false);
+      setHerramientaSeleccionada(null);
+      toast.success("Herramienta agregada correctamente");
+    } catch (error) {
+      console.error("Error al crear herramienta:", error);
+      toast.error("Error al crear la herramienta");
+    }
+  };
+
+  const handleActualizarHerramienta = async (values: HerramientaFormValues) => {
+    if (!herramientaSeleccionada) return;
+    try {
+      await updateHerramienta(herramientaSeleccionada.id, values);
+      await cargarDatos();
+      setModalHerramientaOpen(false);
+      setHerramientaSeleccionada(null);
+      toast.success("Herramienta actualizada correctamente");
+    } catch (error) {
+      console.error("Error al actualizar herramienta:", error);
+      toast.error("Error al actualizar la herramienta");
+    }
+  };
+
+  const handleEliminarHerramienta = async (id: number) => {
+    try {
+      await deleteHerramienta(id);
+      await cargarDatos();
+      toast.success("Herramienta eliminada correctamente");
+    } catch (error) {
+      console.error("Error al eliminar herramienta:", error);
+      toast.error("Error al eliminar la herramienta");
+    }
   };
 
   // Stats cards
@@ -327,6 +383,59 @@ export default function InventarioPage() {
         </div>
       ),
     },
+    {
+      key: "herramientas",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <Package size={16} /> Herramientas
+        </span>
+      ),
+      children: (
+        <div className="flex flex-col gap-5">
+          {/* Botón agregar herramienta */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Administra las herramientas disponibles para las obras
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setHerramientaSeleccionada(null);
+                setModalHerramientaOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+            >
+              <Plus size={18} />
+              Agregar Herramienta
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Total Herramientas" value={herramientas.length} />
+            <StatCard label="Disponibles" value={herramientas.filter((h) => h.estado === "DISPONIBLE").length} />
+            <StatCard label="En uso" value={herramientas.filter((h) => h.estado === "EN_USO").length} />
+            <StatCard label="En mantenimiento" value={herramientas.filter((h) => h.estado === "MANTENIMIENTO").length} />
+          </div>
+
+          {/* Tabla */}
+          {herramientas.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16">
+              <Empty description="No hay herramientas registradas" />
+            </div>
+          ) : (
+            <HerramientasTable
+              herramientas={herramientas}
+              onEdit={(h) => {
+                setHerramientaSeleccionada(h);
+                setModalHerramientaOpen(true);
+              }}
+              onDelete={handleEliminarHerramienta}
+            />
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -363,7 +472,8 @@ export default function InventarioPage() {
         onClose={() => setModalFacturaOpen(false)}
         onSubmit={handleCrearFactura}
         materiales={materiales}
-        proyectos={[]} // TODO: cargar desde API
+        proyectos={obras.map((o) => ({ id: o.proyectoId, nombre: o.proyectoNombre }))}
+        obras={obras.map((o) => ({ id: o.id, nombre: o.nombre, proyectoId: o.proyectoId }))}
       />
 
       {/* Modal de agregar material */}
@@ -384,6 +494,17 @@ export default function InventarioPage() {
           setFacturaDetalleOpen(false);
           setFacturaSeleccionada(null);
         }}
+      />
+
+      {/* Modal de herramienta */}
+      <HerramientaModal
+        open={modalHerramientaOpen}
+        herramienta={herramientaSeleccionada || undefined}
+        onClose={() => {
+          setModalHerramientaOpen(false);
+          setHerramientaSeleccionada(null);
+        }}
+        onSubmit={herramientaSeleccionada ? handleActualizarHerramienta : handleCrearHerramienta}
       />
     </div>
   );

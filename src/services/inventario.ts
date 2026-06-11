@@ -18,8 +18,22 @@ import type {
   MaterialCatalogo,
   MaterialConEstado,
   UnidadDeMedida,
+  Herramienta,
+  HerramientaFormValues,
 } from "@/types/inventario";
 import { calcularInventarioResumen, calcularEstadoStock, calcularStockYPrecio } from "@/lib/inventario";
+
+// Simple cache para nombres de obra (evita dep circular con services/obras)
+const OBRAS_CACHE: { id: number; nombre: string }[] = [
+  { id: 1, nombre: "Casa García" },
+  { id: 2, nombre: "Edificio Comercial Centro" },
+  { id: 3, nombre: "Reforma Casa Molina" },
+  { id: 4, nombre: "Torre Residencial Palmeras" },
+  { id: 5, nombre: "Oficinas TechHub" },
+];
+export function registrarObraEnCache(id: number, nombre: string) {
+  if (!OBRAS_CACHE.find((o) => o.id === id)) OBRAS_CACHE.push({ id, nombre });
+}
 
 // --- Helpers ---
 
@@ -68,16 +82,16 @@ let UNIDADES: UnidadDeMedida[] = [
 
 let MATERIALES: MaterialCatalogo[] = [
   // ESTRUCTURA
-  { id: 101, nombre: "Cemento Portland", categoria: "ESTRUCTURA", unidad: "bolsa", stockActual: 450, stockMinimo: 100, precioPromedio: 8500, ultimaCompra: hace(2), historialPrecios: [{ fecha: hace(30), precio: 8000 }, { fecha: hace(15), precio: 8300 }, { fecha: hace(2), precio: 8500 }] },
-  { id: 102, nombre: "Acero corrugado #3", categoria: "ESTRUCTURA", unidad: "varilla", stockActual: 240, stockMinimo: 50, precioPromedio: 12000, ultimaCompra: hace(5), historialPrecios: [{ fecha: hace(45), precio: 11500 }, { fecha: hace(20), precio: 11800 }, { fecha: hace(5), precio: 12000 }] },
-  { id: 103, nombre: "Acero corrugado #4", categoria: "ESTRUCTURA", unidad: "varilla", stockActual: 180, stockMinimo: 50, precioPromedio: 15000, ultimaCompra: hace(10), historialPrecios: [{ fecha: hace(60), precio: 14000 }, { fecha: hace(30), precio: 14500 }, { fecha: hace(10), precio: 15000 }] },
+  { id: 101, nombre: "Cemento Portland", categoria: "ESTRUCTURA", unidad: "bolsa", stockActual: 450, stockMinimo: 100, precioPromedio: 8500, ultimaCompra: hace(2), historialPrecios: [{ fecha: hace(30), precio: 8000 }, { fecha: hace(15), precio: 8300 }, { fecha: hace(2), precio: 8500 }], proyectoId: 1, proyectoNombre: "Casa Moderna" },
+  { id: 102, nombre: "Acero corrugado #3", categoria: "ESTRUCTURA", unidad: "varilla", stockActual: 240, stockMinimo: 50, precioPromedio: 12000, ultimaCompra: hace(5), historialPrecios: [{ fecha: hace(45), precio: 11500 }, { fecha: hace(20), precio: 11800 }, { fecha: hace(5), precio: 12000 }], proyectoId: 2, proyectoNombre: "Edificio Comercial" },
+  { id: 103, nombre: "Acero corrugado #4", categoria: "ESTRUCTURA", unidad: "varilla", stockActual: 180, stockMinimo: 50, precioPromedio: 15000, ultimaCompra: hace(10), historialPrecios: [{ fecha: hace(60), precio: 14000 }, { fecha: hace(30), precio: 14500 }, { fecha: hace(10), precio: 15000 }], proyectoId: 2, proyectoNombre: "Edificio Comercial" },
   { id: 104, nombre: "Arena gruesa", categoria: "ESTRUCTURA", unidad: "m³", stockActual: 35, stockMinimo: 20, precioPromedio: 45000, ultimaCompra: hace(3), historialPrecios: [{ fecha: hace(40), precio: 42000 }, { fecha: hace(20), precio: 43500 }, { fecha: hace(3), precio: 45000 }] },
   { id: 105, nombre: "Grava / piedra chancada", categoria: "ESTRUCTURA", unidad: "m³", stockActual: 28, stockMinimo: 15, precioPromedio: 55000, ultimaCompra: hace(7), historialPrecios: [{ fecha: hace(50), precio: 52000 }, { fecha: hace(25), precio: 53500 }, { fecha: hace(7), precio: 55000 }] },
   { id: 106, nombre: "Bloque de concreto 15cm", categoria: "ESTRUCTURA", unidad: "unidad", stockActual: 1200, stockMinimo: 500, precioPromedio: 2500, ultimaCompra: hace(4), historialPrecios: [{ fecha: hace(35), precio: 2300 }, { fecha: hace(18), precio: 2400 }, { fecha: hace(4), precio: 2500 }] },
 
   // ACABADOS
-  { id: 201, nombre: "Cerámica piso 60x60", categoria: "ACABADOS", unidad: "caja", stockActual: 45, stockMinimo: 20, precioPromedio: 95000, ultimaCompra: hace(8), historialPrecios: [{ fecha: hace(55), precio: 90000 }, { fecha: hace(28), precio: 92500 }, { fecha: hace(8), precio: 95000 }] },
-  { id: 202, nombre: "Pintura latex interior", categoria: "ACABADOS", unidad: "galón", stockActual: 8, stockMinimo: 10, precioPromedio: 35000, ultimaCompra: hace(15), historialPrecios: [{ fecha: hace(60), precio: 32000 }, { fecha: hace(35), precio: 33500 }, { fecha: hace(15), precio: 35000 }] },
+  { id: 201, nombre: "Cerámica piso 60x60", categoria: "ACABADOS", unidad: "caja", stockActual: 45, stockMinimo: 20, precioPromedio: 95000, ultimaCompra: hace(8), historialPrecios: [{ fecha: hace(55), precio: 90000 }, { fecha: hace(28), precio: 92500 }, { fecha: hace(8), precio: 95000 }], proyectoId: 1, proyectoNombre: "Casa Moderna" },
+  { id: 202, nombre: "Pintura latex interior", categoria: "ACABADOS", unidad: "galón", stockActual: 8, stockMinimo: 10, precioPromedio: 35000, ultimaCompra: hace(15), historialPrecios: [{ fecha: hace(60), precio: 32000 }, { fecha: hace(35), precio: 33500 }, { fecha: hace(15), precio: 35000 }], proyectoId: 3, proyectoNombre: "Reforma Casa" },
   { id: 203, nombre: "Masilla corriente", categoria: "ACABADOS", unidad: "bolsa", stockActual: 22, stockMinimo: 15, precioPromedio: 12000, ultimaCompra: hace(6), historialPrecios: [{ fecha: hace(42), precio: 11000 }, { fecha: hace(22), precio: 11500 }, { fecha: hace(6), precio: 12000 }] },
   { id: 204, nombre: "Fragua blanca", categoria: "ACABADOS", unidad: "bolsa", stockActual: 5, stockMinimo: 10, precioPromedio: 28000, ultimaCompra: hace(20), historialPrecios: [{ fecha: hace(65), precio: 26000 }, { fecha: hace(40), precio: 27000 }, { fecha: hace(20), precio: 28000 }] },
 
@@ -103,6 +117,8 @@ let FACTURAS: FacturaCompra[] = [
     estado: "PAGADA",
     proyectoId: 1,
     proyectoNombre: "Casa Moderna",
+    obraId: 1,
+    obraNombre: "Casa García",
     items: [
       { id: uuidLocal(), materialId: 102, materialNombre: "Acero corrugado #3", unidad: "varilla", cantidad: 100, precioUnitario: 12000, subtotal: 1200000 },
       { id: uuidLocal(), materialId: 103, materialNombre: "Acero corrugado #4", unidad: "varilla", cantidad: 80, precioUnitario: 15000, subtotal: 1200000 },
@@ -124,6 +140,8 @@ let FACTURAS: FacturaCompra[] = [
     estado: "PAGADA",
     proyectoId: 2,
     proyectoNombre: "Edificio Comercial",
+    obraId: 2,
+    obraNombre: "Edificio Comercial Centro",
     items: [
       { id: uuidLocal(), materialId: 101, materialNombre: "Cemento Portland", unidad: "bolsa", cantidad: 200, precioUnitario: 8500, subtotal: 1700000 },
       { id: uuidLocal(), materialId: 104, materialNombre: "Arena gruesa", unidad: "m³", cantidad: 15, precioUnitario: 45000, subtotal: 675000 },
@@ -146,6 +164,8 @@ let FACTURAS: FacturaCompra[] = [
     estado: "APROBADA",
     proyectoId: 1,
     proyectoNombre: "Casa Moderna",
+    obraId: 1,
+    obraNombre: "Casa García",
     items: [
       { id: uuidLocal(), materialId: 201, materialNombre: "Cerámica piso 60x60", unidad: "caja", cantidad: 30, precioUnitario: 95000, subtotal: 2850000 },
       { id: uuidLocal(), materialId: 202, materialNombre: "Pintura latex interior", unidad: "galón", cantidad: 8, precioUnitario: 35000, subtotal: 280000 },
@@ -189,6 +209,8 @@ let FACTURAS: FacturaCompra[] = [
     estado: "APROBADA",
     proyectoId: 2,
     proyectoNombre: "Edificio Comercial",
+    obraId: 2,
+    obraNombre: "Edificio Comercial Centro",
     items: [
       { id: uuidLocal(), materialId: 106, materialNombre: "Bloque de concreto 15cm", unidad: "unidad", cantidad: 500, precioUnitario: 2500, subtotal: 1250000 },
     ],
@@ -250,12 +272,111 @@ let FACTURAS: FacturaCompra[] = [
     total: 1011500,
     notas: "Anulada por error en cantidad. Reemplazo: F-001-2026",
   },
+
+  // FACTURAS PARA REFORMA CASA MOLINA (obraId: 3)
+  {
+    id: 1009,
+    numero: "F-450-2026",
+    proveedorNombre: "Distribuidora Aceros del Valle",
+    proveedorRut: "12.345.678-9",
+    fecha: hace(35),
+    fechaRecepcion: hace(34),
+    estado: "PAGADA",
+    proyectoId: 3,
+    proyectoNombre: "Reforma Casa Molina",
+    obraId: 3,
+    obraNombre: "Reforma Casa Molina",
+    items: [
+      { id: uuidLocal(), materialId: 301, materialNombre: "Tubo PVC 4\" presión", unidad: "m", cantidad: 80, precioUnitario: 8500, subtotal: 680000 },
+      { id: uuidLocal(), materialId: 302, materialNombre: "Cable THW 12 AWG", unidad: "m", cantidad: 150, precioUnitario: 1200, subtotal: 180000 },
+    ],
+    subtotal: 860000,
+    impuesto: 19,
+    total: 1023400,
+    notas: "Materiales para instalaciones eléctricas y sanitarias",
+  },
+
+  {
+    id: 1010,
+    numero: "F-678-2026",
+    proveedorNombre: "Acabados y Decoración Integral",
+    proveedorRut: "55.555.555-5",
+    fecha: hace(25),
+    fechaRecepcion: hace(24),
+    estado: "PAGADA",
+    proyectoId: 3,
+    proyectoNombre: "Reforma Casa Molina",
+    obraId: 3,
+    obraNombre: "Reforma Casa Molina",
+    items: [
+      { id: uuidLocal(), materialId: 202, materialNombre: "Pintura latex interior", unidad: "galón", cantidad: 12, precioUnitario: 35000, subtotal: 420000 },
+      { id: uuidLocal(), materialId: 203, materialNombre: "Masilla corriente", unidad: "bolsa", cantidad: 25, precioUnitario: 12000, subtotal: 300000 },
+    ],
+    subtotal: 720000,
+    impuesto: 19,
+    total: 856800,
+    notas: "Acabados y pintura para interiores",
+  },
+
+  {
+    id: 1011,
+    numero: "F-891-2026",
+    proveedorNombre: "Cementos y Hormigones S.A.",
+    proveedorRut: "98.765.432-1",
+    fecha: hace(15),
+    fechaRecepcion: hace(14),
+    estado: "APROBADA",
+    proyectoId: 3,
+    proyectoNombre: "Reforma Casa Molina",
+    obraId: 3,
+    obraNombre: "Reforma Casa Molina",
+    items: [
+      { id: uuidLocal(), materialId: 101, materialNombre: "Cemento Portland", unidad: "bolsa", cantidad: 150, precioUnitario: 8500, subtotal: 1275000 },
+      { id: uuidLocal(), materialId: 104, materialNombre: "Arena gruesa", unidad: "m³", cantidad: 8, precioUnitario: 45000, subtotal: 360000 },
+    ],
+    subtotal: 1635000,
+    impuesto: 19,
+    total: 1945650,
+    notas: "Materiales para reparación de estructura",
+  },
+
+  {
+    id: 1012,
+    numero: "F-234-2026",
+    proveedorNombre: "Acabados y Decoración Integral",
+    proveedorRut: "55.555.555-5",
+    fecha: hace(8),
+    fechaRecepcion: hace(7),
+    estado: "APROBADA",
+    proyectoId: 3,
+    proyectoNombre: "Reforma Casa Molina",
+    obraId: 3,
+    obraNombre: "Reforma Casa Molina",
+    items: [
+      { id: uuidLocal(), materialId: 201, materialNombre: "Cerámica piso 60x60", unidad: "caja", cantidad: 20, precioUnitario: 95000, subtotal: 1900000 },
+      { id: uuidLocal(), materialId: 204, materialNombre: "Fragua blanca", unidad: "bolsa", cantidad: 12, precioUnitario: 28000, subtotal: 336000 },
+    ],
+    subtotal: 2236000,
+    impuesto: 19,
+    total: 2660840,
+    notas: "Acabados finales de pisos y detalles",
+  },
 ];
 
-let SECUENCIA_FACTURA = 1009;
+let HERRAMIENTAS: Herramienta[] = [
+  { id: 1, nombre: "Andamio metálico 1m x 2m", descripcion: "Estructura modular para trabajos en altura", categoria: "Equipo pesado", fechaAdquisicion: hace(365), estado: "DISPONIBLE", ultimoUsoDatos: { fecha: hace(5), obraId: 1, obraNombre: "Casa Moderna" } },
+  { id: 2, nombre: "Grúa móvil 5 ton", descripcion: "Grúa con capacidad de 5 toneladas", categoria: "Equipo pesado", fechaAdquisicion: hace(730), estado: "EN_USO", ultimoUsoDatos: { fecha: hace(1), obraId: 2, obraNombre: "Edificio Comercial" } },
+  { id: 3, nombre: "Compactadora de suelo", descripcion: "Máquina para compactar suelos", categoria: "Equipo pesado", fechaAdquisicion: hace(500), estado: "DISPONIBLE" },
+  { id: 4, nombre: "Vibrador de concreto", descripcion: "Vibrador eléctrico para concreto", categoria: "Mano de obra", fechaAdquisicion: hace(300), estado: "DISPONIBLE", ultimoUsoDatos: { fecha: hace(3), obraId: 1, obraNombre: "Casa Moderna" } },
+  { id: 5, nombre: "Taladro percutor 1/2\"", descripcion: "Taladro percutor profesional", categoria: "Mano de obra", fechaAdquisicion: hace(200), estado: "DISPONIBLE" },
+  { id: 6, nombre: "Sierra circular 7 1/4\"", descripcion: "Sierra circular eléctrica", categoria: "Mano de obra", fechaAdquisicion: hace(250), estado: "EN_USO", ultimoUsoDatos: { fecha: hace(1), obraId: 3, obraNombre: "Reforma Casa" } },
+];
+
+let SECUENCIA_FACTURA = 1013;
 let SECUENCIA_MATERIAL = 403;
 let SECUENCIA_UNIDAD = 11;
 let SECUENCIA_CATEGORIA = 6;
+let SECUENCIA_HERRAMIENTA = 7;
 
 // --- Funciones privadas ---
 
@@ -319,6 +440,11 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
   const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
   const impuesto = values.impuesto ? (subtotal * values.impuesto) / 100 : 0;
 
+  // Buscar nombre de la obra si se proporcionó obraId
+  const obraNombre = values.obraId
+    ? OBRAS_CACHE.find((o) => o.id === values.obraId)?.nombre
+    : undefined;
+
   const nueva: FacturaCompra = {
     id: nuevoIdFactura(),
     numero: values.numero,
@@ -328,7 +454,9 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
     fechaRecepcion: values.fechaRecepcion,
     estado: "BORRADOR",
     proyectoId: values.proyectoId,
-    proyectoNombre: undefined, // se buscaría en backend
+    proyectoNombre: undefined,
+    obraId: values.obraId,
+    obraNombre,
     items,
     subtotal,
     impuesto: values.impuesto,
@@ -338,6 +466,11 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
 
   FACTURAS.push(nueva);
   return delay(nueva);
+}
+
+export async function getFacturasByObra(obraId: number): Promise<FacturaCompra[]> {
+  const facturas = calcularFacturasEnMemoria();
+  return delay(facturas.filter((f) => f.obraId === obraId));
 }
 
 export async function updateEstadoFactura(id: number, estado: EstadoFactura): Promise<FacturaCompra> {
@@ -424,6 +557,63 @@ export async function createCategoria(nombre: string, etiqueta: string): Promise
   };
   CATEGORIAS.push(nueva);
   return delay(nueva);
+}
+
+// ─── Herramientas ───────────────────────────────────────────────────────────
+
+function nuevoIdHerramienta(): number {
+  return SECUENCIA_HERRAMIENTA++;
+}
+
+export async function getHerramientas(): Promise<Herramienta[]> {
+  return delay(HERRAMIENTAS);
+}
+
+export async function getHerramienta(id: number): Promise<Herramienta> {
+  const h = HERRAMIENTAS.find((x) => x.id === id);
+  if (!h) throw new Error(`Herramienta ${id} no encontrada`);
+  return delay(h);
+}
+
+export async function createHerramienta(values: HerramientaFormValues): Promise<Herramienta> {
+  const nueva: Herramienta = {
+    id: nuevoIdHerramienta(),
+    nombre: values.nombre,
+    descripcion: values.descripcion,
+    categoria: values.categoria,
+    fechaAdquisicion: values.fechaAdquisicion,
+    estado: values.estado,
+  };
+  HERRAMIENTAS.push(nueva);
+  return delay(nueva);
+}
+
+export async function updateHerramienta(id: number, values: Partial<HerramientaFormValues>): Promise<Herramienta> {
+  const h = HERRAMIENTAS.find((x) => x.id === id);
+  if (!h) throw new Error(`Herramienta ${id} no encontrada`);
+  Object.assign(h, values);
+  return delay(h);
+}
+
+export async function updateEstadoHerramienta(id: number, estado: Herramienta["estado"], obraData?: { obraId: number; obraNombre: string }): Promise<Herramienta> {
+  const h = HERRAMIENTAS.find((x) => x.id === id);
+  if (!h) throw new Error(`Herramienta ${id} no encontrada`);
+  h.estado = estado;
+  if (estado === "EN_USO" && obraData) {
+    h.ultimoUsoDatos = {
+      fecha: new Date().toISOString(),
+      ...obraData,
+    };
+  }
+  return delay(h);
+}
+
+export async function deleteHerramienta(id: number): Promise<void> {
+  const index = HERRAMIENTAS.findIndex((h) => h.id === id);
+  if (index !== -1) {
+    HERRAMIENTAS.splice(index, 1);
+  }
+  return delay(undefined);
 }
 
 // ─── Helper para Obras (side effect de reporte diario) ───────────────────────

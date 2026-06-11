@@ -6,6 +6,9 @@ import {
   ObrasResumen,
   ValuacionFinal,
   ValuacionPartida,
+  ValuacionDoc,
+  ValuacionLineaPartida,
+  ReporteDiario,
 } from "@/types/obras";
 import dayjs from "dayjs";
 
@@ -112,3 +115,93 @@ export function calcularPorcentajeEjecucionTotal(obra: Obra): number {
   if (obra.presupuestoTotal === 0) return 0;
   return (obra.presupuestoConsumido / obra.presupuestoTotal) * 100;
 }
+
+export function calcularValuacionDocConReportes(
+  obra: Obra,
+  reportesPendientes: ReporteDiario[],
+  id: number,
+  numero: number,
+  notas?: string
+): ValuacionDoc {
+  // Mapa: partidaId → suma de cantidades ejecutadas en este ciclo
+  const cantidadesCiclo = new Map<number, number>();
+
+  for (const reporte of reportesPendientes) {
+    const partida = obra.partidas.find((p) => p.id === reporte.partidaId);
+    if (!partida) continue;
+    const cantidadEnEsteReporte =
+      (reporte.avanceLogrado / 100) * partida.cantidadPresupuestada;
+    cantidadesCiclo.set(
+      reporte.partidaId,
+      (cantidadesCiclo.get(reporte.partidaId) || 0) + cantidadEnEsteReporte
+    );
+  }
+
+  const lineas: ValuacionLineaPartida[] = obra.partidas.map((p) => {
+    const esExtra = p.esExtra ?? false;
+    const cantidadPresupuestada = esExtra ? 0 : p.cantidadPresupuestada;
+    const montoPresupuestado = cantidadPresupuestada * p.precioUnitario;
+    const cantidadEjecutada = cantidadesCiclo.get(p.id) || 0;
+    const montoEjecutado = cantidadEjecutada * p.precioUnitario;
+
+    let aumento: number | undefined;
+    let montoAumento: number | undefined;
+    let disminucion: number | undefined;
+    let montoDisminucion: number | undefined;
+
+    if (!esExtra) {
+      const diff = cantidadEjecutada - cantidadPresupuestada;
+      if (diff > 0.001) {
+        aumento = diff;
+        montoAumento = diff * p.precioUnitario;
+      } else if (diff < -0.001) {
+        disminucion = Math.abs(diff);
+        montoDisminucion = Math.abs(diff) * p.precioUnitario;
+      }
+    }
+
+    return {
+      partidaId: p.id,
+      codigo: p.codigo,
+      descripcion: p.descripcion,
+      unidad: p.unidad,
+      esExtra,
+      cantidadPresupuestada,
+      precioUnitario: p.precioUnitario,
+      montoPresupuestado,
+      cantidadEjecutada,
+      montoEjecutado,
+      aumento,
+      montoAumento,
+      disminucion,
+      montoDisminucion,
+    };
+  });
+
+  const normales = lineas.filter((l) => !l.esExtra);
+  const extras = lineas.filter((l) => l.esExtra);
+
+  const totalPresupuesto = normales.reduce((s, l) => s + l.montoPresupuestado, 0);
+  const totalEjecutado = normales.reduce((s, l) => s + l.montoEjecutado, 0);
+  const totalAumentos = normales.reduce((s, l) => s + (l.montoAumento ?? 0), 0);
+  const totalDisminuciones = normales.reduce((s, l) => s + (l.montoDisminucion ?? 0), 0);
+  const totalExtras = extras.reduce((s, l) => s + l.montoEjecutado, 0);
+  const presupuestoModificado =
+    totalPresupuesto + totalAumentos - totalDisminuciones + totalExtras;
+
+  return {
+    id,
+    obraId: obra.id,
+    numero,
+    fecha: new Date().toISOString(),
+    lineas,
+    totalPresupuesto,
+    totalEjecutado,
+    totalAumentos,
+    totalDisminuciones,
+    totalExtras,
+    presupuestoModificado,
+    notas,
+  };
+}
+

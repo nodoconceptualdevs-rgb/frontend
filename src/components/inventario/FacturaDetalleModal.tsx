@@ -166,6 +166,16 @@ export default function FacturaDetalleModal({
               <p className="text-sm text-gray-900">{factura.proyectoNombre}</p>
             </div>
           )}
+
+          {factura.obraNombre && (
+            <div>
+              <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">
+                <Building2 size={12} className="inline mr-1" />
+                Obra
+              </label>
+              <p className="text-sm text-gray-900">{factura.obraNombre}</p>
+            </div>
+          )}
         </div>
 
         {factura.proveedorRut && (

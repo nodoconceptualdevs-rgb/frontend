@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CalendarClock,
   X,
+  ChevronDown,
 } from "lucide-react";
 import type {
   Archivo,
@@ -96,6 +97,8 @@ export default function TareaDetalleModal({
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [mostrarReprogramar, setMostrarReprogramar] = useState(true);
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
+  const [openRechazos, setOpenRechazos] = useState(false);
+  const [openReprogramaciones, setOpenReprogramaciones] = useState(false);
   const [archivosSeleccionados, setArchivosSeleccionados] = useState<Set<string>>(new Set());
   const [arquitectosSeleccionados, setArquitectosSeleccionados] = useState<number[]>([]);
   const [guardandoArquitectos, setGuardandoArquitectos] = useState(false);
@@ -560,71 +563,144 @@ export default function TareaDetalleModal({
 
           {/* Historial de rechazos */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-              § Rechazos ({tarea.contadorRechazos || 0})
-            </h3>
-            {tarea.historialRechazos && tarea.historialRechazos.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {tarea.historialRechazos.map((rechazo, idx) => {
-                    const colorMap: Record<string, { bg: string; border: string; dot: string; text: string }> = {
-                      BRIEF_POCO_CLARO: {
-                        bg: "bg-red-50",
-                        border: "border-red-200",
-                        dot: "bg-red-400",
-                        text: "text-red-700",
-                      },
-                      NO_CUMPLE_EXPECTATIVAS: {
-                        bg: "bg-orange-50",
-                        border: "border-orange-200",
-                        dot: "bg-orange-400",
-                        text: "text-orange-700",
-                      },
-                      OTRO: {
-                        bg: "bg-pink-50",
-                        border: "border-pink-200",
-                        dot: "bg-pink-400",
-                        text: "text-pink-700",
-                      },
-                    };
-                    const colors = colorMap[rechazo.categoria] || colorMap.OTRO;
-                    const categoryLabel = {
-                      BRIEF_POCO_CLARO: "Brief poco claro",
-                      NO_CUMPLE_EXPECTATIVAS: "No cumple",
-                      OTRO: "Otro",
-                    }[rechazo.categoria];
+            <button
+              onClick={() => setOpenRechazos(!openRechazos)}
+              className="flex w-full items-center justify-between"
+            >
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                § Rechazos ({tarea.contadorRechazos || 0})
+              </h3>
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 transition-transform duration-200 ${openRechazos ? "rotate-180" : ""}`}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                openRechazos ? "max-h-96 opacity-100 mt-3" : "max-h-0 opacity-0"
+              }`}
+            >
+              {tarea.historialRechazos && tarea.historialRechazos.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {tarea.historialRechazos.map((rechazo, idx) => {
+                      const colorMap: Record<string, { bg: string; border: string; dot: string; text: string }> = {
+                        BRIEF_POCO_CLARO: {
+                          bg: "bg-red-50",
+                          border: "border-red-200",
+                          dot: "bg-red-400",
+                          text: "text-red-700",
+                        },
+                        NO_CUMPLE_EXPECTATIVAS: {
+                          bg: "bg-orange-50",
+                          border: "border-orange-200",
+                          dot: "bg-orange-400",
+                          text: "text-orange-700",
+                        },
+                        OTRO: {
+                          bg: "bg-pink-50",
+                          border: "border-pink-200",
+                          dot: "bg-pink-400",
+                          text: "text-pink-700",
+                        },
+                      };
+                      const colors = colorMap[rechazo.categoria] || colorMap.OTRO;
+                      const categoryLabel = {
+                        BRIEF_POCO_CLARO: "Brief poco claro",
+                        NO_CUMPLE_EXPECTATIVAS: "No cumple",
+                        OTRO: "Otro",
+                      }[rechazo.categoria];
 
-                    return (
-                      <div
-                        key={idx}
-                        className={`rounded-lg border ${colors.border} ${colors.bg} p-2.5 relative`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <div
-                            className={`h-2.5 w-2.5 rounded-full ${colors.dot} mt-1 flex-shrink-0`}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold ${colors.text}`}>
-                              {categoryLabel}
-                            </p>
-                            <p className={`text-xs ${colors.text} opacity-75 mt-0.5 line-clamp-2`}>
-                              {rechazo.motivo}
-                            </p>
-                            <p className="text-[10px] text-gray-400 mt-1">
-                              {new Date(rechazo.registradoEn).toLocaleDateString("es", {
-                                day: "numeric",
-                                month: "short",
-                              })}
-                            </p>
+                      return (
+                        <div
+                          key={idx}
+                          className={`rounded-lg border ${colors.border} ${colors.bg} p-2.5 relative`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div
+                              className={`h-2.5 w-2.5 rounded-full ${colors.dot} mt-1 flex-shrink-0`}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-semibold ${colors.text}`}>
+                                {categoryLabel}
+                              </p>
+                              <p className={`text-xs ${colors.text} opacity-75 mt-0.5 line-clamp-2`}>
+                                {rechazo.motivo}
+                              </p>
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {new Date(rechazo.registradoEn).toLocaleDateString("es", {
+                                  day: "numeric",
+                                  month: "short",
+                                })}
+                              </p>
+                            </div>
                           </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400">Sin rechazos registrados</p>
+                )}
+            </div>
+          </div>
+
+          {/* Reprogramaciones */}
+          <div>
+            <button
+              onClick={() => setOpenReprogramaciones(!openReprogramaciones)}
+              className="flex w-full items-center justify-between"
+            >
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                § Reprogramaciones ({tarea.historialEntregas?.length || 0})
+              </h3>
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 transition-transform duration-200 ${openReprogramaciones ? "rotate-180" : ""}`}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                openReprogramaciones ? "max-h-96 opacity-100 mt-3" : "max-h-0 opacity-0"
+              }`}
+            >
+              {tarea.historialEntregas && tarea.historialEntregas.length > 0 ? (
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-80 pr-1">
+                  {tarea.historialEntregas.map((cambio, idx) => (
+                    <div key={idx} className="rounded-lg border border-sky-200 bg-sky-50 p-2.5">
+                      <div className="flex items-start gap-2">
+                        <CalendarClock size={12} className="text-sky-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {cambio.fechaAnterior && (
+                              <>
+                                <span className="text-xs text-gray-400 line-through">
+                                  {fmtFecha(cambio.fechaAnterior)}
+                                </span>
+                                <span className="text-[10px] text-gray-400">→</span>
+                              </>
+                            )}
+                            <span className="text-xs font-semibold text-sky-700">
+                              {fmtFecha(cambio.fechaNueva)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{cambio.motivo}</p>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {new Date(cambio.registradoEn).toLocaleDateString("es", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400">Sin rechazos registrados</p>
+                <p className="text-xs text-gray-400">Sin reprogramaciones registradas</p>
               )}
             </div>
+          </div>
 
             {/* Fechas de entrega */}
             <div>
