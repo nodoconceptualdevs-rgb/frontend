@@ -260,6 +260,21 @@ const uuidLocal = () => Math.random().toString(36).slice(2, 11);
 
 // ─── Helper para mapear respuesta Strapi a tipo Obra ─────────────────────────
 function mapStrapiObra(item: any): Obra {
+  const partidas = (item.partidas || []).map((p: any) => ({
+    id: p.id,
+    obraId: item.id,
+    codigo: p.codigo,
+    descripcion: p.descripcion,
+    unidad: p.unidad,
+    cantidadPresupuestada: p.cantidadPresupuestada || 0,
+    precioUnitario: p.precioUnitario || 0,
+    montoPresupuestado: p.montoPresupuestado || 0,
+    cantidadEjecutada: p.cantidadEjecutada || 0,
+    montoEjecutado: p.montoEjecutado || 0,
+    avancePorcentaje: p.avancePorcentaje || 0,
+    esExtra: p.esExtra || false,
+  }));
+
   return {
     id: item.id,
     nombre: item.nombre,
@@ -275,7 +290,7 @@ function mapStrapiObra(item: any): Obra {
     presupuestoConsumido: item.presupuesto_consumido ?? 0,
     notas: item.notas,
     creadoEn: item.createdAt,
-    partidas: [],
+    partidas,
     reportes: [],
   };
 }
@@ -293,9 +308,13 @@ export async function getObras(): Promise<Obra[]> {
 }
 
 export async function getObra(id: number): Promise<Obra> {
-  const obra = OBRAS.find((o) => o.id === id);
-  if (!obra) throw new Error(`Obra ${id} no encontrada`);
-  return delay({ ...obra });
+  try {
+    const res = await api.get(`/obras/${id}?populate=partidas,proyecto`);
+    return mapStrapiObra(res.data.data);
+  } catch (error) {
+    console.error('Error fetching obra:', error);
+    throw error;
+  }
 }
 
 export async function createObra(values: ObraFormValues): Promise<Obra> {
