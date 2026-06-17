@@ -1,3 +1,4 @@
+import api from "@/lib/api";
 import {
   Obra,
   ObraFormValues,
@@ -257,11 +258,38 @@ const delay = <T,>(valor: T): Promise<T> =>
 
 const uuidLocal = () => Math.random().toString(36).slice(2, 11);
 
+// ─── Helper para mapear respuesta Strapi a tipo Obra ─────────────────────────
+function mapStrapiObra(item: any): Obra {
+  return {
+    id: item.id,
+    nombre: item.nombre,
+    proyectoId: item.proyecto?.id ?? 0,
+    proyectoNombre: item.proyecto?.nombre_proyecto ?? '',
+    capatazId: undefined,
+    capatazNombre: undefined,
+    estado: item.estado,
+    fechaInicio: item.fecha_inicio,
+    fechaFinPlanificada: item.fecha_fin_planificada,
+    fechaFinReal: item.fecha_fin_real ?? undefined,
+    presupuestoTotal: item.presupuesto_total,
+    presupuestoConsumido: item.presupuesto_consumido ?? 0,
+    notas: item.notas,
+    creadoEn: item.createdAt,
+    partidas: [],
+    reportes: [],
+  };
+}
+
 // ─── Obras CRUD ───────────────────────────────────────────────────────────────
 
 export async function getObras(): Promise<Obra[]> {
-  const result = OBRAS.map((o) => ({ ...o, reportes: [] }));
-  return delay(result);
+  try {
+    const res = await api.get('/obras?populate[proyecto]=*');
+    return res.data.data.map(mapStrapiObra);
+  } catch (error) {
+    console.error('Error fetching obras:', error);
+    throw error;
+  }
 }
 
 export async function getObra(id: number): Promise<Obra> {
@@ -271,28 +299,24 @@ export async function getObra(id: number): Promise<Obra> {
 }
 
 export async function createObra(values: ObraFormValues): Promise<Obra> {
-  const id = SECUENCIA_OBRA++;
-  const obra: Obra = {
-    id,
-    nombre: values.nombre,
-    proyectoId: values.proyectoId,
-    proyectoNombre: `Proyecto ${values.proyectoId}`,
-    capatazId: values.capatazId,
-    capatazNombre: values.capatazId
-      ? PERSONAL.find((p) => p.id === values.capatazId)?.nombre
-      : undefined,
-    estado: values.estado,
-    fechaInicio: values.fechaInicio,
-    fechaFinPlanificada: values.fechaFinPlanificada,
-    presupuestoTotal: values.presupuestoTotal,
-    presupuestoConsumido: 0,
-    partidas: [],
-    reportes: [],
-    notas: values.notas,
-    creadoEn: new Date().toISOString(),
-  };
-  OBRAS.push(obra);
-  return delay(obra);
+  try {
+    const res = await api.post('/obras', {
+      data: {
+        nombre: values.nombre,
+        proyecto: values.proyectoId,
+        estado: values.estado,
+        fecha_inicio: values.fechaInicio,
+        fecha_fin_planificada: values.fechaFinPlanificada,
+        presupuesto_total: values.presupuestoTotal,
+        presupuesto_consumido: 0,
+        notas: values.notas,
+      }
+    });
+    return mapStrapiObra(res.data.data);
+  } catch (error) {
+    console.error('Error creating obra:', error);
+    throw error;
+  }
 }
 
 export async function updateObra(
@@ -319,44 +343,50 @@ export async function updateEstadoObra(
 }
 
 export async function getResumenObras(): Promise<ObrasResumen> {
-  const resumen = calcularResumenObras(OBRAS);
-  return delay(resumen);
+  const obras = await getObras();
+  // Convertir obras reales a formato esperado por calcularResumenObras
+  const obrasConReportes: Obra[] = obras.map(o => ({
+    ...o,
+    reportes: o.reportes || []
+  }));
+  const resumen = calcularResumenObras(obrasConReportes);
+  return resumen;
 }
 
 // ─── Partidas ─────────────────────────────────────────────────────────────────
 
 export async function getPartidas(obraId: number): Promise<Partida[]> {
-  const obra = OBRAS.find((o) => o.id === obraId);
-  if (!obra) throw new Error(`Obra ${obraId} no encontrada`);
-  return delay([...obra.partidas]);
+  try {
+    const res = await api.get(`/obras/${obraId}/partidas`);
+    return res.data.data;
+  } catch (error) {
+    console.error('Error fetching partidas:', error);
+    throw error;
+  }
 }
 
 export async function createPartida(
   obraId: number,
   values: PartidaFormValues
 ): Promise<Partida> {
-  const obra = OBRAS.find((o) => o.id === obraId);
-  if (!obra) throw new Error(`Obra ${obraId} no encontrada`);
-
-  const esExtra = values.esExtra ?? false;
-  const cantidadPresupuestada = esExtra ? (values.cantidadPresupuestada || 0) : values.cantidadPresupuestada;
-
-  const partida: Partida = {
-    id: SECUENCIA_PARTIDA++,
-    obraId,
-    codigo: values.codigo,
-    descripcion: values.descripcion,
-    unidad: values.unidad,
-    cantidadPresupuestada,
-    precioUnitario: values.precioUnitario,
-    montoPresupuestado: cantidadPresupuestada * values.precioUnitario,
-    cantidadEjecutada: 0,
-    montoEjecutado: 0,
-    avancePorcentaje: 0,
-    esExtra,
-  };
-  obra.partidas.push(partida);
-  return delay(partida);
+  try {
+    const montoPresupuestado = values.cantidadPresupuestada * values.precioUnitario;
+    const res = await api.post(`/obras/${obraId}/partidas`, {
+      data: {
+        codigo: values.codigo,
+        descripcion: values.descripcion,
+        unidad: values.unidad,
+        cantidadPresupuestada: values.cantidadPresupuestada,
+        precioUnitario: values.precioUnitario,
+        montoPresupuestado,
+        esExtra: values.esExtra || false
+      }
+    });
+    return res.data.data;
+  } catch (error) {
+    console.error('Error creating partida:', error);
+    throw error;
+  }
 }
 
 export async function updatePartida(
@@ -364,36 +394,39 @@ export async function updatePartida(
   partidaId: number,
   values: Partial<PartidaFormValues>
 ): Promise<Partida> {
-  const obra = OBRAS.find((o) => o.id === obraId);
-  if (!obra) throw new Error(`Obra ${obraId} no encontrada`);
-  const partida = obra.partidas.find((p) => p.id === partidaId);
-  if (!partida) throw new Error(`Partida ${partidaId} no encontrada`);
+  try {
+    const montoPresupuestado = values.cantidadPresupuestada && values.precioUnitario
+      ? values.cantidadPresupuestada * values.precioUnitario
+      : undefined;
 
-  if (values.cantidadPresupuestada !== undefined) {
-    partida.cantidadPresupuestada = values.cantidadPresupuestada;
+    const res = await api.put(`/obras/${obraId}/partidas/${partidaId}`, {
+      data: {
+        ...(values.codigo && { codigo: values.codigo }),
+        ...(values.descripcion && { descripcion: values.descripcion }),
+        ...(values.unidad && { unidad: values.unidad }),
+        ...(values.cantidadPresupuestada !== undefined && { cantidadPresupuestada: values.cantidadPresupuestada }),
+        ...(values.precioUnitario !== undefined && { precioUnitario: values.precioUnitario }),
+        ...(montoPresupuestado !== undefined && { montoPresupuestado }),
+        ...(values.esExtra !== undefined && { esExtra: values.esExtra })
+      }
+    });
+    return res.data.data;
+  } catch (error) {
+    console.error('Error updating partida:', error);
+    throw error;
   }
-  if (values.precioUnitario !== undefined) {
-    partida.precioUnitario = values.precioUnitario;
-  }
-  if (values.codigo !== undefined) partida.codigo = values.codigo;
-  if (values.descripcion !== undefined) partida.descripcion = values.descripcion;
-  if (values.unidad !== undefined) partida.unidad = values.unidad;
-
-  partida.montoPresupuestado =
-    partida.cantidadPresupuestada * partida.precioUnitario;
-  partida.avancePorcentaje = calcularAvancePartida(partida);
-
-  return delay(partida);
 }
 
 export async function deletePartida(
   obraId: number,
   partidaId: number
 ): Promise<void> {
-  const obra = OBRAS.find((o) => o.id === obraId);
-  if (!obra) throw new Error(`Obra ${obraId} no encontrada`);
-  obra.partidas = obra.partidas.filter((p) => p.id !== partidaId);
-  return delay(undefined);
+  try {
+    await api.delete(`/obras/${obraId}/partidas/${partidaId}`);
+  } catch (error) {
+    console.error('Error deleting partida:', error);
+    throw error;
+  }
 }
 
 // ─── Reportes ─────────────────────────────────────────────────────────────────
