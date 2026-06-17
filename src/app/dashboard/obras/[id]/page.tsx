@@ -14,6 +14,7 @@ import {
   getValuacion,
   getValuaciones,
   createPartida,
+  updatePartida,
   deletePartida,
   createReporte,
   createPersonal,
@@ -38,6 +39,7 @@ import type {
   Obra,
   EstadoObra,
   Personal,
+  Partida,
   MaterialDisponible,
   ValuacionFinal,
   PartidaFormValues,
@@ -61,6 +63,7 @@ export default function GerenteObraDetallePage() {
 
   // Estados para modales de edición
   const [partidaModalOpen, setPartidaModalOpen] = useState(false);
+  const [editingPartida, setEditingPartida] = useState<Partida | null>(null);
   const [personalModalOpen, setPersonalModalOpen] = useState(false);
   const [reporteModalOpen, setReporteModalOpen] = useState(false);
   const [personalEditable, setPersonalEditable] = useState<Personal | null>(null);
@@ -118,13 +121,19 @@ export default function GerenteObraDetallePage() {
 
   const handleAgregarPartida = async (values: PartidaFormValues) => {
     try {
-      await createPartida(obraId, values);
+      if (editingPartida) {
+        await updatePartida(obraId, editingPartida.id, values);
+        toast.success("Partida actualizada");
+      } else {
+        await createPartida(obraId, values);
+        toast.success("Partida agregada");
+      }
       setPartidaModalOpen(false);
+      setEditingPartida(null);
       await cargarDatos();
-      toast.success("Partida agregada");
     } catch (error) {
-      console.error("Error creando partida:", error);
-      toast.error("Error al agregar la partida");
+      console.error("Error guardando partida:", error);
+      toast.error("Error al guardar la partida");
     }
   };
 
@@ -241,7 +250,10 @@ export default function GerenteObraDetallePage() {
           </div>
           <PartidasTable
             partidas={obra.partidas}
-            onEditar={() => {}}
+            onEditar={(partida) => {
+              setEditingPartida(partida);
+              setPartidaModalOpen(true);
+            }}
             onEliminar={handleEliminarPartida}
           />
         </div>
@@ -583,8 +595,11 @@ export default function GerenteObraDetallePage() {
       <PartidaModal
         open={partidaModalOpen}
         obraId={obraId}
-        partida={null}
-        onClose={() => setPartidaModalOpen(false)}
+        partida={editingPartida}
+        onClose={() => {
+          setPartidaModalOpen(false);
+          setEditingPartida(null);
+        }}
         onSubmit={handleAgregarPartida}
       />
 
