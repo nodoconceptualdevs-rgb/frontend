@@ -308,13 +308,9 @@ export async function getObras(): Promise<Obra[]> {
 }
 
 export async function getObra(id: number): Promise<Obra> {
-  try {
-    const res = await api.get(`/obras/${id}?populate=partidas,proyecto`);
-    return mapStrapiObra(res.data.data);
-  } catch (error) {
-    console.error('Error fetching obra:', error);
-    throw error;
-  }
+  const obra = OBRAS.find((o) => o.id === id);
+  if (!obra) throw new Error(`Obra ${id} no encontrada`);
+  return delay({ ...obra });
 }
 
 export async function createObra(values: ObraFormValues): Promise<Obra> {
