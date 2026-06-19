@@ -7,14 +7,16 @@ import {
   Button,
   Empty,
   Tabs,
+  Upload,
 } from "antd";
-import { Plus, Trash2, Users, Package } from "lucide-react";
+import { Plus, Trash2, Users, Package, Image, X } from "lucide-react";
 import type {
   Obra,
   MaterialDisponible,
   Personal,
   ReporteFormValues,
 } from "@/types/obras";
+import type { Herramienta } from "@/types/inventario";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 
@@ -24,6 +26,7 @@ interface Props {
   obra: Obra;
   personal: Personal[];
   materiales: MaterialDisponible[];
+  herramientas: Herramienta[];
   onSubmit: (values: ReporteFormValues) => Promise<void>;
 }
 
@@ -40,8 +43,7 @@ interface LineaPartida {
   }[];
   herramientas: {
     id: string;
-    nombre: string;
-    descripcion?: string;
+    herramientaId?: number;
     cantidad: number;
     costoUnitario: number;
   }[];
@@ -51,11 +53,14 @@ export default function ReporteFormSection({
   obra,
   personal,
   materiales,
+  herramientas,
   onSubmit,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [fecha, setFecha] = useState<string>(dayjs().toISOString());
   const [observaciones, setObservaciones] = useState<string>("");
+  const [imagenesArchivos, setImagenesArchivos] = useState<File[]>([]);
+  const [previewImagenes, setPreviewImagenes] = useState<string[]>([]);
   const [partidasLineas, setPartidasLineas] = useState<LineaPartida[]>([]);
   const [activeTabPartida, setActiveTabPartida] = useState<string | null>(null);
 
@@ -77,6 +82,24 @@ export default function ReporteFormSection({
     if (activeTabPartida === id) {
       setActiveTabPartida(null);
     }
+  };
+
+  const handleAgregarImagenes = (files: File[]) => {
+    const nuevasImagenes = [...imagenesArchivos, ...files];
+    setImagenesArchivos(nuevasImagenes);
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewImagenes((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleEliminarImagen = (index: number) => {
+    setImagenesArchivos((prev) => prev.filter((_, i) => i !== index));
+    setPreviewImagenes((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAgregarPersonaAPartida = (partidaId: string) => {
@@ -232,10 +255,33 @@ export default function ReporteFormSection({
       return;
     }
 
+    // Validar stock de materiales
+    for (const partida of partidasLineas) {
+      for (const mat of partida.materiales) {
+        const catalogo = materiales.find((x) => x.materialId === mat.materialId);
+        if (catalogo && mat.cantidad > catalogo.stockActual) {
+          toast.error(`"${catalogo.materialNombre}" excede el stock disponible (${catalogo.stockActual} ${catalogo.unidad})`);
+          return;
+        }
+      }
+    }
+
+    // Validar stock de herramientas
+    for (const partida of partidasLineas) {
+      for (const herr of partida.herramientas) {
+        const catalogo = herramientas.find((x) => x.id === herr.herramientaId);
+        if (catalogo && herr.cantidad > (catalogo.cantidad || 0)) {
+          toast.error(`"${catalogo.nombre}" excede el stock disponible (${catalogo.cantidad || 0} unidad)`);
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
 
-      for (const partida of partidasLineas) {
+      for (let i = 0; i < partidasLineas.length; i++) {
+        const partida = partidasLineas[i];
         const values: ReporteFormValues = {
           obraId: obra.id,
           partidaId: partida.partidaId!,
@@ -255,12 +301,16 @@ export default function ReporteFormSection({
               precioUnitario: m.precioUnitario,
             }))
             .filter((m) => m.materialId),
+          // Solo adjuntar imágenes al primer reporte
+          imagenesArchivos: i === 0 && imagenesArchivos.length > 0 ? imagenesArchivos : undefined,
         };
         await onSubmit(values);
       }
 
       setFecha(dayjs().toISOString());
       setObservaciones("");
+      setImagenesArchivos([]);
+      setPreviewImagenes([]);
       setPartidasLineas([]);
       setActiveTabPartida(null);
       toast.success("Reportes guardados exitosamente");
@@ -272,12 +322,89 @@ export default function ReporteFormSection({
   return (
     <div className="flex flex-col h-full bg-white">
       <style>{`
+        /* ============ RESPONSIVE VARIABLES ============ */
+        @media (max-width: 640px) {
+          :root {
+            --gap-main: 8px;
+            --padding-item: 12px;
+            --partida-cols: 1fr;
+          }
+        }
+        @media (min-width: 641px) and (max-width: 1024px) {
+          :root {
+            --gap-main: 10px;
+            --padding-item: 14px;
+            --partida-cols: 1fr;
+          }
+        }
+        @media (min-width: 1025px) {
+          :root {
+            --gap-main: 12px;
+            --padding-item: 16px;
+            --partida-cols: 28px 1fr 80px 50px 50px;
+          }
+        }
+
+        /* ============ PARTIDA HEADER ============ */
         .partida-header {
           display: grid;
-          grid-template-columns: 28px 1fr 60px 50px 50px;
-          gap: 12px;
+          gap: var(--gap-main);
           align-items: start;
         }
+
+        /* Mobile: stack vertically */
+        @media (max-width: 640px) {
+          .partida-header {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+          }
+          .partida-header > :nth-child(2) {
+            grid-column: 1;
+          }
+          .partida-header > :nth-child(3) {
+            grid-column: 1;
+          }
+          .partida-header > :nth-child(4) {
+            grid-column: 1;
+          }
+          .partida-header > :nth-child(5) {
+            grid-column: 1;
+          }
+        }
+
+        /* Tablet: 2 columns */
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .partida-header {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+          }
+          .partida-header > :nth-child(2) {
+            grid-column: 1 / -1;
+          }
+          .partida-header > :nth-child(3) {
+            grid-column: 1;
+          }
+          .partida-header > :nth-child(4) {
+            grid-column: 2;
+          }
+          .partida-header > :nth-child(5) {
+            grid-column: 1;
+          }
+        }
+
+        /* Desktop: original layout */
+        @media (min-width: 1025px) {
+          .partida-header {
+            grid-template-columns: 28px 1fr 80px 50px 50px;
+          }
+        }
+
+        .partida-header .ant-select {
+          width: 100% !important;
+          min-width: auto;
+        }
+
+        /* ============ PARTIDA NUMBER ============ */
         .partida-num {
           display: flex;
           align-items: center;
@@ -292,38 +419,144 @@ export default function ReporteFormSection({
           flex-shrink: 0;
           margin-top: 2px;
         }
+
+        @media (max-width: 640px) {
+          .partida-num {
+            width: 24px;
+            height: 24px;
+            font-size: 11px;
+            margin-top: 0;
+          }
+        }
+
+        /* ============ PARTIDA ITEM ============ */
         .partida-item {
           border: 1px solid #e5e7eb;
           border-radius: 6px;
-          padding: 12px;
-          margin-bottom: 8px;
+          padding: var(--padding-item);
+          margin-bottom: 12px;
+          transition: all 0.2s ease;
         }
+
         .partida-item:hover {
           border-color: #1e3a5f;
           background: #f9fafb;
+          box-shadow: 0 2px 8px rgba(30, 58, 95, 0.08);
         }
+
+        /* ============ FILA INPUT ============ */
         .fila-input {
           display: grid;
-          grid-template-columns: 1.5fr 60px 70px 70px 80px 50px;
-          gap: 8px;
+          gap: var(--gap-main);
           align-items: end;
-          padding: 8px;
+          padding: var(--padding-item);
           background: #f9fafb;
           border-radius: 4px;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
           font-size: 12px;
         }
+
+        /* Mobile: stack vertically */
+        @media (max-width: 640px) {
+          .fila-input {
+            grid-template-columns: 1fr;
+            padding: 10px;
+            gap: 8px;
+            margin-bottom: 4px;
+          }
+          .fila-input > div {
+            width: 100%;
+          }
+          .label-small {
+            font-size: 9px;
+            margin-bottom: 2px;
+          }
+        }
+
+        /* Tablet: 2-3 columns */
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .fila-input {
+            grid-template-columns: 1fr 1fr 60px 50px;
+            padding: 12px;
+            gap: 10px;
+          }
+          .fila-input > div:nth-child(n+3) {
+            display: none;
+          }
+          .fila-input > div:nth-child(1) {
+            grid-column: 1 / -1;
+          }
+        }
+
+        /* Desktop: original layout */
+        @media (min-width: 1025px) {
+          .fila-input {
+            grid-template-columns: 2.5fr 60px 70px 70px 80px 50px;
+            padding: 12px;
+            gap: 12px;
+          }
+        }
+
+        .fila-input > div:first-child {
+          min-width: 0;
+        }
+
+        .fila-input .ant-select,
+        .fila-herramienta .ant-select {
+          width: 100% !important;
+          min-width: 280px;
+        }
+
+        .fila-input .ant-select-selector,
+        .fila-herramienta .ant-select-selector {
+          height: 36px !important;
+          padding: 4px 11px !important;
+        }
+
+        /* ============ FILA HERRAMIENTA ============ */
         .fila-herramienta {
           display: grid;
-          grid-template-columns: 1.5fr 1fr 60px 70px 80px 50px;
-          gap: 8px;
+          gap: var(--gap-main);
           align-items: end;
-          padding: 8px;
+          padding: var(--padding-item);
           background: #f9fafb;
           border-radius: 4px;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
           font-size: 12px;
         }
+
+        /* Mobile: stack */
+        @media (max-width: 640px) {
+          .fila-herramienta {
+            grid-template-columns: 1fr;
+            padding: 10px;
+            gap: 8px;
+            margin-bottom: 4px;
+          }
+          .fila-herramienta > div {
+            width: 100%;
+          }
+        }
+
+        /* Tablet: 2 columns */
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .fila-herramienta {
+            grid-template-columns: 2fr 60px 50px;
+            padding: 12px;
+            gap: 10px;
+          }
+        }
+
+        /* Desktop: simple layout - solo herramienta, cantidad, delete */
+        @media (min-width: 1025px) {
+          .fila-herramienta {
+            grid-template-columns: 3fr 60px 50px;
+            padding: 12px;
+            gap: 12px;
+          }
+        }
+
+        /* ============ LABEL ============ */
         .label-small {
           font-size: 10px;
           font-weight: 600;
@@ -331,13 +564,110 @@ export default function ReporteFormSection({
           text-transform: uppercase;
           margin-bottom: 3px;
           display: block;
+          letter-spacing: 0.5px;
         }
+
+        @media (max-width: 640px) {
+          .label-small {
+            font-size: 9px;
+            margin-bottom: 2px;
+          }
+        }
+
+        /* ============ SCROLL ============ */
         .scroll-hide::-webkit-scrollbar {
           display: none;
         }
         .scroll-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+
+        /* ============ BUTTONS RESPONSIVE ============ */
+        @media (max-width: 640px) {
+          .ant-btn {
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+            height: 28px !important;
+          }
+          .ant-btn-lg {
+            height: 36px !important;
+            font-size: 12px !important;
+          }
+        }
+
+        /* ============ INPUTS RESPONSIVE ============ */
+        @media (max-width: 640px) {
+          .ant-input,
+          .ant-input-number,
+          .ant-select-selector {
+            font-size: 12px !important;
+            height: 32px !important;
+          }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .ant-input,
+          .ant-input-number,
+          .ant-select-selector {
+            font-size: 11px !important;
+            height: 34px !important;
+          }
+        }
+
+        /* ============ HEADER RESPONSIVE ============ */
+        @media (max-width: 640px) {
+          .px-5 {
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+          }
+          h2 {
+            font-size: 14px !important;
+          }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .px-5 {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          h2 {
+            font-size: 16px !important;
+          }
+        }
+
+        /* ============ GRID HEADER RESPONSIVE ============ */
+        @media (max-width: 640px) {
+          .grid.grid-cols-4 {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+          .grid.grid-cols-4 > div {
+            width: 100%;
+          }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .grid.grid-cols-4 {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+        }
+
+        /* ============ PREVIEW IMAGES RESPONSIVE ============ */
+        @media (max-width: 640px) {
+          .grid.grid-cols-4 {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .h-24 {
+            height: 80px !important;
+          }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .grid.grid-cols-4 {
+            grid-template-columns: 1fr 1fr 1fr !important;
+          }
         }
       `}</style>
 
@@ -368,6 +698,51 @@ export default function ReporteFormSection({
             />
           </div>
         </div>
+
+        {/* Fotos del avance */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <span className="label-small flex items-center gap-2">
+            <Image size={16} />
+            Fotos del Avance
+          </span>
+          <Upload.Dragger
+            accept="image/*"
+            multiple
+            beforeUpload={(file) => {
+              handleAgregarImagenes([file]);
+              return false;
+            }}
+            style={{ marginTop: "8px", fontSize: "12px" }}
+          >
+            <p className="text-xs">Arrastra imágenes aquí o haz clic para seleccionar</p>
+            <p className="text-gray-400 text-xs">(PNG, JPG, GIF, etc.)</p>
+          </Upload.Dragger>
+
+          {/* Vista previa de imágenes */}
+          {previewImagenes.length > 0 && (
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {previewImagenes.map((preview, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="w-full h-24 object-cover rounded border border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleEliminarImagen(idx)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-500 mt-2">
+            {imagenesArchivos.length} {imagenesArchivos.length === 1 ? "imagen" : "imágenes"} agregada(s)
+          </p>
+        </div>
       </div>
 
       {/* Partidas */}
@@ -382,14 +757,19 @@ export default function ReporteFormSection({
               <div className="partida-header mb-3">
                 <div className="partida-num">{idx + 1}</div>
                 <Select
-                  placeholder="Partida..."
+                  placeholder="Buscar partida..."
                   value={partida.partidaId}
                   onChange={(v) => handleUpdatePartida(partida.id, "partidaId", v)}
                   options={obra.partidas.map((p) => ({
                     label: `${p.codigo} - ${p.descripcion}`,
                     value: p.id,
                   }))}
-                  size="small"
+                  showSearch
+                  optionFilterProp="label"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                  }
+                  size="middle"
                   style={{ fontSize: "12px" }}
                 />
                 <div className="text-center">
@@ -444,17 +824,22 @@ export default function ReporteFormSection({
                                   <div>
                                     <span className="label-small">Trabajador</span>
                                     <Select
-                                      placeholder="..."
+                                      placeholder="Buscar trabajador..."
                                       value={p.personalId}
                                       onChange={(v) =>
                                         handleUpdatePersonaEnPartida(partida.id, idx, "personalId", v)
                                       }
                                       options={personal.map((x) => ({
-                                        label: x.nombre,
+                                        label: `${x.nombre} • ${x.cargo}`,
                                         value: x.id,
                                       }))}
-                                      size="small"
-                                      style={{ fontSize: "11px" }}
+                                      showSearch
+                                      optionFilterProp="label"
+                                      filterOption={(input, option) =>
+                                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                      }
+                                      size="middle"
+                                      style={{ fontSize: "12px" }}
                                     />
                                   </div>
                                   <div>
@@ -530,32 +915,41 @@ export default function ReporteFormSection({
                             {partida.materiales.map((m, idx) => {
                               const mat = materiales.find((x) => x.materialId === m.materialId);
                               const total = m.cantidad * m.precioUnitario;
+                              const stockDisponible = mat?.stockActual ?? null;
+                              const excede = stockDisponible !== null && m.cantidad > stockDisponible;
                               return (
                                 <div key={m.id} className="fila-input">
                                   <div>
                                     <span className="label-small">Material</span>
                                     <Select
-                                      placeholder="..."
+                                      placeholder="Buscar material..."
                                       value={m.materialId}
                                       onChange={(v) => {
                                         const material = materiales.find((x) => x.materialId === v);
                                         handleUpdateMaterialEnPartida(partida.id, idx, "materialId", v);
+                                        handleUpdateMaterialEnPartida(partida.id, idx, "cantidad", 0);
                                         if (material) {
-                                          handleUpdateMaterialEnPartida(
-                                            partida.id,
-                                            idx,
-                                            "precioUnitario",
-                                            material.precioPromedio
-                                          );
+                                          handleUpdateMaterialEnPartida(partida.id, idx, "precioUnitario", material.precioPromedio);
                                         }
                                       }}
                                       options={materiales.map((x) => ({
-                                        label: x.materialNombre,
+                                        label: `${x.materialNombre} (disp: ${x.stockActual} ${x.unidad})`,
                                         value: x.materialId,
+                                        disabled: x.stockActual <= 0,
                                       }))}
-                                      size="small"
-                                      style={{ fontSize: "11px" }}
+                                      showSearch
+                                      optionFilterProp="label"
+                                      filterOption={(input, option) =>
+                                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                      }
+                                      size="middle"
+                                      style={{ fontSize: "12px" }}
                                     />
+                                    {mat && (
+                                      <div className={`text-xs mt-0.5 ${stockDisponible === 0 ? "text-red-500" : excede ? "text-orange-500" : "text-gray-400"}`}>
+                                        Disponible: <strong>{stockDisponible} {mat.unidad}</strong>
+                                      </div>
+                                    )}
                                   </div>
                                   <div>
                                     <span className="label-small">Cant.</span>
@@ -565,10 +959,15 @@ export default function ReporteFormSection({
                                         handleUpdateMaterialEnPartida(partida.id, idx, "cantidad", v)
                                       }
                                       min={0}
+                                      max={stockDisponible ?? undefined}
                                       step={0.1}
                                       size="small"
+                                      status={excede ? "error" : undefined}
                                       style={{ width: "100%", fontSize: "11px" }}
                                     />
+                                    {excede && (
+                                      <div className="text-xs text-red-500 mt-0.5">Excede stock</div>
+                                    )}
                                   </div>
                                   <div className="text-right">
                                     <span className="label-small">Ud.</span>
@@ -578,9 +977,7 @@ export default function ReporteFormSection({
                                     <span className="label-small">P.Unit.</span>
                                     <InputNumber
                                       value={m.precioUnitario}
-                                      onChange={(v) =>
-                                        handleUpdateMaterialEnPartida(partida.id, idx, "precioUnitario", v)
-                                      }
+                                      disabled
                                       min={0}
                                       step={1000}
                                       size="small"
@@ -632,32 +1029,43 @@ export default function ReporteFormSection({
                         ) : (
                           <div className="space-y-1">
                             {partida.herramientas.map((h, idx) => {
+                              const herr = herramientas.find((x) => x.id === h.herramientaId);
                               const total = h.cantidad * h.costoUnitario;
+                              const stockDisponible = herr?.cantidad ?? null;
+                              const excede = stockDisponible !== null && h.cantidad > stockDisponible;
                               return (
                                 <div key={h.id} className="fila-herramienta">
                                   <div>
-                                    <span className="label-small">Nombre</span>
-                                    <Input
-                                      placeholder="..."
-                                      value={h.nombre}
-                                      onChange={(e) =>
-                                        handleUpdateHerramientaEnPartida(partida.id, idx, "nombre", e.target.value)
+                                    <span className="label-small">Herramienta</span>
+                                    <Select
+                                      placeholder="Buscar herramienta..."
+                                      value={h.herramientaId}
+                                      onChange={(v) => {
+                                        const herramienta = herramientas.find((x) => x.id === v);
+                                        handleUpdateHerramientaEnPartida(partida.id, idx, "herramientaId", v);
+                                        handleUpdateHerramientaEnPartida(partida.id, idx, "cantidad", 0);
+                                        if (herramienta && herramienta.id) {
+                                          handleUpdateHerramientaEnPartida(partida.id, idx, "costoUnitario", 0);
+                                        }
+                                      }}
+                                      options={herramientas.map((x) => ({
+                                        label: `${x.nombre} (disp: ${x.cantidad || 0})`,
+                                        value: x.id,
+                                        disabled: (x.cantidad || 0) <= 0,
+                                      }))}
+                                      showSearch
+                                      optionFilterProp="label"
+                                      filterOption={(input, option) =>
+                                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                                       }
-                                      size="small"
-                                      style={{ fontSize: "11px" }}
+                                      size="middle"
+                                      style={{ fontSize: "12px" }}
                                     />
-                                  </div>
-                                  <div>
-                                    <span className="label-small">Descripción</span>
-                                    <Input
-                                      placeholder="..."
-                                      value={h.descripcion || ""}
-                                      onChange={(e) =>
-                                        handleUpdateHerramientaEnPartida(partida.id, idx, "descripcion", e.target.value)
-                                      }
-                                      size="small"
-                                      style={{ fontSize: "11px" }}
-                                    />
+                                    {herr && (
+                                      <div className={`text-xs mt-0.5 ${stockDisponible === 0 ? "text-red-500" : excede ? "text-orange-500" : "text-gray-400"}`}>
+                                        Disponible: <strong>{stockDisponible}</strong>
+                                      </div>
+                                    )}
                                   </div>
                                   <div>
                                     <span className="label-small">Cant.</span>
@@ -667,29 +1075,15 @@ export default function ReporteFormSection({
                                         handleUpdateHerramientaEnPartida(partida.id, idx, "cantidad", v)
                                       }
                                       min={0}
+                                      max={stockDisponible ?? undefined}
                                       step={0.5}
                                       size="small"
+                                      status={excede ? "error" : undefined}
                                       style={{ width: "100%", fontSize: "11px" }}
                                     />
-                                  </div>
-                                  <div>
-                                    <span className="label-small">Costo Unit.</span>
-                                    <InputNumber
-                                      value={h.costoUnitario}
-                                      onChange={(v) =>
-                                        handleUpdateHerramientaEnPartida(partida.id, idx, "costoUnitario", v)
-                                      }
-                                      min={0}
-                                      step={1000}
-                                      size="small"
-                                      style={{ width: "100%", fontSize: "11px" }}
-                                    />
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="label-small">Total</span>
-                                    <div className="text-xs font-semibold text-gray-900">
-                                      ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-                                    </div>
+                                    {excede && (
+                                      <div className="text-xs text-red-500 mt-0.5">Excede stock</div>
+                                    )}
                                   </div>
                                   <Button
                                     type="text"

@@ -2,8 +2,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Select, Spin, Empty } from "antd";
-import { Plus } from "lucide-react";
-import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
   getObras,
@@ -93,16 +91,10 @@ export default function ObrasPage() {
         subtitulo={`${resumen?.totalObras || 0} obras · $${(resumen?.presupuestoConsumido || 0).toLocaleString("es-CO", { maximumFractionDigits: 0 })}`}
       />
 
-      <div className="flex items-center justify-between px-6">
+      <div className="px-6">
         <p className="text-sm text-gray-600">
           Control de construcción y ejecución de presupuesto
         </p>
-        <Link href="/admin/obras/nueva">
-          <button className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-            <Plus size={18} />
-            Nueva Obra
-          </button>
-        </Link>
       </div>
 
       {/* Stat Cards */}
@@ -120,7 +112,7 @@ export default function ObrasPage() {
             options={[
               { label: "Todas", value: "TODAS" },
               { label: ESTADO_OBRA_LABEL.PREPARACION, value: "PREPARACION" },
-              { label: ESTADO_OBRA_LABEL.EN_CURSO, value: "EN_CURSO" },
+              { label: ESTADO_OBRA_LABEL.EN_CURSO, value: "EN CURSO" },
               { label: ESTADO_OBRA_LABEL.PAUSADA, value: "PAUSADA" },
               { label: ESTADO_OBRA_LABEL.COMPLETADA, value: "COMPLETADA" },
             ]}

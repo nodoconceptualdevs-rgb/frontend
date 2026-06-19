@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Tabs, Spin, Empty, Select } from "antd";
-import { Plus, Package, Archive } from "lucide-react";
+import { Plus, Package, Archive, FileUp } from "lucide-react";
 import dayjs from "dayjs";
 import AgregarMaterialModal from "@/components/inventario/AgregarMaterialModal";
+import ImportarMaterialesModal from "@/components/inventario/ImportarMaterialesModal";
+import ImportarHerramientasModal from "@/components/inventario/ImportarHerramientasModal";
 import toast from "react-hot-toast";
 import AdminHeader from "@/components/admin/AdminHeader";
 import FacturasTable from "@/components/inventario/FacturasTable";
@@ -27,7 +29,6 @@ import type {
 import {
   getFacturas,
   createFactura,
-  updateEstadoFactura,
   anularFactura,
   getMateriales,
   getResumenInventario,
@@ -35,20 +36,27 @@ import {
   createHerramienta,
   updateHerramienta,
   deleteHerramienta,
+  deleteMaterial,
 } from "@/services/inventario";
 import { getObras } from "@/services/obras";
+import { getProyectos } from "@/services/proyectos";
 import type { Obra } from "@/types/obras";
+import type { Proyecto } from "@/types/proyectos";
 
 export default function InventarioPage() {
   const [facturas, setFacturas] = useState<FacturaCompra[]>([]);
   const [materiales, setMateriales] = useState<MaterialConEstado[]>([]);
   const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [resumen, setResumen] = useState<InventarioResumen | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalFacturaOpen, setModalFacturaOpen] = useState(false);
   const [modalMaterialOpen, setModalMaterialOpen] = useState(false);
+  const [materialEditar, setMaterialEditar] = useState<MaterialConEstado | undefined>();
+  const [importarMaterialesOpen, setImportarMaterialesOpen] = useState(false);
   const [modalHerramientaOpen, setModalHerramientaOpen] = useState(false);
+  const [importarHerramientasOpen, setImportarHerramientasOpen] = useState(false);
   const [facturaDetalleOpen, setFacturaDetalleOpen] = useState(false);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaCompra | null>(null);
   const [herramientaSeleccionada, setHerramientaSeleccionada] = useState<Herramienta | null>(null);
@@ -67,23 +75,33 @@ export default function InventarioPage() {
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
-      const [f, m, r, h, o] = await Promise.all([
+      // Carga principal — si alguna falla, el error se propaga
+      const [f, m, h, o, pRes] = await Promise.all([
         getFacturas(),
         getMateriales(),
-        getResumenInventario(),
         getHerramientas(),
         getObras(),
+        getProyectos(),
       ]);
       setFacturas(f);
       setMateriales(m);
-      setResumen(r);
       setHerramientas(h);
       setObras(o);
+      setProyectos(pRes.data);
+      console.log("✅ Datos cargados. Obras:", o.map(ob => ({ id: ob.id, nombre: ob.nombre, proyectoId: ob.proyectoId, proyectoNombre: ob.proyectoNombre })));
     } catch (error) {
       console.error(error);
       toast.error("Error al cargar datos");
     } finally {
       setLoading(false);
+    }
+
+    // Resumen separado — no bloquea la carga principal si falla
+    try {
+      const r = await getResumenInventario();
+      setResumen(r);
+    } catch (error) {
+      console.warn("No se pudo cargar el resumen de inventario", error);
     }
   }, []);
 
@@ -94,13 +112,9 @@ export default function InventarioPage() {
   // Handlers
   const handleCrearFactura = async (values: FacturaFormValues) => {
     await createFactura(values);
+    toast.success("Factura creada");
     await cargarDatos();
-  };
-
-  const handleAprobarFactura = async (id: number) => {
-    await updateEstadoFactura(id, "APROBADA");
-    await cargarDatos();
-    toast.success("Factura aprobada");
+    setModalFacturaOpen(false);
   };
 
   const handleAnularFactura = async (id: number) => {
@@ -113,16 +127,7 @@ export default function InventarioPage() {
     setFacturaDetalleOpen(true);
   };
 
-  // Obtener proyectos únicos
-  const proyectosUnicos = useMemo(() => {
-    const proyectos = new Map<number | undefined, string>();
-    facturas.forEach((f) => {
-      if (f.proyectoId && f.proyectoNombre) {
-        proyectos.set(f.proyectoId, f.proyectoNombre);
-      }
-    });
-    return Array.from(proyectos.entries()).map(([id, nombre]) => ({ id, nombre }));
-  }, [facturas]);
+
 
   // Filtrar facturas por período y proyecto
   const facturasFiltradasPorFecha = useMemo(() => {
@@ -175,23 +180,55 @@ export default function InventarioPage() {
     };
   }, [facturasFiltradasPorFecha]);
 
-  const handleCrearMaterial = async (
-    nombre: string,
-    categoria: any,
-    unidad: string,
-    stockMinimo: number | null
-  ) => {
-    const { createMaterial } = await import("@/services/inventario");
-    await createMaterial(nombre, categoria, unidad, stockMinimo || 0, 0);
-    await cargarDatos();
-    setModalMaterialOpen(false);
-    toast.success("Material agregado al catálogo");
+  const handleCrearMaterial = async (material: MaterialConEstado) => {
+    try {
+      setMateriales([...materiales, material]);
+      setModalMaterialOpen(false);
+      setMaterialEditar(undefined);
+      toast.success("Material agregado al catálogo");
+    } catch (error) {
+      console.error("Error al crear material:", error);
+      toast.error("Error al crear material");
+    }
+  };
+
+  const handleEditarMaterial = (material: MaterialConEstado) => {
+    setMaterialEditar(material);
+    setModalMaterialOpen(true);
+  };
+
+  const handleActualizarMaterial = async (material: MaterialConEstado) => {
+    try {
+      setMateriales(materiales.map((m) => (m.id === material.id ? material : m)));
+      setModalMaterialOpen(false);
+      setMaterialEditar(undefined);
+      toast.success("Material actualizado");
+    } catch (error) {
+      console.error("Error al actualizar material:", error);
+      toast.error("Error al actualizar material");
+    }
+  };
+
+  const handleEliminarMaterial = async (id: number) => {
+    try {
+      const material = materiales.find((m) => m.id === id);
+      if (!material || !material.documentId) {
+        toast.error("ID de material inválido");
+        return;
+      }
+      await deleteMaterial(material.documentId);
+      setMateriales(materiales.filter((m) => m.id !== id));
+      toast.success("Material eliminado");
+    } catch (error) {
+      console.error("Error al eliminar material:", error);
+      toast.error("Error al eliminar material");
+    }
   };
 
   const handleCrearHerramienta = async (values: HerramientaFormValues) => {
     try {
-      await createHerramienta(values);
-      await cargarDatos();
+      const nueva = await createHerramienta(values);
+      setHerramientas([...herramientas, nueva]);
       setModalHerramientaOpen(false);
       setHerramientaSeleccionada(null);
       toast.success("Herramienta agregada correctamente");
@@ -204,8 +241,8 @@ export default function InventarioPage() {
   const handleActualizarHerramienta = async (values: HerramientaFormValues) => {
     if (!herramientaSeleccionada) return;
     try {
-      await updateHerramienta(herramientaSeleccionada.id, values);
-      await cargarDatos();
+      const actualizada = await updateHerramienta(herramientaSeleccionada.id, values);
+      setHerramientas(herramientas.map((h) => (h.id === actualizada.id ? actualizada : h)));
       setModalHerramientaOpen(false);
       setHerramientaSeleccionada(null);
       toast.success("Herramienta actualizada correctamente");
@@ -217,8 +254,13 @@ export default function InventarioPage() {
 
   const handleEliminarHerramienta = async (id: number) => {
     try {
-      await deleteHerramienta(id);
-      await cargarDatos();
+      const herramienta = herramientas.find((h) => h.id === id);
+      if (!herramienta || !herramienta.documentId) {
+        toast.error("ID de herramienta inválido");
+        return;
+      }
+      await deleteHerramienta(herramienta.documentId);
+      setHerramientas(herramientas.filter((h) => h.id !== id));
       toast.success("Herramienta eliminada correctamente");
     } catch (error) {
       console.error("Error al eliminar herramienta:", error);
@@ -293,9 +335,9 @@ export default function InventarioPage() {
                   onChange={setProyectoIdFiltro}
                   options={[
                     { value: undefined, label: "Todos los proyectos" },
-                    ...proyectosUnicos.map((p) => ({
+                    ...proyectos.map((p) => ({
                       value: p.id,
-                      label: p.nombre,
+                      label: p.nombre_proyecto,
                     })),
                   ]}
                   className="w-full"
@@ -327,7 +369,6 @@ export default function InventarioPage() {
             <FacturasTable
               facturas={facturasFiltradasPorFecha}
               onVerDetalle={handleVerDetalle}
-              onAprobar={handleAprobarFactura}
               onAnular={handleAnularFactura}
             />
           )}
@@ -348,14 +389,27 @@ export default function InventarioPage() {
             <p className="text-sm text-gray-500">
               Administra el catálogo de materiales disponibles para las facturas
             </p>
-            <button
-              type="button"
-              onClick={() => setModalMaterialOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
-            >
-              <Plus size={18} />
-              Agregar Material
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setImportarMaterialesOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <FileUp size={18} />
+                Importar Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMaterialEditar(undefined);
+                  setModalMaterialOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
+              >
+                <Plus size={18} />
+                Agregar Material
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -378,7 +432,11 @@ export default function InventarioPage() {
               <Empty description="No hay materiales" />
             </div>
           ) : (
-            <MaterialesTable materiales={materiales} />
+            <MaterialesTable
+              materiales={materiales}
+              onEditar={handleEditarMaterial}
+              onEliminar={handleEliminarMaterial}
+            />
           )}
         </div>
       ),
@@ -397,17 +455,27 @@ export default function InventarioPage() {
             <p className="text-sm text-gray-500">
               Administra las herramientas disponibles para las obras
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                setHerramientaSeleccionada(null);
-                setModalHerramientaOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
-            >
-              <Plus size={18} />
-              Agregar Herramienta
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setImportarHerramientasOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <FileUp size={18} />
+                Importar Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHerramientaSeleccionada(null);
+                  setModalHerramientaOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
+              >
+                <Plus size={18} />
+                Agregar Herramienta
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -430,7 +498,7 @@ export default function InventarioPage() {
                 setHerramientaSeleccionada(h);
                 setModalHerramientaOpen(true);
               }}
-              onDelete={handleEliminarHerramienta}
+              onDelete={(h) => handleEliminarHerramienta(h.id)}
             />
           )}
         </div>
@@ -472,18 +540,33 @@ export default function InventarioPage() {
         onClose={() => setModalFacturaOpen(false)}
         onSubmit={handleCrearFactura}
         materiales={materiales}
-        proyectos={obras.map((o) => ({ id: o.proyectoId, nombre: o.proyectoNombre }))}
-        obras={obras.map((o) => ({ id: o.id, nombre: o.nombre, proyectoId: o.proyectoId }))}
+        proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre_proyecto }))}
+        obras={obras.map((o) => ({ id: o.id, nombre: o.nombre, proyectoId: o.proyectoId, proyectoNombre: o.proyectoNombre }))}
+        mostrarSelectorObra={true}
       />
 
-      {/* Modal de agregar material */}
+      {/* Modal de agregar/editar material */}
       <AgregarMaterialModal
         open={modalMaterialOpen}
-        onClose={() => setModalMaterialOpen(false)}
-        onMaterialCreado={() => {
+        onClose={() => {
           setModalMaterialOpen(false);
-          cargarDatos();
+          setMaterialEditar(undefined);
         }}
+        materialEditar={materialEditar}
+        onMaterialCreado={(material) => {
+          if (materialEditar) {
+            handleActualizarMaterial(material);
+          } else {
+            handleCrearMaterial(material);
+          }
+        }}
+      />
+
+      {/* Modal de importar materiales */}
+      <ImportarMaterialesModal
+        open={importarMaterialesOpen}
+        onClose={() => setImportarMaterialesOpen(false)}
+        onImported={cargarDatos}
       />
 
       {/* Modal de detalle factura */}
@@ -505,6 +588,13 @@ export default function InventarioPage() {
           setHerramientaSeleccionada(null);
         }}
         onSubmit={herramientaSeleccionada ? handleActualizarHerramienta : handleCrearHerramienta}
+      />
+
+      {/* Modal de importar herramientas */}
+      <ImportarHerramientasModal
+        open={importarHerramientasOpen}
+        onClose={() => setImportarHerramientasOpen(false)}
+        onImported={cargarDatos}
       />
     </div>
   );

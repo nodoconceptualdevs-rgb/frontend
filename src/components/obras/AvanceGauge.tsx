@@ -10,7 +10,7 @@ export default function AvanceGauge({ porcentaje, size = "md" }: Props) {
   if (size === "sm") {
     return (
       <div className="flex items-center justify-center">
-        <Progress type="circle" percent={porcentaje} width={50} strokeWidth={5} />
+        <Progress type="circle" percent={porcentaje} size={50} strokeWidth={5} />
       </div>
     );
   }

@@ -102,6 +102,13 @@ export interface ReporteDiario {
   costoTotal: number;
   creadoEn: string;
   valuacionId?: number;  // undefined = pendiente, número = concretado en esa valuación
+  imagenes?: {
+    id: number;
+    name: string;
+    url: string;
+    mime: string;
+    size: number;
+  }[];
 }
 
 export interface ReporteFormValues {
@@ -119,12 +126,23 @@ export interface ReporteFormValues {
     cantidad: number;
     precioUnitario: number;
   }[];
+  imagenesArchivos?: File[];
+}
+
+// ─── Precio Historial ────────────────────────────────────────────────────────
+
+export interface PrecioHistorial {
+  id: number;
+  precio: number;
+  fecha_inicio: string;
+  fecha_fin: string | null;
 }
 
 // ─── Obra ─────────────────────────────────────────────────────────────────────
 
 export interface Obra {
   id: number;
+  documentId?: string;
   nombre: string;
   proyectoId: number;
   proyectoNombre: string;

@@ -8,7 +8,7 @@ import type { Herramienta } from "@/types/inventario";
 interface HerramientasTableProps {
   herramientas: Herramienta[];
   onEdit?: (herramienta: Herramienta) => void;
-  onDelete?: (id: number) => void;
+  onDelete?: (herramienta: Herramienta) => void;
   onVerDetalle?: (herramienta: Herramienta) => void;
 }
 
@@ -39,6 +39,16 @@ export default function HerramientasTable({
       width: "15%",
       render: (categoria: string) => (
         <span className="text-sm text-gray-600">{categoria}</span>
+      ),
+    },
+    {
+      title: "Cantidad",
+      dataIndex: "cantidad",
+      key: "cantidad",
+      width: "10%",
+      align: "center" as const,
+      render: (cantidad: number | undefined) => (
+        <span className="font-semibold text-gray-900">{cantidad || 1}</span>
       ),
     },
     {
@@ -107,7 +117,7 @@ export default function HerramientasTable({
             <Popconfirm
               title="Eliminar herramienta"
               description="¿Está seguro de que desea eliminar esta herramienta?"
-              onConfirm={() => onDelete(record.id)}
+              onConfirm={() => onDelete(record)}
               okText="Sí"
               cancelText="No"
             >

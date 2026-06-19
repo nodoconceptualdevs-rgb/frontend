@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Table, Empty, Divider } from "antd";
+import { Modal, Table, Empty, Divider, Image as AntImage } from "antd";
 import type { ReporteDiario } from "@/types/obras";
 import dayjs from "dayjs";
 
@@ -183,6 +183,30 @@ export default function ReporteDetalleModal({ open, reporte, onClose }: Props) {
             </p>
           </div>
         </div>
+
+        {/* Imágenes del avance */}
+        {reporte.imagenes && reporte.imagenes.length > 0 && (
+          <>
+            <Divider />
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Fotos del Avance</h3>
+              <AntImage.PreviewGroup>
+                <div className="grid grid-cols-4 gap-3">
+                  {reporte.imagenes.map((img, idx) => (
+                    <AntImage
+                      key={idx}
+                      src={img.url}
+                      alt={`Foto ${idx + 1}`}
+                      preview
+                      className="rounded border border-gray-200 object-cover"
+                      style={{ width: "100%", height: "150px", objectFit: "cover" }}
+                    />
+                  ))}
+                </div>
+              </AntImage.PreviewGroup>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   );

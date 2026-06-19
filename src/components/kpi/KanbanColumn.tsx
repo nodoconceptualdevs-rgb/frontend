@@ -6,7 +6,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Inbox } from "lucide-react";
+import { Inbox, Plus } from "lucide-react";
 import type { EstadoTarea, TareaConKpi } from "@/types/kpi";
 import { ESTADO_LABEL } from "@/types/kpi";
 import TareaCard from "./TareaCard";
@@ -20,6 +20,7 @@ interface KanbanColumnProps {
   onRechazo: (t: TareaConKpi) => void;
   onPublicar: (t: TareaConKpi) => void;
   onEliminar: (t: TareaConKpi) => void;
+  onCrear?: () => void;
 }
 
 /** Estilos de acento por columna. */
@@ -53,6 +54,7 @@ export default function KanbanColumn({
   onRechazo,
   onPublicar,
   onEliminar,
+  onCrear,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: estado });
   const acento = ACENTO[estado];
@@ -99,10 +101,21 @@ export default function KanbanColumn({
         </SortableContext>
 
         {tareas.length === 0 && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-6 text-center text-gray-300">
+          <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-center text-gray-300">
             <Inbox size={26} strokeWidth={1.5} />
             <span className="text-xs text-gray-400">Sin tareas</span>
           </div>
+        )}
+
+        {/* Botón para agregar nueva tarea al final de la columna */}
+        {onCrear && (
+          <button
+            onClick={onCrear}
+            className="mt-auto flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:border-gray-400 hover:bg-gray-50 hover:text-gray-700"
+          >
+            <Plus size={16} />
+            <span>Añade una tarjeta</span>
+          </button>
         )}
       </div>
     </div>

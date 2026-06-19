@@ -30,6 +30,7 @@ export default function NuevoProyectoGerentePage() {
     fecha_fin_planificada: "",
     presupuesto_total: "",
     es_publico: true,
+    crear_obra: true,
   });
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function NuevoProyectoGerentePage() {
       );
 
       const proyectoId = (result as any)?.data?.id ?? (result as any)?.id;
-      if (proyectoId) {
+      if (proyectoId && formData.crear_obra) {
         await createObra({
           nombre: formData.nombre_proyecto,
           proyectoId,
@@ -252,6 +253,24 @@ export default function NuevoProyectoGerentePage() {
                   />
                   <span className="text-sm font-medium text-gray-700">
                     Proyecto público (visible para todos)
+                  </span>
+                </label>
+              </div>
+
+              {/* Crear Obra */}
+              <div className="md:col-span-2">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="crear_obra"
+                    checked={formData.crear_obra}
+                    onChange={(e) =>
+                      setFormData({ ...formData, crear_obra: e.target.checked })
+                    }
+                    className="w-5 h-5 text-red-600 border-2 border-gray-300 rounded focus:ring-red-200"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Crear obra vinculada (desmarca si es solo diseño)
                   </span>
                 </label>
               </div>

@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { Table } from "antd";
-import { Package, AlertTriangle } from "lucide-react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
+import { Table, Button } from "antd";
+import { Package, AlertTriangle, Plus, ChevronDown, Check, Loader2 } from "lucide-react";
 import type { ReporteDiario, MaterialDisponible } from "@/types/obras";
-import type { FacturaCompra } from "@/types/inventario";
+import type { EstadoFactura, FacturaCompra } from "@/types/inventario";
 import dayjs from "dayjs";
 
 interface Props {
   reportes: ReporteDiario[];
   materiales: MaterialDisponible[];
   facturas?: FacturaCompra[];
+  onCambiarEstado?: (facturaId: number, estado: EstadoFactura) => Promise<void>;
+  onAgregarFactura?: () => void;
 }
 
 const fmt = (n: number) =>
@@ -19,21 +21,102 @@ const fmt = (n: number) =>
 const fmtDec = (n: number) =>
   n.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const ESTADO_STOCK_COLOR: Record<string, string> = {
-  NORMAL: "green",
-  BAJO: "orange",
-  CRITICO: "red",
-  SIN_STOCK: "default",
+const ESTADO_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string; ring: string }> = {
+  APROBADA:  { label: "Aprobada",  dot: "bg-blue-500",    bg: "bg-blue-50",    text: "text-blue-700",    ring: "ring-blue-200" },
+  PAGADA:    { label: "Pagada",    dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", ring: "ring-emerald-200" },
+  ANULADA:   { label: "Anulada",   dot: "bg-red-400",     bg: "bg-red-50",     text: "text-red-600",     ring: "ring-red-200" },
 };
 
-const ESTADO_FACTURA_COLOR: Record<string, string> = {
-  BORRADOR: "default",
-  APROBADA: "blue",
-  PAGADA: "green",
-  ANULADA: "red",
-};
+const ESTADOS_FACTURA: EstadoFactura[] = ["PAGADA", "ANULADA"];
 
-export default function InventarioTab({ reportes, materiales, facturas = [] }: Props) {
+function EstadoBadge({
+  estado,
+  facturaId,
+  loading,
+  disabled,
+  onCambiar,
+}: {
+  estado: EstadoFactura;
+  facturaId: number;
+  loading: boolean;
+  disabled: boolean;
+  onCambiar?: (id: number, estado: EstadoFactura) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const cfg = ESTADO_CONFIG[estado];
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const badge = (
+    <button
+      type="button"
+      disabled={disabled || !onCambiar}
+      onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+      className={`
+        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+        ring-1 transition-all duration-150 select-none
+        ${cfg.bg} ${cfg.text} ${cfg.ring}
+        ${onCambiar && !disabled ? "cursor-pointer hover:brightness-95 active:scale-95" : "cursor-default"}
+      `}
+    >
+      {loading
+        ? <Loader2 size={10} className="animate-spin" />
+        : <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
+      }
+      {cfg.label}
+      {onCambiar && estado === "APROBADA" && <ChevronDown size={11} className={`opacity-50 transition-transform ${open ? "rotate-180" : ""}`} />}
+    </button>
+  );
+
+  if (!onCambiar) return badge;
+
+  return (
+    <div ref={ref} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+      {badge}
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-50 w-36 rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/80 py-1 overflow-hidden">
+          {ESTADOS_FACTURA.map((e) => {
+            const c = ESTADO_CONFIG[e];
+            const isActive = e === estado;
+            const isDisabled = false;
+            return (
+              <button
+                key={e}
+                type="button"
+                disabled={isActive || isDisabled}
+                onClick={async () => {
+                  setOpen(false);
+                  await onCambiar(facturaId, e);
+                }}
+                className={`
+                  w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors
+                  ${isActive || isDisabled
+                    ? "opacity-40 cursor-not-allowed text-gray-500"
+                    : "hover:bg-gray-50 cursor-pointer text-gray-700"}
+                `}
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
+                <span className="flex-1 text-left">{c.label}</span>
+                {isActive && <Check size={12} className="text-gray-400" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function InventarioTab({ reportes, materiales, facturas = [], onCambiarEstado, onAgregarFactura }: Props) {
+  const [loadingEstado, setLoadingEstado] = useState<number | null>(null);
   // Materiales consumidos en reportes
   const materialesGastados = useMemo(() => {
     const map = new Map<
@@ -63,8 +146,8 @@ export default function InventarioTab({ reportes, materiales, facturas = [] }: P
       .sort((a, b) => b.costo - a.costo);
   }, [reportes]);
 
-  const materialesUsadosIds = new Set(materialesGastados.map((m) => m.id));
-  const stockRelacionado = materiales.filter((m) => materialesUsadosIds.has(m.materialId));
+  // Materiales disponibles: solo los que tienen stock restante > 0
+  const stockDisponible = materiales.filter((m) => m.stockActual > 0);
 
   const totalCostoMateriales = materialesGastados.reduce((s, m) => s + m.costo, 0);
 
@@ -131,23 +214,23 @@ export default function InventarioTab({ reportes, materiales, facturas = [] }: P
         )}
       </section>
 
-      {/* ── Stock Actual ───────────────────────────────────────────────── */}
+      {/* ── Stock Disponible ───────────────────────────────────────────────── */}
       <section>
         <div className="flex items-center gap-2 mb-3">
           <Package size={16} className="text-gray-600" />
-          <h3 className="font-semibold text-gray-800">Stock Actual (materiales usados en obra)</h3>
+          <h3 className="font-semibold text-gray-800">Stock Disponible</h3>
         </div>
 
-        {stockRelacionado.length === 0 ? (
+        {stockDisponible.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 bg-white py-8 text-center">
-            <p className="text-sm text-gray-400">Sin materiales en inventario relacionados</p>
+            <p className="text-sm text-gray-400">Sin materiales comprados para esta obra</p>
           </div>
         ) : (
           <Table
             size="small"
             bordered
             pagination={false}
-            dataSource={stockRelacionado.map((m) => ({ ...m, key: m.materialId }))}
+            dataSource={stockDisponible.map((m) => ({ ...m, key: m.materialId }))}
             columns={[
               { title: "Material", dataIndex: "materialNombre", key: "nombre" },
               { title: "Ud.", dataIndex: "unidad", key: "unidad", width: 50, align: "center" as const },
@@ -183,8 +266,7 @@ export default function InventarioTab({ reportes, materiales, facturas = [] }: P
                 key: "alerta",
                 width: 30,
                 render: (_: any, r: MaterialDisponible) => {
-                  const gastado = materialesGastados.find((m) => m.id === r.materialId);
-                  if (gastado && r.stockActual < gastado.cantidad * 0.2) {
+                  if (r.stockActual === 0) {
                     return <AlertTriangle size={14} className="text-red-500" />;
                   }
                   return null;
@@ -197,16 +279,23 @@ export default function InventarioTab({ reportes, materiales, facturas = [] }: P
 
       {/* ── Historial de Compras ───────────────────────────────────────────── */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Package size={16} className="text-gray-600" />
-          <h3 className="font-semibold text-gray-800">
-            Historial de Compras
-            {facturas.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-gray-400">
-                {facturas.length} factura{facturas.length !== 1 ? "s" : ""} · {fmt(facturas.reduce((s, f) => s + f.total, 0))} total
-              </span>
-            )}
-          </h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Package size={16} className="text-gray-600" />
+            <h3 className="font-semibold text-gray-800">
+              Historial de Compras
+              {facturas.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-gray-400">
+                  {facturas.length} factura{facturas.length !== 1 ? "s" : ""} · {fmt(facturas.reduce((s, f) => s + f.total, 0))} total
+                </span>
+              )}
+            </h3>
+          </div>
+          {onAgregarFactura && (
+            <Button size="small" icon={<Plus size={14} />} onClick={onAgregarFactura}>
+              Agregar Factura
+            </Button>
+          )}
         </div>
 
         {facturas.length === 0 ? (
@@ -242,19 +331,25 @@ export default function InventarioTab({ reportes, materiales, facturas = [] }: P
               { title: "Proveedor", dataIndex: "proveedorNombre", key: "prov" },
               { title: "Ítems", dataIndex: "items", key: "items", width: 60, align: "center" as const, render: (v: any[]) => v?.length ?? 0 },
               { title: "Total", dataIndex: "total", key: "total", width: 130, align: "right" as const, render: (v: number) => <span className="font-bold">{fmt(v)}</span> },
-              { title: "Estado", dataIndex: "estado", key: "estado", width: 100, render: (v: string) => {
-                const colors: Record<string, string> = {
-                  BORRADOR: "bg-gray-100 text-gray-800",
-                  APROBADA: "bg-blue-100 text-blue-800",
-                  PAGADA: "bg-green-100 text-green-800",
-                  ANULADA: "bg-red-100 text-red-800",
-                };
-                return (
-                  <span className={`text-xs font-semibold px-2 py-1 rounded ${colors[v] || "bg-gray-100"}`}>
-                    {v}
-                  </span>
-                );
-              }},
+              {
+                title: "Estado",
+                dataIndex: "estado",
+                key: "estado",
+                width: 130,
+                render: (estado: EstadoFactura, record: FacturaCompra) => (
+                  <EstadoBadge
+                    estado={estado}
+                    facturaId={record.id}
+                    loading={loadingEstado === record.id}
+                    disabled={loadingEstado === record.id || estado !== "APROBADA"}
+                    onCambiar={onCambiarEstado ? async (id, e) => {
+                      setLoadingEstado(id);
+                      try { await onCambiarEstado(id, e); }
+                      finally { setLoadingEstado(null); }
+                    } : undefined}
+                  />
+                ),
+              },
             ]}
             footer={() => (
               <div className="flex justify-end text-sm font-bold text-gray-800">

@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from "react";
-import { Table, Button, Tag } from "antd";
-import { Eye } from "lucide-react";
-import type { ReporteDiario } from "@/types/obras";
+import { Table, Button, Tag, Popconfirm } from "antd";
+import { Trash2 } from "lucide-react";
+import type { ReporteDiario, Obra } from "@/types/obras";
 import dayjs from "dayjs";
 
 interface Props {
   reportes: ReporteDiario[];
+  obra?: Obra;
   onVerDetalle?: (reporte: ReporteDiario) => void;
+  onEliminar?: (reporteId: number) => void;
 }
 
 interface ReporteFecha {
@@ -16,7 +18,7 @@ interface ReporteFecha {
   id: string;
 }
 
-export default function ReportesTable({ reportes, onVerDetalle }: Props) {
+export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar }: Props) {
   const [expandedFechas, setExpandedFechas] = useState<Set<string>>(new Set());
   const [expandedReportes, setExpandedReportes] = useState<Set<number>>(new Set());
 
@@ -108,7 +110,17 @@ export default function ReportesTable({ reportes, onVerDetalle }: Props) {
       title: "Total Día",
       key: "totalDia",
       render: (_: any, record: ReporteFecha) => {
-        const total = record.reportes.reduce((s, r) => s + r.costoTotal, 0);
+        const total = record.reportes.reduce((s, r) => {
+          let costoSegunAvance = 0;
+          if (obra && obra.partidas) {
+            const partida = obra.partidas.find((p) => p.id === r.partidaId);
+            if (partida) {
+              const costoPresupuestadoPartida = partida.cantidadPresupuestada * partida.precioUnitario;
+              costoSegunAvance = costoPresupuestadoPartida > 0 ? (costoPresupuestadoPartida * r.avanceLogrado) / 100 : 0;
+            }
+          }
+          return s + r.costoManoObra + r.costoMateriales + costoSegunAvance;
+        }, 0);
         return (
           <span className="font-bold text-blue-600">
             ${total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
@@ -201,36 +213,59 @@ export default function ReportesTable({ reportes, onVerDetalle }: Props) {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
-                  <tr style={{ background: "#f2f2f2" }}>
-                    <th style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>▼</th>
-                    {["#", "Código", "Descripción", "Avance", "Personal", "Costo MO", "Costo Mat.", "Total"].map((h, i) => (
-                      <th key={i} style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: i > 1 ? "right" : "left", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
+                  <tr style={{ background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}>
+                    <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>▼</th>
+                    {["#", "Código", "Descripción", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
+                      <th key={i} style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: i > 1 ? "right" : "left", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {record.reportes.map((r, idx) => {
                     const isExpanded = expandedReportes.has(r.id);
-                    const rowBg = idx % 2 === 0 ? "#fff" : "#fafafa";
+                    const rowBg = idx % 2 === 0 ? "#fff" : "#f9fafb";
                     const cell = (content: React.ReactNode, align = "right", bold = false) => (
-                      <td style={{ border: "1px solid #ddd", padding: "5px 7px", textAlign: align as any, background: rowBg, whiteSpace: "nowrap", fontWeight: bold ? 600 : 400 }}>{content}</td>
+                      <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: align as any, background: rowBg, whiteSpace: "nowrap", fontWeight: bold ? 600 : 400 }}>{content}</td>
                     );
+
+                    // Calcular costo presupuestado según avance
+                    let costoSegunAvance = 0;
+                    if (obra && obra.partidas) {
+                      const partida = obra.partidas.find((p) => p.id === r.partidaId);
+                      if (partida) {
+                        const costoPresupuestadoPartida = partida.cantidadPresupuestada * partida.precioUnitario;
+                        costoSegunAvance = costoPresupuestadoPartida > 0 ? (costoPresupuestadoPartida * r.avanceLogrado) / 100 : 0;
+                      }
+                    }
+
                     return (
                       <React.Fragment key={r.id}>
                         <tr style={{ cursor: "pointer" }} onClick={() => toggleReporte(r.id)}>
-                          <td style={{ border: "1px solid #ddd", padding: "5px 7px", textAlign: "center", background: rowBg, fontSize: 10, color: "#666" }}>{isExpanded ? "▼" : "▶"}</td>
-                          <td style={{ border: "1px solid #ddd", padding: "5px 7px", textAlign: "center", background: rowBg, fontWeight: 700 }}>{idx + 1}</td>
+                          <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontSize: 10, color: "#6b7280" }}>{isExpanded ? "▼" : "▶"}</td>
+                          <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontWeight: 700 }}>{idx + 1}</td>
                           {cell(r.partidaCodigo, "center")}
                           {cell(r.partidaDescripcion, "left")}
-                          {cell(<span style={{ fontWeight: 600, color: "#d97706" }}>{r.avanceLogrado}%</span>)}
+                          {cell(<span style={{ fontWeight: 600, color: "#7c3aed" }}>{r.avanceLogrado}%</span>)}
+                          {cell(<strong style={{ color: "#059669" }}>${costoSegunAvance.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                           {cell(<span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>{r.personal?.length || 0}P</span>)}
                           {cell(<strong style={{ color: "#2563eb" }}>${r.costoManoObra.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                           {cell(<strong style={{ color: "#06b6d4" }}>${r.costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
-                          {cell(<strong style={{ color: "#1f2937" }}>${r.costoTotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
+                          {cell(<strong style={{ color: "#374151", fontWeight: 700 }}>${(r.costoManoObra + r.costoMateriales + costoSegunAvance).toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
+                          {onEliminar && <td style={{ border: "1px solid #e5e7eb", padding: "3px 5px", background: rowBg, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                            <Popconfirm
+                              title="Eliminar reporte"
+                              description="¿Está seguro?"
+                              onConfirm={() => onEliminar(r.id)}
+                              okText="Sí"
+                              cancelText="No"
+                            >
+                              <Button type="text" size="small" danger icon={<Trash2 size={14} />} />
+                            </Popconfirm>
+                          </td>}
                         </tr>
                         {isExpanded && (
-                          <tr style={{ background: "#f9fafb" }}>
-                            <td colSpan={9} style={{ padding: "8px", borderBottom: "1px solid #ddd" }}>
+                          <tr style={{ background: "#f3f4f6" }}>
+                            <td colSpan={10} style={{ padding: "8px", borderBottom: "1px solid #e5e7eb" }}>
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                                 {(r.personal?.length || 0) > 0 && (
                                   <div>

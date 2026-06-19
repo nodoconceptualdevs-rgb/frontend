@@ -3,25 +3,30 @@
 import React, { useEffect, useState, useCallback, Fragment } from "react";
 import { Tabs, Spin, Empty, Button, Modal, DatePicker } from "antd";
 import dayjs from "dayjs";
-import { Plus, ChevronLeft } from "lucide-react";
+import { Plus, ChevronLeft, FileUp } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   getObra,
+  getPartidas,
+  getReportes,
   updateEstadoObra,
   getPersonal,
   getMaterialesDisponibles,
-  getValuacion,
   getValuaciones,
   createPartida,
   updatePartida,
   deletePartida,
   createReporte,
+  deleteReporte,
   createPersonal,
+  updatePersonal,
   createValuacion,
 } from "@/services/obras";
-import { getFacturasByObra } from "@/services/inventario";
-import type { FacturaCompra } from "@/types/inventario";
+import { calcularValuacion } from "@/lib/obras";
+import { getFacturasByObra, updateEstadoFactura, createFactura, getHerramientas } from "@/services/inventario";
+import type { EstadoFactura, FacturaCompra, FacturaFormValues } from "@/types/inventario";
+import FacturaModal from "@/components/inventario/FacturaModal";
 import {
   PartidasTable,
   ReportesTable,
@@ -34,18 +39,21 @@ import {
   ValuacionesTab,
   AnaliticaTab,
   InventarioTab,
+  ImportarPartidasModal,
 } from "@/components/obras";
 import type {
   Obra,
   EstadoObra,
   Personal,
   Partida,
+  ReporteDiario,
   MaterialDisponible,
   ValuacionFinal,
   PartidaFormValues,
   PersonalFormValues,
   ReporteFormValues,
 } from "@/types/obras";
+import type { Herramienta } from "@/types/inventario";
 import toast from "react-hot-toast";
 
 export default function GerenteObraDetallePage() {
@@ -56,13 +64,16 @@ export default function GerenteObraDetallePage() {
   const [obra, setObra] = useState<Obra | null>(null);
   const [personal, setPersonal] = useState<Personal[]>([]);
   const [materiales, setMateriales] = useState<MaterialDisponible[]>([]);
+  const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
   const [valuacion, setValuacion] = useState<ValuacionFinal | null>(null);
-  const [valuaciones, setValuaciones] = useState<import("@/types/obras").ValuacionDoc[]>([]);
+  const [valuaciones, setValuaciones] = useState<import("@/tipos/obras").ValuacionDoc[]>([]);
   const [facturas, setFacturas] = useState<FacturaCompra[]>([]);
   const [loading, setLoading] = useState(true);
+  const [facturaModalOpen, setFacturaModalOpen] = useState(false);
 
   // Estados para modales de edición
   const [partidaModalOpen, setPartidaModalOpen] = useState(false);
+  const [importarModalOpen, setImportarModalOpen] = useState(false);
   const [editingPartida, setEditingPartida] = useState<Partida | null>(null);
   const [personalModalOpen, setPersonalModalOpen] = useState(false);
   const [reporteModalOpen, setReporteModalOpen] = useState(false);
@@ -76,23 +87,80 @@ export default function GerenteObraDetallePage() {
   // Expandibles para reportes pendientes
   const [expandedReportesPendientes, setExpandedReportesPendientes] = useState<Set<number>>(new Set());
 
+  // Estado para ver detalle de reporte
+  const [reporteSeleccionado, setReporteSeleccionado] = useState<ReporteDiario | null>(null);
+  const [reporteDetalleOpen, setReporteDetalleOpen] = useState(false);
+
 
   // Cargar datos
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
-      const [o, p, m, v, vals, f2] = await Promise.all([
+      const [o, p, m, h, vals, f2] = await Promise.all([
         getObra(obraId),
         getPersonal(),
         getMaterialesDisponibles(),
-        getValuacion(obraId),
+        getHerramientas(),
         getValuaciones(obraId),
         getFacturasByObra(obraId),
       ]);
-      setObra(o);
+
+      const [partidasResult, reportesResult] = await Promise.allSettled([
+        getPartidas(obraId),
+        getReportes(obraId),
+      ]);
+
+      const partidas = partidasResult.status === "fulfilled" ? partidasResult.value : [];
+      const reportes = reportesResult.status === "fulfilled" ? reportesResult.value : [];
+
+      // Calcular stock disponible por material en esta obra:
+      // total comprado en facturas - ya consumido en reportes existentes
+      const compradoPorMaterial = new Map<number, number>();
+      f2.filter(f => !f.inhabilitada).forEach(factura =>
+        (factura.items || []).forEach(item => {
+          compradoPorMaterial.set(item.materialId, (compradoPorMaterial.get(item.materialId) || 0) + item.cantidad);
+        })
+      );
+
+      const consumidoPorMaterial = new Map<number, number>();
+      reportes.forEach(reporte =>
+        (reporte.materiales || []).forEach(mat => {
+          consumidoPorMaterial.set(mat.materialId, (consumidoPorMaterial.get(mat.materialId) || 0) + mat.cantidad);
+        })
+      );
+
+      const materialesObra = m
+        .filter(mat => compradoPorMaterial.has(mat.materialId))
+        .map(mat => ({
+          ...mat,
+          stockActual: Math.max(0, (compradoPorMaterial.get(mat.materialId) || 0) - (consumidoPorMaterial.get(mat.materialId) || 0)),
+        }));
+
+      // Calcular stock de herramientas: cantidad total - consumido en reportes
+      const consumidoHerramientas = new Map<number, number>();
+      reportes.forEach(reporte => {
+        if (reporte.herramientas) {
+          // Buscar herramientas en el reporte (si las hay)
+          // Por ahora asumimos que herramientas en reportes tienen cantidad
+          reporte.herramientas.forEach((h: any) => {
+            if (h.herramientaId) {
+              consumidoHerramientas.set(h.herramientaId, (consumidoHerramientas.get(h.herramientaId) || 0) + (h.cantidad || 1));
+            }
+          });
+        }
+      });
+
+      const herramientasObra = h.map(herr => ({
+        ...herr,
+        cantidad: Math.max(0, (herr.cantidad || 0) - (consumidoHerramientas.get(herr.id) || 0)),
+      }));
+
+      const obraConDatos = { ...o, partidas, reportes };
+      setObra(obraConDatos);
       setPersonal(p);
-      setMateriales(m);
-      setValuacion(v);
+      setMateriales(materialesObra.length > 0 ? materialesObra : m);
+      setHerramientas(herramientasObra);
+      setValuacion(calcularValuacion(obraConDatos));
       setValuaciones(vals);
       setFacturas(f2);
     } catch (error) {
@@ -138,19 +206,30 @@ export default function GerenteObraDetallePage() {
   };
 
   const handleEliminarPartida = async (partidaId: number) => {
+    try {
+      await deletePartida(obraId, partidaId);
+      await cargarDatos();
+      toast.success("Partida eliminada");
+    } catch (error) {
+      console.error("Error eliminando partida:", error);
+      toast.error("Error al eliminar la partida");
+    }
+  };
+
+  const handleEliminarReporte = async (reporteId: number) => {
     Modal.confirm({
-      title: "Eliminar Partida",
-      content: "¿Está seguro de que desea eliminar esta partida?",
+      title: "Eliminar Reporte",
+      content: "¿Está seguro de que desea eliminar este reporte?",
       okText: "Eliminar",
       okType: "danger",
       onOk: async () => {
         try {
-          await deletePartida(obraId, partidaId);
+          await deleteReporte(obraId, reporteId);
           await cargarDatos();
-          toast.success("Partida eliminada");
+          toast.success("Reporte eliminado");
         } catch (error) {
-          console.error("Error eliminando partida:", error);
-          toast.error("Error al eliminar la partida");
+          console.error("Error eliminando reporte:", error);
+          toast.error("Error al eliminar el reporte");
         }
       },
     });
@@ -170,11 +249,16 @@ export default function GerenteObraDetallePage() {
 
   const handleAgregarPersonal = async (values: PersonalFormValues) => {
     try {
-      await createPersonal(values);
+      if (personalEditable) {
+        await updatePersonal(personalEditable.id, values);
+        toast.success("Personal actualizado");
+      } else {
+        await createPersonal(values);
+        toast.success("Personal agregado");
+      }
       setPersonalModalOpen(false);
       setPersonalEditable(null);
       await cargarDatos();
-      toast.success("Personal agregado");
     } catch (error) {
       console.error("Error guardando personal:", error);
       toast.error("Error al guardar el personal");
@@ -182,13 +266,36 @@ export default function GerenteObraDetallePage() {
   };
 
   const handleConcretarValuacion = async () => {
+    if (!obra) return;
     try {
-      await createValuacion(obraId, {});
+      await createValuacion(obraId, obra, valuaciones, {});
       await cargarDatos();
       toast.success("Valuación concretada");
     } catch (error: any) {
       console.error("Error concretando valuación:", error);
       toast.error(error.message || "Error al concretar la valuación");
+    }
+  };
+
+  const handleCrearFacturaEnObra = async (values: FacturaFormValues) => {
+    try {
+      await createFactura({ ...values, obraId });
+      toast.success("Factura creada");
+      setFacturaModalOpen(false);
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error creando factura:", error);
+      toast.error("Error al crear la factura");
+    }
+  };
+
+  const handleCambiarEstadoFactura = async (facturaId: number, estado: EstadoFactura) => {
+    try {
+      await updateEstadoFactura(facturaId, estado);
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error cambiando estado de factura:", error);
+      toast.error("Error al cambiar el estado de la factura");
     }
   };
 
@@ -218,8 +325,9 @@ export default function GerenteObraDetallePage() {
     );
   }
 
-  // Filtrar reportes por rango de fechas
+  // Solo reportes ya concretados en una valuación
   const reportesFiltrados = obra.reportes.filter((reporte) => {
+    if (!reporte.valuacionId) return false;
     const fechaReporte = new Date(reporte.fecha).getTime();
     if (fechaInicio) {
       const inicio = new Date(fechaInicio).getTime();
@@ -227,7 +335,7 @@ export default function GerenteObraDetallePage() {
     }
     if (fechaFin) {
       const fin = new Date(fechaFin);
-      fin.setDate(fin.getDate() + 1); // Incluir todo el día fin
+      fin.setDate(fin.getDate() + 1);
       if (fechaReporte >= fin.getTime()) return false;
     }
     return true;
@@ -239,7 +347,13 @@ export default function GerenteObraDetallePage() {
       label: "Partidas",
       children: (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex gap-2 justify-end">
+            <Button
+              icon={<FileUp size={18} />}
+              onClick={() => setImportarModalOpen(true)}
+            >
+              Importar Excel
+            </Button>
             <Button
               type="primary"
               icon={<Plus size={18} />}
@@ -323,7 +437,7 @@ export default function GerenteObraDetallePage() {
                           <thead>
                             <tr style={{ background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}>
                               <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>▼</th>
-                              {["#", "Código", "Descripción", "Avance", "Personal", "Costo MO", "Costo Mat.", "Total"].map((h, i) => (
+                              {["#", "Código", "Descripción", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
                                 <th key={i} style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: i > 1 ? "right" : "left", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
                               ))}
                             </tr>
@@ -335,6 +449,12 @@ export default function GerenteObraDetallePage() {
                               const cell = (content: React.ReactNode, align = "right", bold = false) => (
                                 <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: align as any, background: rowBg, whiteSpace: "nowrap", fontWeight: bold ? 600 : 400 }}>{content}</td>
                               );
+
+                              // Calcular costo presupuestado de la partida según el avance
+                              const partida = obra?.partidas?.find((p) => p.id === r.partidaId);
+                              const costoPresupuestadoPartida = partida ? partida.cantidadPresupuestada * partida.precioUnitario : 0;
+                              const costoSegunAvance = (costoPresupuestadoPartida * r.avanceLogrado) / 100;
+
                               return (
                                 <Fragment key={r.id}>
                                   <tr style={{ cursor: "pointer" }} onClick={() => {
@@ -351,10 +471,11 @@ export default function GerenteObraDetallePage() {
                                     {cell(r.partidaCodigo, "center")}
                                     {cell(r.partidaDescripcion, "left")}
                                     {cell(<span style={{ fontWeight: 600, color: "#7c3aed" }}>{r.avanceLogrado}%</span>)}
+                                    {cell(<strong style={{ color: "#059669" }}>${costoSegunAvance.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                                     {cell(<span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>{r.personal?.length || 0}P</span>)}
                                     {cell(<strong style={{ color: "#2563eb" }}>${r.costoManoObra.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                                     {cell(<strong style={{ color: "#06b6d4" }}>${r.costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
-                                    {cell(<strong style={{ color: "#374151" }}>${r.costoTotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
+                                    {cell(<strong style={{ color: "#374151", fontWeight: 700 }}>${(r.costoManoObra + r.costoMateriales + costoSegunAvance).toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
                                   </tr>
                                   {isExpanded && (
                                     <tr style={{ background: "#f3f4f6" }}>
@@ -423,7 +544,7 @@ export default function GerenteObraDetallePage() {
             );
           })()}
 
-          <h4 className="font-semibold text-gray-800 mb-3">Reportes</h4>
+          <h4 className="font-semibold text-gray-800 mb-3">Reportes Valuados</h4>
           <div className="flex items-center gap-4 mb-4">
             <DatePicker.RangePicker
               format="DD/MM/YYYY"
@@ -442,6 +563,8 @@ export default function GerenteObraDetallePage() {
 
           <ReportesTable
             reportes={reportesFiltrados}
+            obra={obra}
+            onEliminar={handleEliminarReporte}
           />
         </div>
       ),
@@ -510,6 +633,8 @@ export default function GerenteObraDetallePage() {
           reportes={obra.reportes}
           materiales={materiales}
           facturas={facturas}
+          onCambiarEstado={handleCambiarEstadoFactura}
+          onAgregarFactura={() => setFacturaModalOpen(true)}
         />
       ),
     },
@@ -603,6 +728,13 @@ export default function GerenteObraDetallePage() {
         onSubmit={handleAgregarPartida}
       />
 
+      <ImportarPartidasModal
+        open={importarModalOpen}
+        obraId={obraId}
+        onClose={() => setImportarModalOpen(false)}
+        onImported={cargarDatos}
+      />
+
       <PersonalModal
         open={personalModalOpen}
         personal={personalEditable}
@@ -626,6 +758,7 @@ export default function GerenteObraDetallePage() {
             obra={obra}
             personal={personal}
             materiales={materiales}
+            herramientas={herramientas}
             onSubmit={async (values) => {
               await handleGuardarReporte(values);
               setReporteModalOpen(false);
@@ -634,8 +767,19 @@ export default function GerenteObraDetallePage() {
         )}
       </Modal>
 
-
-
+      <FacturaModal
+        open={facturaModalOpen}
+        onClose={() => setFacturaModalOpen(false)}
+        onSubmit={handleCrearFacturaEnObra}
+        materiales={materiales.map((m) => ({
+          id: m.materialId,
+          nombre: m.materialNombre,
+          categoria: "",
+          unidad: m.unidad,
+          stockActual: m.stockActual,
+          precioPromedio: m.precioPromedio,
+        }))}
+      />
 
     </div>
   );

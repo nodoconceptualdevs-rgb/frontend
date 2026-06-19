@@ -1,10 +1,8 @@
 /**
- * Servicio KPI — versión MOCK (en memoria).
+ * Servicio KPI — API real Strapi.
  *
- * La UI de Productividad se construye contra estas funciones con datos
- * simulados. Cuando exista el backend Strapi `api::kpi.tarea-diseno`, se
- * reemplaza SOLO el cuerpo de cada función por llamadas a `api` (axios),
- * manteniendo las mismas firmas.
+ * Reemplaza el mock anterior por llamadas HTTP a los endpoints de tareas,
+ * comentarios, reprogramaciones y rechazos.
  */
 
 import type {
@@ -18,646 +16,719 @@ import type {
   RechazoValues,
   ReprogramarValues,
   TareaConKpi,
-  TareaDiseno,
   TareaFormValues,
 } from "@/types/kpi";
 import { conKpi } from "@/lib/kpi";
+import api from "@/lib/api";
 
-// ---------------------------------------------------------------------------
-// Datos de referencia (mock)
-// ---------------------------------------------------------------------------
+// Helpers para normalizar respuestas de Strapi v4 y v5
+const toArray = (val: any): any[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (Array.isArray(val.data)) return val.data;
+  return [];
+};
 
-const ARQUITECTOS: Arquitecto[] = [
-  { id: 1, name: "Juan Pérez" },
-  { id: 2, name: "María González" },
-  { id: 3, name: "Carlos Ramírez" },
-  { id: 4, name: "Lucía Fernández" },
-];
+const toOne = (val: any): any => {
+  if (!val) return null;
+  if (val.data !== undefined) return val.data;
+  return val;
+};
 
-const CLIENTES: Cliente[] = [
-  { id: 101, name: "Familia Restrepo" },
-  { id: 102, name: "Inversiones del Sur S.A." },
-  { id: 103, name: "Andrea Molina" },
-];
+// Helpers para normalizar respuestas de Strapi
+const adaptarTarea = (data: any): any => {
+  if (!data) return null;
+  const attrs = data.attributes || data;
 
-const PROYECTOS: ProyectoOpcion[] = [
-  { id: 1, nombre: "Casa Moderna", clienteId: 101, clienteNombre: "Familia Restrepo" },
-  { id: 2, nombre: "Edificio Comercial", clienteId: 102, clienteNombre: "Inversiones del Sur S.A." },
-  { id: 3, nombre: "Reforma Apartamento", clienteId: 103, clienteNombre: "Andrea Molina" },
-];
+  // Arquitectos → { id, name }
+  const arquitectos = toArray(attrs.arquitectos).map((a: any) => {
+    const aa = a.attributes || a;
+    return { id: a.id ?? aa.id, name: aa.name || aa.username || '' };
+  });
 
-const HITOS: HitoOpcion[] = [
-  { id: 11, nombre: "Conceptualización (Diseño)", proyectoId: 1, proyectoNombre: "Casa Moderna" },
-  { id: 12, nombre: "Visualización 3D", proyectoId: 1, proyectoNombre: "Casa Moderna" },
-  { id: 13, nombre: "Planificación (Técnico)", proyectoId: 1, proyectoNombre: "Casa Moderna" },
-  { id: 21, nombre: "Conceptualización (Diseño)", proyectoId: 2, proyectoNombre: "Edificio Comercial" },
-  { id: 22, nombre: "Visualización 3D", proyectoId: 2, proyectoNombre: "Edificio Comercial" },
-  { id: 31, nombre: "Acabados y Decoración", proyectoId: 3, proyectoNombre: "Reforma Apartamento" },
-];
+  // historialEntregas (reprogramaciones) → CambioEntrega shape
+  const historialEntregas = toArray(attrs.reprogramaciones).map((r: any) => {
+    const ra = r.attributes || r;
+    return {
+      fechaAnterior: ra.fechaAnterior,
+      fechaNueva: ra.fechaNueva,
+      motivo: ra.motivo,
+      registradoEn: ra.registradoEn || ra.createdAt,
+    };
+  });
 
-const BIBLIOTECA_PROYECTO: Record<number, ArchivoProyecto[]> = {
-  1: [
-    {
-      id: "bib-1-001",
-      nombre: "Especificaciones_Materiales_CasaModerna_v2.pdf",
-      tamaño: 2_450_000,
-      subidoEn: hace(20),
-      proyectoId: 1,
-      etiquetas: ["especificaciones", "materiales"],
-    },
-    {
-      id: "bib-1-002",
-      nombre: "Plano_Sitio_CasaModerna.dwg",
-      tamaño: 890_000,
-      subidoEn: hace(18),
-      proyectoId: 1,
-      etiquetas: ["planos"],
-    },
-    {
-      id: "bib-1-003",
-      nombre: "Referencia_Fachada_Contemporanea.jpg",
-      tamaño: 3_100_000,
-      subidoEn: hace(15),
-      proyectoId: 1,
-      etiquetas: ["referencias", "fachada"],
-    },
-    {
-      id: "bib-1-004",
-      nombre: "Brief_Cliente_Restrepo.pdf",
-      tamaño: 540_000,
-      subidoEn: hace(25),
-      proyectoId: 1,
-      etiquetas: ["brief"],
-    },
-  ],
-  2: [
-    {
-      id: "bib-2-001",
-      nombre: "Normativa_Comercial_Zona_Industrial.pdf",
-      tamaño: 1_200_000,
-      subidoEn: hace(30),
-      proyectoId: 2,
-      etiquetas: ["normativa"],
-    },
-    {
-      id: "bib-2-002",
-      nombre: "Topografia_Lote_Comercial.dwg",
-      tamaño: 760_000,
-      subidoEn: hace(22),
-      proyectoId: 2,
-      etiquetas: ["planos", "topografia"],
-    },
-  ],
-  3: [
-    {
-      id: "bib-3-001",
-      nombre: "Fotos_Estado_Actual_Apt.zip",
-      tamaño: 45_000_000,
-      subidoEn: hace(8),
-      proyectoId: 3,
-      etiquetas: ["fotos", "estado-actual"],
-    },
-  ],
+  // historialRechazos (rechazos) → Rechazo shape
+  const historialRechazos = toArray(attrs.rechazos).map((r: any) => {
+    const ra = r.attributes || r;
+    return {
+      motivo: ra.motivo,
+      categoria: ra.categoria,
+      registradoEn: ra.registradoEn || ra.createdAt,
+    };
+  });
+
+  // Archivos → Archivo shape
+  const archivos = toArray(attrs.archivos).map((f: any) => {
+    const fa = f.attributes || f;
+    return {
+      id: String(f.id ?? fa.id),
+      nombre: fa.name || fa.nombre || '',
+      tamaño: fa.size || 0,
+      ruta: fa.url || fa.ruta,
+      subidoEn: fa.createdAt || fa.subidoEn || '',
+    };
+  });
+
+  // Relaciones singulares
+  const proyectoRaw = toOne(attrs.proyecto);
+  const proyectoAttrs = proyectoRaw?.attributes || proyectoRaw;
+
+  const clienteRaw = toOne(attrs.cliente);
+  const clienteAttrs = clienteRaw?.attributes || clienteRaw;
+
+  const hitoRaw = toOne(attrs.hito);
+  const hitoAttrs = hitoRaw?.attributes || hitoRaw;
+
+  return {
+    id: data.id ?? attrs.id,
+    titulo: attrs.titulo || '',
+    descripcion: attrs.descripcion,
+    estado: attrs.estado,
+    tipo: attrs.tipo,
+    orden: attrs.orden ?? 0,
+    notasInternas: attrs.notasInternas,
+    fechaRequerimiento: attrs.fechaRequerimiento,
+    fechaInicio: attrs.fechaInicio,
+    fechaEntregaEstimada: attrs.fechaEntregaEstimada,
+    fechaEntregaOriginal: attrs.fechaEntregaOriginal,
+    fechaCompletacion: attrs.fechaCompletacion,
+    publicacion: attrs.publicacion,
+    clienteId: clienteRaw?.id ?? clienteAttrs?.id,
+    clienteNombre: clienteAttrs?.name || clienteAttrs?.username || '',
+    proyectoId: proyectoRaw?.id ?? proyectoAttrs?.id,
+    proyectoNombre: proyectoAttrs?.nombre_proyecto || proyectoAttrs?.nombre || '',
+    hitoId: hitoRaw?.id ?? hitoAttrs?.id,
+    hitoNombre: hitoAttrs?.nombre || '',
+    arquitectos,
+    historialEntregas,
+    historialRechazos,
+    contadorRechazos: attrs.contadorRechazos || 0,
+    archivos,
+    comentarios: toArray(attrs.comentarios),
+  };
+};
+
+const adaptarUsuario = (data: any): Arquitecto => {
+  if (!data) return null;
+  const attrs = data.attributes || data;
+  return {
+    id: data.id || attrs.id,
+    name: attrs.name || attrs.username || "",
+  };
+};
+
+const adaptarProyecto = (data: any, cliente?: any): ProyectoOpcion => {
+  if (!data) return null;
+  const attrs = data.attributes || data;
+  const clienteData = cliente || attrs.clientes?.data?.[0];
+  const clienteAttrs = clienteData?.attributes || clienteData;
+  return {
+    id: data.id || attrs.id,
+    nombre: attrs.nombre_proyecto || attrs.nombre || "",
+    clienteId: clienteData?.id || clienteAttrs?.id,
+    clienteNombre: clienteAttrs?.name || clienteAttrs?.nombre || "",
+  };
+};
+
+const adaptarHito = (data: any, proyecto?: any): HitoOpcion => {
+  if (!data) return null;
+  const attrs = data.attributes || data;
+  const proyData = proyecto || attrs.proyecto?.data;
+  const proyAttrs = proyData?.attributes || proyData;
+  return {
+    id: data.id || attrs.id,
+    nombre: attrs.nombre || "",
+    proyectoId: proyData?.id || proyAttrs?.id,
+    proyectoNombre: proyAttrs?.nombre_proyecto || "",
+  };
 };
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function hace(dias: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - dias);
-  return d.toISOString();
-}
-
-function dentro(dias: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + dias);
-  return d.toISOString();
-}
-
-function delay<T>(valor: T, ms = 280): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(valor), ms));
-}
-
-function proyectoDe(proyectoId?: number): ProyectoOpcion | undefined {
-  return PROYECTOS.find((p) => p.id === proyectoId);
-}
-
-function hitoDe(hitoId?: number): HitoOpcion | undefined {
-  return HITOS.find((h) => h.id === hitoId);
-}
-
-// ---------------------------------------------------------------------------
-// Estado en memoria
-// ---------------------------------------------------------------------------
-
-let SECUENCIA = 100;
-function nuevoId(): number {
-  SECUENCIA += 1;
-  return SECUENCIA;
-}
-
-let TAREAS: TareaDiseno[] = [
-  {
-    id: 1,
-    titulo: "Boceto conceptual de fachada principal",
-    descripcion: "Propuesta inicial de fachada con lenguaje contemporáneo.",
-    estado: "COMPLETADA",
-    tipo: "CLIENTE",
-    clienteId: 101,
-    clienteNombre: "Familia Restrepo",
-    proyectoId: 1,
-    proyectoNombre: "Casa Moderna",
-    hitoId: 11,
-    hitoNombre: "Conceptualización (Diseño)",
-    arquitectos: [ARQUITECTOS[0]],
-    fechaRequerimiento: hace(14),
-    fechaInicio: hace(12),
-    fechaEntregaOriginal: hace(7),
-    fechaEntregaEstimada: hace(7),
-    fechaCompletacion: hace(7), // a tiempo, sin retrabajo → ALTA
-    historialEntregas: [],
-    contadorRechazos: 0,
-    historialRechazos: [],
-    archivos: [],
-    notasInternas: "Entregada en la fecha comprometida.",
-    publicacion: {
-      hitoId: 11,
-      hitoNombre: "Conceptualización (Diseño)",
-      fecha: hace(6),
-      archivoIds: ["bib-1-001", "bib-1-002", "bib-1-003"],
-    },
-    orden: 0,
-  },
-  {
-    id: 2,
-    titulo: "Render 3D de sala principal",
-    descripcion: "Visualización fotorrealista de la sala con iluminación diurna.",
-    estado: "COMPLETADA",
-    tipo: "CLIENTE",
-    clienteId: 101,
-    clienteNombre: "Familia Restrepo",
-    proyectoId: 1,
-    proyectoNombre: "Casa Moderna",
-    hitoId: 12,
-    hitoNombre: "Visualización 3D",
-    arquitectos: [ARQUITECTOS[1], ARQUITECTOS[2]],
-    fechaRequerimiento: hace(16),
-    fechaInicio: hace(14),
-    fechaEntregaOriginal: hace(7),
-    fechaEntregaEstimada: hace(7),
-    fechaCompletacion: hace(7),
-    historialEntregas: [],
-    contadorRechazos: 1, // 1 retrabajo → MEDIA
-    historialRechazos: [
-      {
-        categoria: "NO_CUMPLE_EXPECTATIVAS",
-        motivo: "La temperatura de color no coincidía con la referencia del cliente.",
-        registradoEn: hace(10),
-      },
-    ],
-    archivos: [],
-    orden: 1,
-  },
-  {
-    id: 3,
-    titulo: "Planos técnicos de instalaciones",
-    estado: "EN_PROCESO",
-    tipo: "CLIENTE",
-    clienteId: 101,
-    clienteNombre: "Familia Restrepo",
-    proyectoId: 1,
-    proyectoNombre: "Casa Moderna",
-    hitoId: 13,
-    hitoNombre: "Planificación (Técnico)",
-    arquitectos: [ARQUITECTOS[2]],
-    fechaRequerimiento: hace(5),
-    fechaInicio: hace(3),
-    fechaEntregaOriginal: dentro(4),
-    fechaEntregaEstimada: dentro(4), // en plazo, sin retrabajo → ALTA
-    historialEntregas: [],
-    contadorRechazos: 0,
-    historialRechazos: [],
-    archivos: [],
-    orden: 0,
-  },
-  {
-    id: 4,
-    titulo: "Render 3D de fachada nocturna",
-    descripcion: "Versión nocturna con iluminación arquitectónica.",
-    estado: "EN_PROCESO",
-    tipo: "CLIENTE",
-    clienteId: 102,
-    clienteNombre: "Inversiones del Sur S.A.",
-    proyectoId: 2,
-    proyectoNombre: "Edificio Comercial",
-    hitoId: 22,
-    hitoNombre: "Visualización 3D",
-    arquitectos: [ARQUITECTOS[1]],
-    fechaRequerimiento: hace(12),
-    fechaInicio: hace(9),
-    fechaEntregaOriginal: hace(2),
-    fechaEntregaEstimada: hace(1), // vencida → EN RIESGO
-    historialEntregas: [
-      {
-        fechaAnterior: hace(5),
-        fechaNueva: hace(2),
-        motivo: "Retraso por carga de trabajo del arquitecto.",
-        registradoEn: hace(6),
-      },
-      {
-        fechaAnterior: hace(2),
-        fechaNueva: hace(1),
-        motivo: "Pendiente de aprobación de materialidad.",
-        registradoEn: hace(3),
-      },
-    ],
-    contadorRechazos: 1, // 2 reprogramaciones + 1 rechazo → BAJA
-    historialRechazos: [
-      {
-        categoria: "BRIEF_POCO_CLARO",
-        motivo: "El brief no especificaba el tipo de iluminación esperada.",
-        registradoEn: hace(7),
-      },
-    ],
-    archivos: [],
-    notasInternas: "Necesita seguimiento, va atrasada.",
-    orden: 1,
-  },
-  {
-    id: 5,
-    titulo: "Moodboard de acabados interiores",
-    descripcion: "Selección de materiales, texturas y paleta para interiores.",
-    estado: "PENDIENTE",
-    tipo: "CLIENTE",
-    clienteId: 103,
-    clienteNombre: "Andrea Molina",
-    proyectoId: 3,
-    proyectoNombre: "Reforma Apartamento",
-    hitoId: 31,
-    hitoNombre: "Acabados y Decoración",
-    arquitectos: [ARQUITECTOS[3]],
-    fechaRequerimiento: hace(1),
-    fechaEntregaOriginal: dentro(10),
-    fechaEntregaEstimada: dentro(10),
-    historialEntregas: [],
-    contadorRechazos: 0,
-    historialRechazos: [],
-    archivos: [],
-    orden: 0,
-  },
-  // --- Tareas INDEPENDIENTES (trabajo interno, sin cliente) ---
-  {
-    id: 6,
-    titulo: "Plantilla base de presentación de proyectos",
-    descripcion: "Maqueta reutilizable para entregas a clientes.",
-    estado: "EN_PROCESO",
-    tipo: "INDEPENDIENTE",
-    arquitectos: [ARQUITECTOS[0], ARQUITECTOS[3]],
-    fechaRequerimiento: hace(6),
-    fechaInicio: hace(4),
-    fechaEntregaOriginal: dentro(5),
-    fechaEntregaEstimada: dentro(5),
-    historialEntregas: [],
-    contadorRechazos: 0,
-    historialRechazos: [],
-    archivos: [],
-    notasInternas: "Mejora de procesos internos.",
-    orden: 2,
-  },
-  {
-    id: 7,
-    titulo: "Biblioteca de bloques CAD del estudio",
-    estado: "PENDIENTE",
-    tipo: "INDEPENDIENTE",
-    arquitectos: [ARQUITECTOS[2]],
-    fechaRequerimiento: hace(2),
-    fechaEntregaOriginal: dentro(14),
-    fechaEntregaEstimada: dentro(14),
-    historialEntregas: [],
-    contadorRechazos: 0,
-    historialRechazos: [],
-    archivos: [],
-    orden: 1,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Ordenamiento por columna
-// ---------------------------------------------------------------------------
-
-function ordenarTareas(tareas: TareaDiseno[]): TareaDiseno[] {
-  return [...tareas].sort((a, b) => a.orden - b.orden);
-}
-
-// ---------------------------------------------------------------------------
-// API mock — catálogos
+// Catálogos
 // ---------------------------------------------------------------------------
 
 export async function getArquitectos(): Promise<Arquitecto[]> {
-  return delay([...ARQUITECTOS]);
+  try {
+    const { data } = await api.get("/users?populate=role");
+    const items = Array.isArray(data) ? data : data.data || [];
+    return items
+      .filter((u: any) => {
+        const attrs = u.attributes || u;
+        const role = attrs.role?.data?.attributes || attrs.role;
+        return role?.type && ["admin", "gerente_de_proyecto"].includes(role.type);
+      })
+      .map(adaptarUsuario);
+  } catch (error) {
+    console.error("Error fetching arquitectos:", error);
+    return [];
+  }
 }
 
 export async function getClientes(): Promise<Cliente[]> {
-  return delay([...CLIENTES]);
+  try {
+    const { data } = await api.get("/users?populate=role");
+    const items = Array.isArray(data) ? data : data.data || [];
+    return items
+      .filter((u: any) => {
+        const attrs = u.attributes || u;
+        const role = attrs.role?.data?.attributes || attrs.role;
+        return role?.type === "client";
+      })
+      .map(adaptarUsuario);
+  } catch (error) {
+    console.error("Error fetching clientes:", error);
+    return [];
+  }
 }
 
 export async function getProyectos(): Promise<ProyectoOpcion[]> {
-  return delay([...PROYECTOS]);
+  try {
+    const { data } = await api.get("/proyectos?populate[clientes]=true");
+    const items = Array.isArray(data) ? data : data.data || [];
+    return items.map((p: any) => adaptarProyecto(p, p.attributes?.clientes?.data?.[0]));
+  } catch (error) {
+    console.error("Error fetching proyectos:", error);
+    return [];
+  }
 }
 
 export async function getHitos(proyectoId?: number): Promise<HitoOpcion[]> {
-  const lista = proyectoId
-    ? HITOS.filter((h) => h.proyectoId === proyectoId)
-    : HITOS;
-  return delay([...lista]);
+  try {
+    const url = proyectoId
+      ? `/hitos?filters[proyecto][id][$eq]=${proyectoId}`
+      : "/hitos?populate=proyecto";
+    const { data } = await api.get(url);
+    const items = Array.isArray(data) ? data : data.data || [];
+    return items.map((h: any) => adaptarHito(h, h.attributes?.proyecto?.data));
+  } catch (error) {
+    console.error("Error fetching hitos:", error);
+    return [];
+  }
 }
 
 export async function getBibliotecaProyecto(
   proyectoId: number,
 ): Promise<ArchivoProyecto[]> {
-  const archivos = BIBLIOTECA_PROYECTO[proyectoId] ?? [];
-  return delay([...archivos]);
+  try {
+    // Usar populate=* como en proyectos.ts para obtener TODO
+    const { data } = await api.get(
+      `/proyectos/${proyectoId}?populate=*`,
+    );
+    const proyecto = data.data || data;
+    const attrs = proyecto.attributes || proyecto;
+
+    // La biblioteca puede estar en diferentes formatos
+    let archivos = attrs.biblioteca || [];
+
+    // Si viene como relación poblada de Strapi
+    if (archivos.data) {
+      archivos = archivos.data;
+    }
+
+    // Asegurar que es un array
+    const items = Array.isArray(archivos) ? archivos : [];
+
+    console.log("📚 Biblioteca Strapi Response:", {
+      raw: attrs.biblioteca,
+      processed: items,
+      cantidad: items.length,
+    });
+
+    // Si no hay biblioteca, extraer archivos de los hitos
+    if (items.length === 0) {
+      console.log("⚠️ Campo biblioteca vacío o restringido. Extrayendo archivos de hitos...");
+      const hitosRaw = attrs.hitos || [];
+      const hitos = Array.isArray(hitosRaw) ? hitosRaw : hitosRaw.data || [];
+      const archivosDelHitos: any[] = [];
+
+      hitos.forEach((hito: any) => {
+        const hitoAttrs = hito.attributes || hito;
+        const contenido = hitoAttrs.contenido;
+
+        if (contenido) {
+          const contenidoAttrs = contenido.attributes || contenido;
+
+          // Galerías
+          const galeriaFotos = Array.isArray(contenidoAttrs.galeria_fotos)
+            ? contenidoAttrs.galeria_fotos
+            : contenidoAttrs.galeria_fotos?.data || [];
+
+          galeriaFotos.forEach((f: any) => {
+            const fa = f.attributes || f;
+            archivosDelHitos.push({
+              id: String(f.id ?? fa.id),
+              nombre: fa.name || fa.nombre || 'Imagen',
+              tamaño: fa.size || 0,
+              ruta: fa.url || fa.ruta,
+              subidoEn: fa.createdAt || fa.updatedAt || '',
+              proyectoId,
+            });
+          });
+
+          // Documentación
+          const docs = Array.isArray(contenidoAttrs.documentacion)
+            ? contenidoAttrs.documentacion
+            : contenidoAttrs.documentacion?.data || [];
+
+          docs.forEach((f: any) => {
+            const fa = f.attributes || f;
+            archivosDelHitos.push({
+              id: String(f.id ?? fa.id),
+              nombre: fa.name || fa.nombre || 'Documento',
+              tamaño: fa.size || 0,
+              ruta: fa.url || fa.ruta,
+              subidoEn: fa.createdAt || fa.updatedAt || '',
+              proyectoId,
+            });
+          });
+        }
+      });
+
+      console.log("✅ Archivos extraídos de hitos:", archivosDelHitos);
+      return archivosDelHitos;
+    }
+
+    return items.map((f: any) => {
+      const fa = f.attributes || f;
+      return {
+        id: String(f.id ?? fa.id),
+        nombre: fa.name || fa.nombre || '',
+        tamaño: fa.size || 0,
+        ruta: fa.url || fa.ruta,
+        subidoEn: fa.createdAt || fa.subidoEn || '',
+        proyectoId,
+      };
+    });
+  } catch (error) {
+    console.error("❌ Error fetching biblioteca:", error);
+    return [];
+  }
+}
+
+export async function uploadABibliotecaProyecto(
+  proyectoId: number,
+  files: File[],
+): Promise<ArchivoProyecto[]> {
+  try {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    formData.append("ref", "api::proyecto.proyecto");
+    formData.append("refId", String(proyectoId));
+    formData.append("field", "biblioteca");
+    const { data } = await api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const uploaded = Array.isArray(data) ? data : [data];
+    return uploaded.map((f: any) => ({
+      id: String(f.id),
+      nombre: f.name || '',
+      tamaño: f.size || 0,
+      ruta: f.url,
+      subidoEn: f.createdAt || '',
+      proyectoId,
+    }));
+  } catch (error) {
+    console.error("Error uploading to biblioteca:", error);
+    throw error;
+  }
+}
+
+export interface HitoConContenido {
+  id: number;
+  nombre: string;
+  orden: number;
+  estado_completado: boolean;
+  fecha_actualizacion?: string;
+  contenido?: {
+    descripcion_avance?: string;
+    galeria_fotos?: Array<{ id: number; nombre: string; url: string; size: number }>;
+    videos_walkthrough?: Array<{ id: number; nombre: string; url: string; size: number }>;
+    documentacion?: Array<{ id: number; nombre: string; url: string; size: number }>;
+  };
+}
+
+export async function getHitosConContenido(proyectoId: number): Promise<HitoConContenido[]> {
+  try {
+    // Deep populate para traer archivos del contenido
+    const { data } = await api.get(
+      `/hitos?filters[proyecto][id][$eq]=${proyectoId}&populate[contenido][populate][galeria_fotos]=true&populate[contenido][populate][documentacion]=true&populate[contenido][populate][videos_walkthrough]=true&sort=orden:asc`,
+    );
+    const items = Array.isArray(data) ? data : data.data || [];
+
+    const mapMedia = (arr: any) => {
+      // Puede venir como array directo o como { data: [...] } (Strapi v4)
+      const normalized = Array.isArray(arr) ? arr : arr?.data || [];
+      return normalized.map((f: any) => {
+        const fa = f.attributes || f;
+        return {
+          id: f.id ?? fa.id,
+          nombre: fa.name || fa.nombre || '',
+          url: fa.url || '',
+          size: fa.size || 0,
+        };
+      });
+    };
+
+    return items.map((h: any) => {
+      const ha = h.attributes || h;
+      const contRaw = ha.contenido;
+      const cont = contRaw?.attributes || contRaw || {};
+
+      return {
+        id: h.id,
+        nombre: ha.nombre || '',
+        orden: ha.orden || 0,
+        estado_completado: ha.estado_completado || false,
+        fecha_actualizacion: ha.fecha_actualizacion,
+        contenido: {
+          descripcion_avance: cont.descripcion_avance || null,
+          galeria_fotos: mapMedia(cont.galeria_fotos),
+          videos_walkthrough: mapMedia(cont.videos_walkthrough),
+          documentacion: mapMedia(cont.documentacion),
+        },
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching hitos con contenido:", error);
+    return [];
+  }
+}
+
+export async function asignarArchivosAHito(
+  hitoId: number,
+  archivoIds: number[],
+  descripcionAvance: string,
+): Promise<void> {
+  try {
+    console.log("📤 Asignando archivos a hito:", { hitoId, archivoIds, descripcionAvance });
+
+    // Detectar tipos de archivo: imágenes vs documentos
+    // Para esto necesitamos los nombres/tipos de los archivos
+    // Por ahora, asumimos que todos van a galeria_fotos si son imágenes, documentacion si no
+    // NOTA: Idealmente deberías tener metadata de tipos, pero por ahora separamos por extensión
+
+    // Si los IDs son números puros, los asignamos directamente
+    // El servidor debería detectar el tipo
+    await api.put(`/hitos/${hitoId}`, {
+      data: {
+        contenido: {
+          // IMPORTANTE: No duplicar archivos en ambos campos
+          // Dejar que el servidor/cliente determine dónde van basado en el tipo
+          galeria_fotos: archivoIds,
+          descripcion_avance: descripcionAvance || '',
+        },
+      },
+    });
+
+    console.log("✅ Archivos asignados correctamente");
+  } catch (error) {
+    console.error("❌ Error asignando archivos a hito:", error);
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// API mock — tareas
+// Tareas CRUD
 // ---------------------------------------------------------------------------
 
 export async function getTareas(): Promise<TareaConKpi[]> {
-  return delay(ordenarTareas(TAREAS).map(conKpi));
-}
-
-/** Construye los campos de relación según el tipo y proyecto/hito elegidos. */
-function camposRelacion(values: TareaFormValues) {
-  if (values.tipo === "INDEPENDIENTE") {
-    return {
-      tipo: "INDEPENDIENTE" as const,
-      clienteId: undefined,
-      clienteNombre: undefined,
-      proyectoId: undefined,
-      proyectoNombre: undefined,
-      hitoId: undefined,
-      hitoNombre: undefined,
-    };
+  try {
+    const { data } = await api.get(
+      "/tareas-diseno?populate[arquitectos]=true&populate[cliente]=true&populate[proyecto]=true&populate[hito]=true&populate[reprogramaciones]=true&populate[rechazos]=true&populate[comentarios][populate][autor]=true&populate[archivos]=true&sort=estado:asc,orden:asc",
+    );
+    const items = Array.isArray(data) ? data : data.data || [];
+    return items.map((t: any) => conKpi(adaptarTarea(t)));
+  } catch (error) {
+    console.error("Error fetching tareas:", error);
+    return [];
   }
-  const proyecto = proyectoDe(values.proyectoId);
-  const hito = hitoDe(values.hitoId);
-  return {
-    tipo: "CLIENTE" as const,
-    clienteId: proyecto?.clienteId,
-    clienteNombre: proyecto?.clienteNombre,
-    proyectoId: proyecto?.id,
-    proyectoNombre: proyecto?.nombre,
-    hitoId: hito?.id,
-    hitoNombre: hito?.nombre,
-  };
 }
 
-export async function createTarea(
-  values: TareaFormValues,
-): Promise<TareaConKpi> {
-  const arquitectos = ARQUITECTOS.filter((a) =>
-    values.arquitectoIds.includes(a.id),
-  );
-  const ordenMax = Math.max(
-    -1,
-    ...TAREAS.filter((t) => t.estado === "PENDIENTE").map((t) => t.orden),
-  );
+// Actualizar función getComentarios para deep-populate autor
+export async function getComentarios(tareaId: number) {
+  try {
+    const { data } = await api.get(
+      `/comentario-tareas?filters[tarea][id][$eq]=${tareaId}&populate[autor]=true&sort=createdAt:desc`,
+    );
+    const items = Array.isArray(data) ? data : data.data || [];
+    return items.map((c: any) => {
+      const attrs = c.attributes || c;
+      const autorRaw = attrs.autor?.data || attrs.autor;
+      const autorAttrs = autorRaw?.attributes || autorRaw;
+      return {
+        id: c.id as number,
+        contenido: attrs.contenido as string,
+        createdAt: attrs.createdAt || c.createdAt,
+        autor: autorRaw ? { id: autorRaw.id as number, name: (autorAttrs?.name || autorAttrs?.username || '') as string } : null,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching comentarios:", error);
+    return [];
+  }
+}
 
-  const nueva: TareaDiseno = {
-    id: nuevoId(),
-    titulo: values.titulo,
-    descripcion: values.descripcion,
-    estado: "PENDIENTE",
-    arquitectos,
-    fechaRequerimiento: new Date().toISOString(), // el brief llega ahora
-    fechaEntregaOriginal: values.fechaEntregaEstimada,
-    fechaEntregaEstimada: values.fechaEntregaEstimada,
-    historialEntregas: [],
-    contadorRechazos: 0,
-    historialRechazos: [],
-    archivos: [],
-    notasInternas: values.notasInternas,
-    orden: ordenMax + 1,
-    ...camposRelacion(values),
-  };
+export async function createTarea(values: TareaFormValues): Promise<TareaConKpi> {
+  try {
+    const payload = {
+      titulo: values.titulo,
+      descripcion: values.descripcion,
+      tipo: values.tipo,
+      estado: "PENDIENTE",
+      fechaRequerimiento: new Date().toISOString(),
+      fechaEntregaEstimada: values.fechaEntregaEstimada,
+      fechaEntregaOriginal: values.fechaEntregaEstimada,
+      notasInternas: values.notasInternas,
+      arquitectos: values.arquitectoIds,
+      proyecto: values.tipo === "CLIENTE" ? values.proyectoId : null,
+      hito: values.hitoId,
+      orden: 0,
+    };
 
-  TAREAS = [...TAREAS, nueva];
-  return delay(conKpi(nueva));
+    const { data } = await api.post("/tareas-diseno", { data: payload });
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error creating tarea:", error);
+    throw error;
+  }
 }
 
 export async function updateTarea(
   id: number,
   values: TareaFormValues,
 ): Promise<TareaConKpi> {
-  const arquitectos = ARQUITECTOS.filter((a) =>
-    values.arquitectoIds.includes(a.id),
-  );
+  try {
+    const payload = {
+      titulo: values.titulo,
+      descripcion: values.descripcion,
+      tipo: values.tipo,
+      notasInternas: values.notasInternas,
+      fechaEntregaEstimada: values.fechaEntregaEstimada,
+      arquitectos: values.arquitectoIds,
+      proyecto: values.tipo === "CLIENTE" ? values.proyectoId : null,
+      hito: values.hitoId,
+    };
 
-  TAREAS = TAREAS.map((t) =>
-    t.id === id
-      ? {
-          ...t,
-          titulo: values.titulo,
-          descripcion: values.descripcion,
-          arquitectos,
-          notasInternas: values.notasInternas,
-          // La fecha de entrega NO se cambia aquí; usar reprogramarEntrega.
-          ...camposRelacion(values),
-        }
-      : t,
-  );
-
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada));
+    const { data } = await api.put(`/tareas-diseno/${id}`, { data: payload });
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error updating tarea:", error);
+    throw error;
+  }
 }
 
-/**
- * Cambia el estado de una tarea (drag & drop entre columnas) y aplica las
- * reglas de fechas KPI. `orden` es la nueva posición dentro de la columna destino.
- */
 export async function updateEstadoTarea(
   id: number,
   estado: EstadoTarea,
   orden: number,
 ): Promise<TareaConKpi> {
-  const ahora = new Date().toISOString();
-
-  TAREAS = TAREAS.map((t) => {
-    if (t.id !== id) return t;
-    const next: TareaDiseno = { ...t, estado, orden };
-    if (!next.fechaRequerimiento) next.fechaRequerimiento = ahora;
-
-    if (estado === "EN_PROCESO") {
-      if (!next.fechaInicio) next.fechaInicio = ahora;
-      next.fechaCompletacion = undefined;
-    } else if (estado === "COMPLETADA") {
-      if (!next.fechaInicio) next.fechaInicio = ahora;
-      next.fechaCompletacion = ahora; // entrega real
-    } else {
-      next.fechaInicio = undefined;
-      next.fechaCompletacion = undefined;
-    }
-    return next;
-  });
-
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada), 120);
+  try {
+    const { data } = await api.patch(`/tareas-diseno/${id}/estado`, {
+      data: { estado, orden },
+    });
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error updating estado:", error);
+    throw error;
+  }
 }
 
-/** Reordena las tareas de una columna según el array de ids dado. */
 export async function reordenarColumna(
   estado: EstadoTarea,
   idsOrdenados: number[],
 ): Promise<void> {
-  TAREAS = TAREAS.map((t) =>
-    t.estado === estado && idsOrdenados.includes(t.id)
-      ? { ...t, orden: idsOrdenados.indexOf(t.id) }
-      : t,
-  );
-  return delay(undefined, 80);
+  try {
+    const tareas = idsOrdenados.map((id, idx) => ({ id, orden: idx }));
+    await api.post("/tareas-diseno/reordenar", {
+      data: { tareas },
+    });
+  } catch (error) {
+    console.error("Error reordenando tareas:", error);
+    throw error;
+  }
 }
 
-/**
- * Reprograma la fecha de entrega de una tarea. Deja un registro en el
- * historial (con motivo obligatorio) — penaliza el cumplimiento de fechas.
- */
+export async function eliminarTarea(id: number): Promise<void> {
+  try {
+    await api.delete(`/tareas-diseno/${id}`);
+  } catch (error) {
+    console.error("Error deleting tarea:", error);
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reprogramaciones
+// ---------------------------------------------------------------------------
+
 export async function reprogramarEntrega(
   id: number,
   values: ReprogramarValues,
 ): Promise<TareaConKpi> {
-  TAREAS = TAREAS.map((t) => {
-    if (t.id !== id) return t;
-    const fechaAnterior = t.fechaEntregaEstimada;
-    return {
-      ...t,
-      fechaEntregaOriginal: t.fechaEntregaOriginal ?? fechaAnterior,
-      fechaEntregaEstimada: values.fechaNueva,
-      historialEntregas: [
-        ...t.historialEntregas,
-        {
-          fechaAnterior,
-          fechaNueva: values.fechaNueva,
-          motivo: values.motivo,
-          registradoEn: new Date().toISOString(),
-        },
-      ],
-    };
-  });
-
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada));
+  try {
+    const { data } = await api.post("/reprogramacion-tareas", {
+      data: {
+        tarea: id,
+        fechaNueva: values.fechaNueva,
+        motivo: values.motivo,
+      },
+    });
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error reprogramming:", error);
+    throw error;
+  }
 }
 
-/**
- * Registra un rechazo / retrabajo (rediseño): incrementa el contador con su
- * motivo y categoría, y devuelve la tarea a EN_PROCESO (se está retrabajando).
- */
+// ---------------------------------------------------------------------------
+// Rechazos
+// ---------------------------------------------------------------------------
+
 export async function registrarRechazo(
   id: number,
   values: RechazoValues,
 ): Promise<TareaConKpi> {
-  const ahora = new Date().toISOString();
-  TAREAS = TAREAS.map((t) =>
-    t.id === id
-      ? {
-          ...t,
-          estado: "EN_PROCESO",
-          fechaInicio: t.fechaInicio ?? ahora,
-          fechaCompletacion: undefined,
-          contadorRechazos: t.contadorRechazos + 1,
-          historialRechazos: [
-            ...t.historialRechazos,
-            {
-              categoria: values.categoria,
-              motivo: values.motivo,
-              registradoEn: ahora,
-            },
-          ],
-        }
-      : t,
-  );
-
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada));
+  try {
+    const { data } = await api.post("/rechazo-tareas", {
+      data: {
+        tarea: id,
+        motivo: values.motivo,
+        categoria: values.categoria,
+      },
+    });
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error registering rechazo:", error);
+    throw error;
+  }
 }
 
-/**
- * Publica una tarea en un hito: lleva su información (descripción + IDs de archivos)
- * al hito, que es lo que ve el cliente.
- */
+// ---------------------------------------------------------------------------
+// Comentarios
+// ---------------------------------------------------------------------------
+
+export async function agregarComentario(tareaId: number, contenido: string) {
+  try {
+    const { data } = await api.post("/comentario-tareas", {
+      data: {
+        tarea: tareaId,
+        contenido,
+        es_privado: false,
+      },
+    });
+    const respData = data.data || data;
+    const attrs = respData.attributes || respData;
+    const autorRaw = attrs.autor?.data || attrs.autor;
+    const autorAttrs = autorRaw?.attributes || autorRaw;
+    return {
+      id: respData.id as number,
+      contenido: attrs.contenido as string,
+      createdAt: attrs.createdAt || respData.createdAt,
+      autor: autorRaw ? { id: autorRaw.id as number, name: (autorAttrs?.name || autorAttrs?.username || '') as string } : null,
+    };
+  } catch (error) {
+    console.error("Error adding comentario:", error);
+    throw error;
+  }
+}
+
+export async function eliminarComentario(comentarioId: number): Promise<void> {
+  try {
+    await api.delete(`/comentario-tareas/${comentarioId}`);
+  } catch (error) {
+    console.error("Error deleting comentario:", error);
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Publicaciones en hitos
+// ---------------------------------------------------------------------------
+
 export async function publicarEnHito(
   id: number,
   values: PublicarHitoValues,
 ): Promise<TareaConKpi> {
-  const hito = hitoDe(values.hitoId);
-  const ahora = new Date().toISOString();
+  try {
+    // Guardar los archivos también en la tarea (no solo en publicacion)
+    const archivoIds = (values.archivoIds || []).map((id: any) => {
+      const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+      return Number.isNaN(numId) ? null : numId;
+    }).filter(Boolean);
 
-  TAREAS = TAREAS.map((t) =>
-    t.id === id
-      ? {
-          ...t,
-          estado: "COMPLETADA",
-          fechaInicio: t.fechaInicio ?? ahora,
-          fechaCompletacion: t.fechaCompletacion ?? ahora,
-          descripcion: values.descripcionAvance || t.descripcion,
-          publicacion: {
-            hitoId: values.hitoId,
-            hitoNombre: hito?.nombre ?? "Hito",
-            fecha: ahora,
-            archivoIds: values.archivoIds,
-          },
-        }
-      : t,
-  );
-
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada));
+    const { data } = await api.put(`/tareas-diseno/${id}`, {
+      data: {
+        // Guardar en publicacion (para el hito)
+        publicacion: {
+          hitoId: values.hitoId,
+          hitoNombre: "",
+          fecha: new Date().toISOString(),
+          archivoIds: archivoIds,
+        },
+        // TAMBIÉN guardar en archivos de la tarea (para visualización)
+        archivos: archivoIds,
+      },
+    });
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error publicando en hito:", error);
+    throw error;
+  }
 }
 
-export async function eliminarTarea(id: number): Promise<void> {
-  TAREAS = TAREAS.filter((t) => t.id !== id);
-  return delay(undefined, 150);
-}
+// ---------------------------------------------------------------------------
+// Archivos
+// ---------------------------------------------------------------------------
 
-/**
- * Agregar archivos a una tarea. Los archivos se acumulan en el array.
- */
 export async function agregarArchivosATarea(
-  id: number,
-  archivos: import("@/types/kpi").Archivo[],
+  tareaId: number,
+  archivos: File[],
 ): Promise<TareaConKpi> {
-  TAREAS = TAREAS.map((t) =>
-    t.id === id
-      ? {
-          ...t,
-          archivos: [...t.archivos, ...archivos],
-        }
-      : t,
-  );
+  try {
+    const formData = new FormData();
+    archivos.forEach((file) => {
+      formData.append("files", file);
+    });
+    formData.append("ref", "api::tarea-diseno.tarea-diseno");
+    formData.append("refId", String(tareaId));
+    formData.append("field", "archivos");
 
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada));
+    await api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    const { data } = await api.get(
+      `/tareas-diseno/${tareaId}?populate[archivos]=true`,
+    );
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error uploading archivos:", error);
+    throw error;
+  }
 }
 
-/**
- * Eliminar un archivo de una tarea.
- */
 export async function eliminarArchivoDeTarea(
-  id: number,
-  archivoId: string,
+  tareaId: number,
+  archivoId: number,
 ): Promise<TareaConKpi> {
-  TAREAS = TAREAS.map((t) =>
-    t.id === id
-      ? {
-          ...t,
-          archivos: t.archivos.filter((a) => a.id !== archivoId),
-        }
-      : t,
-  );
-
-  const actualizada = TAREAS.find((t) => t.id === id)!;
-  return delay(conKpi(actualizada));
+  try {
+    await api.delete(`/upload/files/${archivoId}`);
+    const { data } = await api.get(
+      `/tareas-diseno/${tareaId}?populate[archivos]=true`,
+    );
+    return conKpi(adaptarTarea(data.data || data));
+  } catch (error) {
+    console.error("Error deleting archivo:", error);
+    throw error;
+  }
 }

@@ -1,13 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Avatar } from "antd";
-import { Trophy, Timer, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Trophy, Timer, RotateCcw, CheckCircle2, Search } from "lucide-react";
 import type { KpiArquitecto } from "@/types/kpi";
 import { EFICIENCIA_COLOR } from "@/lib/kpi";
 
 interface ArquitectoKpiTableProps {
   filas: KpiArquitecto[];
+  onRowClick?: (fila: KpiArquitecto) => void;
 }
 
 function iniciales(nombre: string): string {
@@ -20,14 +21,32 @@ function iniciales(nombre: string): string {
 
 const AVATAR_COLORS = ["#ef4444", "#f5b940", "#0ea5e9", "#8b5cf6", "#10b981"];
 
-export default function ArquitectoKpiTable({ filas }: ArquitectoKpiTableProps) {
+export default function ArquitectoKpiTable({ filas, onRowClick }: ArquitectoKpiTableProps) {
+  const [busqueda, setBusqueda] = useState("");
+  const filasFiltradas = busqueda.trim()
+    ? filas.filter((f) => f.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    : filas;
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-4">
-        <Trophy size={18} className="text-amber-500" />
-        <h3 className="text-sm font-bold uppercase tracking-wide text-gray-700">
-          Rendimiento por arquitecto
-        </h3>
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Trophy size={18} className="text-amber-500" />
+          <h3 className="text-sm font-bold uppercase tracking-wide text-gray-700">
+            Rendimiento por arquitecto
+          </h3>
+        </div>
+        {/* Buscador */}
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar dev..."
+            className="rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 py-1.5 text-xs font-medium text-gray-700 placeholder-gray-400 focus:border-red-400 focus:outline-none focus:bg-white transition-all w-40"
+          />
+        </div>
       </div>
 
       {/* Cabecera (desktop) */}
@@ -40,12 +59,13 @@ export default function ArquitectoKpiTable({ filas }: ArquitectoKpiTableProps) {
       </div>
 
       <div className="divide-y divide-gray-50">
-        {filas.map((fila, i) => {
+        {filasFiltradas.map((fila, i) => {
           const ef = EFICIENCIA_COLOR[fila.eficienciaPromedio];
           return (
             <div
               key={fila.arquitectoId}
-              className="grid grid-cols-2 items-center gap-2 px-5 py-3.5 transition hover:bg-gray-50/60 md:grid-cols-12"
+              onClick={() => onRowClick?.(fila)}
+              className={`grid grid-cols-2 items-center gap-2 px-5 py-3.5 transition md:grid-cols-12 ${onRowClick ? "cursor-pointer hover:bg-red-50/40 hover:border-l-2 hover:border-red-400" : "hover:bg-gray-50/60"}`}
             >
               {/* Arquitecto */}
               <div className="col-span-2 flex items-center gap-3 md:col-span-4">
@@ -124,9 +144,9 @@ export default function ArquitectoKpiTable({ filas }: ArquitectoKpiTableProps) {
           );
         })}
 
-        {filas.length === 0 && (
+        {filasFiltradas.length === 0 && (
           <div className="px-5 py-10 text-center text-sm text-gray-400">
-            No hay datos de arquitectos para mostrar.
+            {busqueda ? `No hay resultados para "${busqueda}"` : "No hay datos de arquitectos para mostrar."}
           </div>
         )}
       </div>

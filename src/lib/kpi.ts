@@ -139,12 +139,19 @@ export function calcularResumen(tareas: TareaDiseno[]): KpiResumen {
   const enProceso = tareas.filter((t) => t.estado === "EN_PROCESO");
   const pendientes = tareas.filter((t) => t.estado === "PENDIENTE");
 
-  const loadTimes = completadas
+  // Load time: promedio de completadas. Si no hay, usar días transcurridos de en proceso.
+  const loadTimesCompletadas = completadas
     .map((t) => calcularLoadTime(t))
     .filter((d): d is number => typeof d === "number");
+
+  const loadTimesEnProceso = enProceso
+    .map((t) => calcularTiempoDias(t))
+    .filter((d): d is number => typeof d === "number");
+
+  const todosLoadTimes = [...loadTimesCompletadas, ...loadTimesEnProceso];
   const loadTimePromedio =
-    loadTimes.length > 0
-      ? Math.round(loadTimes.reduce((a, b) => a + b, 0) / loadTimes.length)
+    todosLoadTimes.length > 0
+      ? Math.round(todosLoadTimes.reduce((a, b) => a + b, 0) / todosLoadTimes.length)
       : 0;
 
   const totalReprogramaciones = tareas.reduce(
@@ -153,21 +160,27 @@ export function calcularResumen(tareas: TareaDiseno[]): KpiResumen {
   );
   const totalRechazos = tareas.reduce((a, t) => a + t.contadorRechazos, 0);
 
-  const conRetrabajo = completadas.filter((t) => t.contadorRechazos > 0).length;
+  // Tasa de retrabajo: sobre todas las tareas iniciadas (no solo completadas)
+  const iniciadas = tareas.filter((t) => t.estado !== "PENDIENTE");
+  const conRetrabajo = iniciadas.filter((t) => t.contadorRechazos > 0).length;
   const tasaRetrabajo =
-    completadas.length > 0
-      ? Math.round((conRetrabajo / completadas.length) * 100)
+    iniciadas.length > 0
+      ? Math.round((conRetrabajo / iniciadas.length) * 100)
       : 0;
 
-  const aTiempo = completadas.filter((t) => {
-    const d = calcularDesviacion(t);
-    return typeof d === "number" ? d <= 0 : true;
-  }).length;
-
-  const tasaEntregaATiempo =
-    completadas.length > 0
-      ? Math.round((aTiempo / completadas.length) * 100)
-      : 0;
+  // Entregas a tiempo: sobre completadas. Si no hay, mostrar % de no vencidas en proceso.
+  let tasaEntregaATiempo = 0;
+  if (completadas.length > 0) {
+    const aTiempo = completadas.filter((t) => {
+      const d = calcularDesviacion(t);
+      return typeof d === "number" ? d <= 0 : true;
+    }).length;
+    tasaEntregaATiempo = Math.round((aTiempo / completadas.length) * 100);
+  } else if (enProceso.length > 0) {
+    // Alternativa: % de tareas en proceso que aún no están vencidas
+    const noVencidas = enProceso.filter((t) => !estaEnRiesgo(t)).length;
+    tasaEntregaATiempo = Math.round((noVencidas / enProceso.length) * 100);
+  }
 
   return {
     totalTareas: tareas.length,
@@ -208,26 +221,29 @@ export function calcularKpiPorArquitecto(
     const completadas = suyas.filter((t) => t.estado === "COMPLETADA");
     const enProceso = suyas.filter((t) => t.estado === "EN_PROCESO");
 
-    const loadTimes = completadas
+    const loadTimesComp = completadas
       .map((t) => calcularLoadTime(t))
       .filter((d): d is number => typeof d === "number");
+    const loadTimesProc = enProceso
+      .map((t) => calcularTiempoDias(t))
+      .filter((d): d is number => typeof d === "number");
+    const todosLT = [...loadTimesComp, ...loadTimesProc];
     const loadTimePromedio =
-      loadTimes.length > 0
-        ? Math.round(loadTimes.reduce((a, b) => a + b, 0) / loadTimes.length)
+      todosLT.length > 0
+        ? Math.round(todosLT.reduce((a, b) => a + b, 0) / todosLT.length)
         : 0;
 
     const totalReprogramaciones = suyas.reduce(
-      (a, t) => a + t.historialEntregas?.length,
+      (a, t) => a + (t.historialEntregas?.length || 0),
       0,
     );
     const totalRechazos = suyas.reduce((a, t) => a + t.contadorRechazos, 0);
 
-    const conRetrabajo = completadas.filter(
-      (t) => t.contadorRechazos > 0,
-    ).length;
+    const iniciadas = suyas.filter((t) => t.estado !== "PENDIENTE");
+    const conRetrabajo = iniciadas.filter((t) => t.contadorRechazos > 0).length;
     const tasaRetrabajo =
-      completadas.length > 0
-        ? Math.round((conRetrabajo / completadas.length) * 100)
+      iniciadas.length > 0
+        ? Math.round((conRetrabajo / iniciadas.length) * 100)
         : 0;
 
     const entregasATiempo = completadas.filter((t) => {
@@ -236,7 +252,6 @@ export function calcularKpiPorArquitecto(
     }).length;
 
     // Promedio de eficiencia sobre las tareas iniciadas (en proceso o completadas).
-    const iniciadas = suyas.filter((t) => t.estado !== "PENDIENTE");
     const pesos = iniciadas
       .map((t) => calcularEficiencia(t))
       .filter((e): e is Eficiencia => Boolean(e))

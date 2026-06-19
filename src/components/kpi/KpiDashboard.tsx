@@ -16,7 +16,7 @@ import {
   MessageSquare,
   History,
 } from "lucide-react";
-import type { TareaConKpi } from "@/types/kpi";
+import type { TareaConKpi, KpiArquitecto } from "@/types/kpi";
 import { calcularKpiPorArquitecto, calcularResumen } from "@/lib/kpi";
 import KpiStatCard from "./KpiStatCard";
 import ArquitectoKpiTable from "./ArquitectoKpiTable";
@@ -213,6 +213,28 @@ export default function KpiDashboard({
 
   // Estado para modal de detalles de tarea
   const [tareaDetalleModal, setTareaDetalleModal] = useState<TareaConKpi | null>(null);
+
+  // Estado para modal de detalle de arquitecto (desde la tabla)
+  const [arquitectoModal, setArquitectoModal] = useState<KpiArquitecto | null>(null);
+  const tareasArquitectoModal = useMemo(() => {
+    if (!arquitectoModal) return [];
+    return tareas.filter((t) => t.arquitectos.some((a) => a.id === arquitectoModal.arquitectoId));
+  }, [arquitectoModal, tareas]);
+
+  // Desglose de tareas por cliente
+  const porCliente = useMemo(() => {
+    const mapa = new Map<string, { nombre: string; total: number; completadas: number; enProceso: number; pendientes: number }>();
+    tareas.forEach((t) => {
+      const key = t.clienteNombre || "Independiente";
+      const entry = mapa.get(key) ?? { nombre: key, total: 0, completadas: 0, enProceso: 0, pendientes: 0 };
+      entry.total++;
+      if (t.estado === "COMPLETADA") entry.completadas++;
+      else if (t.estado === "EN_PROCESO") entry.enProceso++;
+      else entry.pendientes++;
+      mapa.set(key, entry);
+    });
+    return Array.from(mapa.values()).sort((a, b) => b.total - a.total);
+  }, [tareas]);
 
   // Vista cuando hay arquitecto seleccionado
   if (arquitectoSeleccionado && datosArquitectoSeleccionado) {
@@ -476,7 +498,7 @@ export default function KpiDashboard({
           sufijo="%"
           icon={CalendarCheck}
           tono="esmeralda"
-          hint="Sobre tareas completadas"
+          hint={resumen.completadas > 0 ? "Sobre tareas completadas" : "Tareas en proceso no vencidas"}
         />
         <KpiStatCard
           label="Tasa de retrabajo"
@@ -484,7 +506,7 @@ export default function KpiDashboard({
           sufijo="%"
           icon={RotateCcw}
           tono="rojo"
-          hint={`${resumen.totalRechazos} rechazos en total`}
+          hint={`${resumen.totalRechazos} rechazo${resumen.totalRechazos !== 1 ? "s" : ""} en total`}
         />
         <KpiStatCard
           label="En riesgo"
@@ -554,8 +576,97 @@ export default function KpiDashboard({
         </div>
       </div>
 
-      {/* Tabla por arquitecto - solo si no hay selección */}
-      <ArquitectoKpiTable filas={porArquitecto} />
+      {/* Tabla por arquitecto con buscador */}
+      <ArquitectoKpiTable filas={porArquitecto} onRowClick={setArquitectoModal} />
+
+      {/* Modal de detalle por arquitecto */}
+      {arquitectoModal && (
+        <Modal
+          title={null}
+          open={!!arquitectoModal}
+          onCancel={() => setArquitectoModal(null)}
+          footer={null}
+          width="90vw"
+          style={{ maxWidth: "1100px" }}
+          destroyOnHidden
+          centered
+        >
+          <div className="space-y-5 pt-4">
+            {/* Header */}
+            <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold"
+                style={{ backgroundColor: ["#ef4444","#f5b940","#0ea5e9","#8b5cf6","#10b981"][arquitectoModal.arquitectoId % 5] }}
+              >
+                {arquitectoModal.nombre.slice(0, 1).toUpperCase()}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{arquitectoModal.nombre}</h2>
+                <p className="text-sm text-gray-500">{arquitectoModal.tareasTotales} tareas · {arquitectoModal.tareasCompletadas} completadas</p>
+              </div>
+            </div>
+
+            {/* KPIs */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {[
+                { label: "Entregas a tiempo", value: `${arquitectoModal.entregasATiempo}/${arquitectoModal.tareasCompletadas}`, color: "text-emerald-600" },
+                { label: "Load time promedio", value: `${arquitectoModal.loadTimePromedioDias}d`, color: "text-amber-600" },
+                { label: "Rechazos", value: arquitectoModal.totalRechazos, color: "text-red-600" },
+                { label: "Eficiencia", value: arquitectoModal.eficienciaPromedio, color: "text-gray-900" },
+              ].map((kpi) => (
+                <div key={kpi.label} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase">{kpi.label}</p>
+                  <p className={`text-2xl font-bold mt-1 ${kpi.color}`}>{kpi.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Tareas */}
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-3">
+                Tareas asignadas ({tareasArquitectoModal.length})
+              </h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {tareasArquitectoModal.map((tarea) => (
+                  <div key={tarea.id} className={`rounded-lg border p-3 flex items-center gap-3 ${
+                    tarea.estado === "COMPLETADA" ? "border-emerald-200 bg-emerald-50" :
+                    tarea.estado === "EN_PROCESO" ? "border-amber-200 bg-amber-50" :
+                    "border-gray-200 bg-gray-50"
+                  }`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{tarea.titulo}</p>
+                      <p className="text-xs text-gray-500">
+                        {tarea.proyectoNombre || "Independiente"}
+                        {tarea.clienteNombre ? ` · ${tarea.clienteNombre}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 text-xs font-semibold">
+                      {tarea.contadorRechazos > 0 && (
+                        <span className="text-red-600">{tarea.contadorRechazos} rechazo{tarea.contadorRechazos !== 1 ? "s" : ""}</span>
+                      )}
+                      {tarea.diasRestantes !== null && (
+                        <span className={tarea.diasRestantes < 0 ? "text-red-600" : "text-gray-500"}>
+                          {tarea.diasRestantes}d restantes
+                        </span>
+                      )}
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] ${
+                        tarea.estado === "COMPLETADA" ? "bg-emerald-200 text-emerald-800" :
+                        tarea.estado === "EN_PROCESO" ? "bg-amber-200 text-amber-800" :
+                        "bg-gray-200 text-gray-700"
+                      }`}>
+                        {tarea.estado === "COMPLETADA" ? "Completada" : tarea.estado === "EN_PROCESO" ? "En proceso" : "Pendiente"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {tareasArquitectoModal.length === 0 && (
+                  <p className="text-center text-sm text-gray-400 py-6">Sin tareas en el periodo seleccionado</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

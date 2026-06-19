@@ -3,3 +3,5 @@ export { default as MaterialesTable } from "./MaterialesTable";
 export { default as FacturaModal } from "./FacturaModal";
 export { default as HerramientasTable } from "./HerramientasTable";
 export { default as HerramientaModal } from "./HerramientaModal";
+export { default as ImportarMaterialesModal } from "./ImportarMaterialesModal";
+export { default as ImportarHerramientasModal } from "./ImportarHerramientasModal";

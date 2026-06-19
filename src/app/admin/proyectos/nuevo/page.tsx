@@ -31,6 +31,7 @@ export default function NuevoProyectoPage() {
     fecha_fin_planificada: "",
     presupuesto_total: "",
     es_publico: true,
+    crear_obra: true,
   });
 
   useEffect(() => {
@@ -86,9 +87,9 @@ export default function NuevoProyectoPage() {
         }
       );
 
-      // 2. Crear la obra automáticamente vinculada al proyecto
+      // 2. Crear la obra automáticamente vinculada al proyecto si está habilitado
       const proyectoId = (result as any)?.data?.id ?? (result as any)?.id;
-      if (proyectoId) {
+      if (proyectoId && formData.crear_obra) {
         await createObra({
           nombre: formData.nombre_proyecto,
           proyectoId,
@@ -323,6 +324,38 @@ export default function NuevoProyectoPage() {
               </div>
             </div>
 
+            {/* Opción de crear obra */}
+            <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                    Crear obra vinculada
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {formData.crear_obra
+                      ? "Se creará una obra automáticamente al crear el proyecto"
+                      : "Proyecto solo de diseño sin obra ejecutiva"}
+                  </p>
+                </div>
+                <div className="ml-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, crear_obra: !formData.crear_obra })}
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                      formData.crear_obra ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                  >
+                    <span className="sr-only">Crear obra</span>
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                        formData.crear_obra ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Info Box */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <div className="flex gap-3">
@@ -347,9 +380,11 @@ export default function NuevoProyectoPage() {
                     <li>
                       • Se generará automáticamente un <strong>token NFC único</strong>
                     </li>
-                    <li>
-                      • Se creará automáticamente la <strong>obra vinculada</strong> al proyecto
-                    </li>
+                    {formData.crear_obra && (
+                      <li>
+                        • Se creará automáticamente la <strong>obra vinculada</strong> al proyecto
+                      </li>
+                    )}
                     <li>
                       • Podrás <strong>crear los hitos</strong> del proyecto manualmente
                     </li>

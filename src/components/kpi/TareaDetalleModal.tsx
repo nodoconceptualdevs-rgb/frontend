@@ -1,25 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Modal, Avatar, Select, Button, Input, DatePicker } from "antd";
+import { Modal, Select, Button, Input, DatePicker, Tooltip, Spin } from "antd";
 import dayjs from "dayjs";
 import { useForm, Controller } from "react-hook-form";
 import {
   Wrench,
   CalendarX,
   Send,
-  CheckCircle2,
   AlertCircle,
   CalendarClock,
-  X,
   ChevronDown,
+  Trash2,
+  Upload,
 } from "lucide-react";
+import BibliotecaArchivos from "@/components/BibliotecaArchivos";
+import ArchivosTareaCard from "./ArchivosTareaCard";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import type {
-  Archivo,
   ArchivoProyecto,
   Arquitecto,
   EstadoTarea,
   HitoOpcion,
+  ProyectoOpcion,
   RechazoValues,
   ReprogramarValues,
   TareaConKpi,
@@ -27,9 +32,21 @@ import type {
 } from "@/types/kpi";
 import { ESTADO_LABEL } from "@/types/kpi";
 import { fmtFecha } from "@/lib/kpi";
-import { getBibliotecaProyecto } from "@/services/kpi";
-import ArchivoUploader from "./ArchivoUploader";
-import BibliotecaSelector from "./BibliotecaSelector";
+import {
+  getBibliotecaProyecto,
+  getComentarios,
+  agregarComentario,
+  eliminarComentario,
+  getHitosConContenido,
+} from "@/services/kpi";
+import type { HitoConContenido } from "@/services/kpi";
+
+interface Comentario {
+  id: number;
+  contenido: string;
+  autor: { id: number; name: string } | null;
+  createdAt: string;
+}
 
 interface TareaDetalleModalProps {
   open: boolean;
@@ -37,15 +54,20 @@ interface TareaDetalleModalProps {
   tarea: TareaConKpi | null;
   hitos: HitoOpcion[];
   arquitectos: Arquitecto[];
+  proyectos?: ProyectoOpcion[];
   onGuardarEdicion: (id: number, values: TareaFormValues) => Promise<void>;
   onConfirmarReprogramar: (id: number, values: ReprogramarValues) => Promise<void>;
+  onConfirmarRechazo?: (id: number, values: RechazoValues) => Promise<void>;
   onCambiarEstado: (id: number, nuevoEstado: EstadoTarea) => Promise<void>;
   onGuardarArquitectos: (id: number, arquitectoIds: number[]) => Promise<void>;
   onReprogramar: (t: TareaConKpi) => void;
   onPublicar: (t: TareaConKpi) => void;
   onRechazo: (t: TareaConKpi) => void;
-  onAgregarArchivos?: (archivos: Archivo[]) => Promise<void> | void;
+  onSubirABiblioteca?: (files: File[]) => Promise<void>;
+  onPublicarAvance?: (hitoId: number, archivoIds: string[], descripcion: string) => Promise<void>;
   onEliminarArchivo?: (archivoId: string) => Promise<void> | void;
+  bibliotecaVersion?: number;
+  isAdmin?: boolean;
 }
 
 const ESTADO_COLOR: Record<EstadoTarea, { bg: string; text: string; dot: string }> = {
@@ -82,19 +104,35 @@ export default function TareaDetalleModal({
   tarea,
   hitos,
   arquitectos,
+  proyectos = [],
   onGuardarEdicion,
   onConfirmarReprogramar,
+  onConfirmarRechazo,
   onCambiarEstado,
   onGuardarArquitectos,
   onReprogramar,
   onPublicar,
   onRechazo,
-  onAgregarArchivos,
+  onSubirABiblioteca,
+  onPublicarAvance,
   onEliminarArchivo,
+  bibliotecaVersion = 0,
+  isAdmin = false,
 }: TareaDetalleModalProps) {
+  const { user } = useAuth();
   const [archivosProyecto, setArchivosProyecto] = useState<ArchivoProyecto[]>([]);
   const [cargandoBiblioteca, setCargandoBiblioteca] = useState(false);
+  const [hitosProyecto, setHitosProyecto] = useState<HitoConContenido[]>([]);
+  const [cargandoHitos, setCargandoHitos] = useState(false);
+  const [hitoExpandido, setHitoExpandido] = useState<number | null>(null);
+  const [hitoPublicarId, setHitoPublicarId] = useState<number | undefined>();
+  const [descripcionAvance, setDescripcionAvance] = useState("");
+  const [publicando, setPublicando] = useState(false);
+  const [draggedFile, setDraggedFile] = useState<string | null>(null);
+  const [dragOverHito, setDragOverHito] = useState<number | null>(null);
   const [nuevoComentario, setNuevoComentario] = useState("");
+  const [comentarios, setComentarios] = useState<Comentario[]>([]);
+  const [cargandoComentarios, setCargandoComentarios] = useState(false);
   const [mostrarReprogramar, setMostrarReprogramar] = useState(true);
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
   const [openRechazos, setOpenRechazos] = useState(false);
@@ -102,28 +140,17 @@ export default function TareaDetalleModal({
   const [archivosSeleccionados, setArchivosSeleccionados] = useState<Set<string>>(new Set());
   const [arquitectosSeleccionados, setArquitectosSeleccionados] = useState<number[]>([]);
   const [guardandoArquitectos, setGuardandoArquitectos] = useState(false);
-  const [comentarios, setComentarios] = useState<
-    Array<{ id: string; autor: string; texto: string; fecha: string }>
-  >([
-    {
-      id: "c1",
-      autor: "Juan Pérez",
-      texto: "Iniciada la tarea. Se está trabajando en los materiales.",
-      fecha: "2 jun 2026, 10:30",
-    },
-    {
-      id: "c2",
-      autor: "María González",
-      texto: "Revisadas las texturas. Se requieren ajustes en la paleta de colores.",
-      fecha: "2 jun 2026, 14:15",
-    },
-  ]);
+  const [mostrarBibliotecaModal, setMostrarBibliotecaModal] = useState(false);
 
   // Inline edit state
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
+  const [tipo, setTipo] = useState<"CLIENTE" | "INDEPENDIENTE">("CLIENTE");
+  const [proyectoId, setProyectoId] = useState<number | undefined>();
+  const [fechaEntrega, setFechaEntrega] = useState<string | undefined>();
   const [editandoTitulo, setEditandoTitulo] = useState(false);
   const [editandoDesc, setEditandoDesc] = useState(false);
+  const [editandoTipo, setEditandoTipo] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   // Form para reschedule
@@ -141,12 +168,22 @@ export default function TareaDetalleModal({
 
     setTitulo(tarea.titulo);
     setDescripcion(tarea.descripcion || "");
+    setTipo(tarea.tipo);
+    setProyectoId(tarea.proyectoId);
+    setFechaEntrega(tarea.fechaEntregaEstimada);
     setEditandoTitulo(false);
     setEditandoDesc(false);
-    setMostrarReprogramar(true);
+    setEditandoTipo(false);
+    setMostrarReprogramar(!!tarea.fechaEntregaEstimada);
     setMostrarRechazo(false);
-    setArchivosSeleccionados(new Set());
+    // Cargar archivos que ya están guardados en la tarea
+    const archivosGuardados = tarea.archivos?.map((a) => String(a.id)) || [];
+    setArchivosSeleccionados(new Set(archivosGuardados));
+    console.log("📋 Archivos ya guardados en la tarea:", archivosGuardados);
     setArquitectosSeleccionados(tarea.arquitectos.map((a) => a.id));
+    setHitoPublicarId(tarea.hitoId ?? undefined);
+    setDescripcionAvance("");
+    setHitoExpandido(null);
     reprogramarForm.reset({ fechaNueva: "", motivo: "" });
     rechazoForm.reset({ categoria: "BRIEF_POCO_CLARO", motivo: "" });
 
@@ -156,13 +193,26 @@ export default function TareaDetalleModal({
         .then(setArchivosProyecto)
         .catch(() => setArchivosProyecto([]))
         .finally(() => setCargandoBiblioteca(false));
+
+      setCargandoHitos(true);
+      getHitosConContenido(tarea.proyectoId)
+        .then(setHitosProyecto)
+        .catch(() => setHitosProyecto([]))
+        .finally(() => setCargandoHitos(false));
     }
-  }, [open, tarea]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    setCargandoComentarios(true);
+    getComentarios(tarea.id)
+      .then(setComentarios)
+      .catch(() => setComentarios([]))
+      .finally(() => setCargandoComentarios(false));
+  }, [open, tarea, bibliotecaVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!tarea) return null;
 
-  const esIndependiente = tarea.tipo === "INDEPENDIENTE";
+  const esIndependiente = tipo === "INDEPENDIENTE";
   const estadoColor = ESTADO_COLOR[tarea.estado];
+  const tieneFechaEntrega = !!tarea.fechaEntregaEstimada;
 
   const guardarTitulo = async () => {
     if (titulo.trim() === tarea.titulo) {
@@ -174,11 +224,11 @@ export default function TareaDetalleModal({
       await onGuardarEdicion(tarea.id, {
         titulo: titulo.trim() || tarea.titulo,
         descripcion,
-        tipo: tarea.tipo,
-        proyectoId: tarea.proyectoId,
+        tipo,
+        proyectoId: tipo === "CLIENTE" ? proyectoId : undefined,
         hitoId: tarea.hitoId,
         arquitectoIds: tarea.arquitectos.map((a) => a.id),
-        fechaEntregaEstimada: tarea.fechaEntregaEstimada,
+        fechaEntregaEstimada: fechaEntrega,
       });
       setEditandoTitulo(false);
     } finally {
@@ -196,13 +246,36 @@ export default function TareaDetalleModal({
       await onGuardarEdicion(tarea.id, {
         titulo,
         descripcion,
-        tipo: tarea.tipo,
-        proyectoId: tarea.proyectoId,
+        tipo,
+        proyectoId: tipo === "CLIENTE" ? proyectoId : undefined,
         hitoId: tarea.hitoId,
         arquitectoIds: tarea.arquitectos.map((a) => a.id),
-        fechaEntregaEstimada: tarea.fechaEntregaEstimada,
+        fechaEntregaEstimada: fechaEntrega,
       });
       setEditandoDesc(false);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const guardarTipo = async (nuevoTipo: "CLIENTE" | "INDEPENDIENTE") => {
+    if (nuevoTipo === tarea.tipo && (nuevoTipo === "INDEPENDIENTE" || proyectoId === tarea.proyectoId)) {
+      return;
+    }
+    try {
+      setGuardando(true);
+      setTipo(nuevoTipo);
+      await onGuardarEdicion(tarea.id, {
+        titulo,
+        descripcion,
+        tipo: nuevoTipo,
+        proyectoId: nuevoTipo === "CLIENTE" ? proyectoId : undefined,
+        hitoId: tarea.hitoId,
+        arquitectoIds: tarea.arquitectos.map((a) => a.id),
+        fechaEntregaEstimada: fechaEntrega,
+      });
+    } catch (error) {
+      console.error("Error guardando tipo:", error);
     } finally {
       setGuardando(false);
     }
@@ -215,7 +288,11 @@ export default function TareaDetalleModal({
   });
 
   const handleConfirmarRechazo = rechazoForm.handleSubmit(async (values) => {
-    await onRechazo(tarea);
+    if (onConfirmarRechazo) {
+      await onConfirmarRechazo(tarea.id, values);
+    } else {
+      await onRechazo(tarea);
+    }
     setMostrarRechazo(false);
     rechazoForm.reset({ categoria: "BRIEF_POCO_CLARO", motivo: "" });
   });
@@ -230,19 +307,17 @@ export default function TareaDetalleModal({
     }
   };
 
-  const enviarComentario = () => {
+  const enviarComentario = async () => {
     const texto = nuevoComentario.trim();
     if (!texto) return;
-    setComentarios((prev) => [
-      ...prev,
-      {
-        id: `c${prev.length + 1}`,
-        autor: "Tú",
-        texto,
-        fecha: new Date().toLocaleString("es"),
-      },
-    ]);
-    setNuevoComentario("");
+    try {
+      await agregarComentario(tarea.id, texto);
+      setNuevoComentario("");
+      const fresh = await getComentarios(tarea.id);
+      setComentarios(fresh);
+    } catch (error) {
+      console.error("Error enviando comentario:", error);
+    }
   };
 
   return (
@@ -280,7 +355,7 @@ export default function TareaDetalleModal({
               <span className={`h-1.5 w-1.5 rounded-full ${estadoColor.dot}`} />
               {ESTADO_LABEL[tarea.estado]}
             </span>
-            {esIndependiente ? (
+            {tipo === "INDEPENDIENTE" ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
                 <Wrench size={12} /> Independiente
               </span>
@@ -324,7 +399,7 @@ export default function TareaDetalleModal({
               </h1>
             )}
 
-            {!esIndependiente && (
+            {tipo === "CLIENTE" && (
               <p className="mt-1 text-sm text-gray-500">
                 {tarea.proyectoNombre}
                 {tarea.hitoNombre ? ` · ${tarea.hitoNombre}` : ""}
@@ -390,100 +465,284 @@ export default function TareaDetalleModal({
               )}
             </div>
 
-            {/* Archivos */}
-            <div>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                § Archivos ({archivosSeleccionados.size} seleccionado{archivosSeleccionados.size !== 1 ? 's' : ''})
-              </h3>
-              <div className="flex flex-col gap-3">
-                {/* Enviar archivos a hito — ARRIBA */}
-                {archivosSeleccionados.size > 0 && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <p className="mb-2 text-xs font-semibold text-amber-900">
-                      Enviar {archivosSeleccionados.size} archivo{archivosSeleccionados.size !== 1 ? 's' : ''} a hito:
-                    </p>
+            {/* Biblioteca — Disponible para TODOS los tipos de tarea */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+                    📚 {tarea.proyectoId ? "Biblioteca del Proyecto" : "Archivos"}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {(tarea.archivos?.length ?? 0)} archivo{(tarea.archivos?.length ?? 0) !== 1 ? "s" : ""} en la tarea
+                  </p>
+                </div>
+                <button
+                  onClick={() => setMostrarBibliotecaModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-red-50 to-red-100 px-4 py-2 text-xs font-semibold text-red-600 hover:from-red-100 hover:to-red-200 transition-all border border-red-200"
+                >
+                  <Upload size={14} /> Abrir Biblioteca
+                </button>
+              </div>
+
+              {/* Archivos guardados en la tarea - arrastrables a hitos */}
+              <ArchivosTareaCard
+                tarea={tarea}
+                draggedFile={draggedFile}
+                onDragStart={(archivoIds) => {
+                  setDraggedFile(archivoIds[0] || null);
+                  setArchivosSeleccionados(new Set(archivoIds));
+                }}
+                onDragEnd={() => setDraggedFile(null)}
+              />
+            </div>
+
+            {/* Modal de Biblioteca Archivos */}
+            <BibliotecaArchivos
+              visible={mostrarBibliotecaModal}
+              onClose={() => setMostrarBibliotecaModal(false)}
+              onSelect={async (files) => {
+                const archivoIds = files.map((f) => f.id);
+
+                try {
+                  await api.put(`/tareas-diseno/${tarea.id}`, {
+                    data: { archivos: archivoIds },
+                  });
+                  toast.success(`${files.length} archivo(s) agregado(s) a la tarea`);
+                  // Refrescar la tarea para que aparezcan los archivos
+                  if (tarea.proyectoId) {
+                    const archivosActualizados = await getBibliotecaProyecto(tarea.proyectoId);
+                    setArchivosProyecto(archivosActualizados);
+                  }
+                } catch (error) {
+                  toast.error("Error al guardar los archivos");
+                }
+
+                setMostrarBibliotecaModal(false);
+              }}
+              maxSelection={50}
+            />
+
+            {/* Hitos del proyecto — Con Drop Zones para Drag-and-Drop */}
+            {tarea.proyectoId && (
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+                    🎯 Hitos del Proyecto
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Arrastra archivos aquí para publicar avances</p>
+                </div>
+
+                {cargandoHitos ? (
+                  <div className="flex justify-center py-6"><Spin size="small" /></div>
+                ) : hitosProyecto.length === 0 ? (
+                  <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-50 p-8 text-center">
+                    <p className="text-sm font-medium text-gray-600 mb-1">Este proyecto no tiene hitos</p>
+                    <p className="text-xs text-gray-400">Los hitos aparecerán aquí una vez creados en el proyecto</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                    {hitosProyecto.map((hito) => {
+                      const totalArchivos =
+                        (hito.contenido?.galeria_fotos?.length ?? 0) +
+                        (hito.contenido?.documentacion?.length ?? 0);
+                      const esActual = hito.id === tarea.hitoId;
+                      const isDragOver = dragOverHito === hito.id && draggedFile !== null;
+
+                      return (
+                        <div
+                          key={hito.id}
+                          onDragOver={(e) => {
+                            if (draggedFile) {
+                              e.preventDefault();
+                              setDragOverHito(hito.id);
+                            }
+                          }}
+                          onDragLeave={() => setDragOverHito(null)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggedFile) {
+                              setHitoPublicarId(hito.id);
+                              setHitoExpandido(hito.id);
+                              const next = new Set(archivosSeleccionados);
+                              next.add(draggedFile);
+                              setArchivosSeleccionados(next);
+                              setDragOverHito(null);
+                              setDraggedFile(null);
+                            }
+                          }}
+                          className={`rounded-lg border-2 p-3.5 transition-all cursor-default group ${
+                            isDragOver
+                              ? 'border-emerald-400 bg-emerald-50/60 shadow-md scale-[1.01] ring-2 ring-emerald-200'
+                              : esActual
+                                ? 'border-amber-200 bg-amber-50/50 shadow-sm'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm hover:bg-gray-50/20'
+                          }`}
+                        >
+                          {/* Header del hito */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div
+                                className={`h-3 w-3 rounded-full shrink-0 ${
+                                  hito.estado_completado ? 'bg-emerald-500' : 'bg-amber-400'
+                                }`}
+                              />
+                              <p className="text-sm font-semibold text-gray-800 truncate">{hito.nombre}</p>
+                              {esActual && (
+                                <span className="inline-block text-[10px] font-bold text-red-600 bg-red-100 rounded-full px-2 py-0.5 shrink-0">
+                                  asignado
+                                </span>
+                              )}
+                              {hito.estado_completado && (
+                                <span className="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-100 rounded-full px-2 py-0.5 shrink-0">
+                                  completado
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] font-medium text-gray-500">
+                                {totalArchivos} {totalArchivos === 1 ? 'archivo' : 'archivos'}
+                              </span>
+                              <button
+                                onClick={() => setHitoExpandido(hitoExpandido === hito.id ? null : hito.id)}
+                                className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                              >
+                                {hitoExpandido === hito.id ? '▼' : '▶'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Contenido expandido */}
+                          {hitoExpandido === hito.id && (
+                            <div className="mt-3 border-t border-gray-200 pt-3 space-y-2">
+                              {hito.contenido?.descripcion_avance && (
+                                <p className="text-xs text-gray-600 italic bg-blue-50 rounded p-2 border-l-2 border-blue-300">
+                                  "{hito.contenido.descripcion_avance}"
+                                </p>
+                              )}
+                              {totalArchivos === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-2">
+                                  Arrastra un archivo aquí para agregarlo a este hito
+                                </p>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                                    {totalArchivos} archivo{totalArchivos !== 1 ? 's' : ''} publicado{totalArchivos !== 1 ? 's' : ''}:
+                                  </p>
+                                  {[
+                                    ...(hito.contenido?.galeria_fotos || []),
+                                    ...(hito.contenido?.documentacion || []),
+                                  ].map((f) => {
+                                    const esImagen = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.nombre || '');
+                                    return (
+                                      <div key={f.id} className="flex items-center gap-2 text-xs bg-white border border-gray-200 rounded-lg p-2 hover:border-gray-300 transition-colors">
+                                        {/* Miniatura o ícono */}
+                                        {esImagen && f.url ? (
+                                          <img
+                                            src={f.url}
+                                            alt={f.nombre}
+                                            className="w-8 h-8 rounded object-cover flex-shrink-0 border border-gray-200"
+                                          />
+                                        ) : (
+                                          <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-gray-400 text-base">📄</span>
+                                          </div>
+                                        )}
+                                        <span className="text-gray-700 truncate flex-1 font-medium">{f.nombre}</span>
+                                        {f.url && (
+                                          <a
+                                            href={f.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="text-blue-600 hover:text-blue-700 shrink-0 font-semibold hover:underline"
+                                          >
+                                            Ver
+                                          </a>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Indicador de drop zone activo */}
+                          {isDragOver && (
+                            <div className="absolute inset-0 rounded-lg bg-emerald-400/10 border-emerald-400 flex items-center justify-center pointer-events-none">
+                              <span className="text-xs font-bold text-emerald-600">Suelta aquí</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Panel de confirmación — visible cuando selecciona archivos */}
+                {archivosSeleccionados.size > 0 && hitoPublicarId && (
+                  <div className="rounded-lg border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-50/50 p-3.5 space-y-2.5 sticky bottom-0 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      <p className="text-xs font-semibold text-emerald-900">
+                        Publicar {archivosSeleccionados.size} archivo{archivosSeleccionados.size !== 1 ? 's' : ''} en
+                      </p>
+                      <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded text-xs font-semibold truncate">
+                        {hitosProyecto.find((h) => h.id === hitoPublicarId)?.nombre || 'hito'}
+                      </span>
+                    </div>
+                    <Input.TextArea
+                      rows={2}
+                      placeholder="Descripción del avance (visible al cliente)..."
+                      value={descripcionAvance}
+                      onChange={(e) => setDescripcionAvance(e.target.value)}
+                      className="text-xs"
+                    />
                     <div className="flex gap-2">
-                      <Select
-                        placeholder="Selecciona hito"
-                        className="flex-1"
-                        options={hitos
-                          .filter((h) => h.proyectoId === tarea.proyectoId)
-                          .map((h) => ({ value: h.id, label: h.nombre }))}
-                      />
                       <Button
                         type="primary"
-                        onClick={() => onPublicar(tarea)}
-                        style={{ background: "#ef4444", borderColor: "#ef4444" }}
-                      >
-                        Enviar
-                      </Button>
-                    </div>
-                    <button
-                      onClick={() => setArchivosSeleccionados(new Set())}
-                      className="mt-2 w-full text-xs text-amber-600 hover:text-amber-700 font-semibold"
-                    >
-                      Limpiar selección
-                    </button>
-                  </div>
-                )}
+                        loading={publicando}
+                        disabled={!onPublicarAvance}
+                        onClick={async () => {
+                          if (!hitoPublicarId || !onPublicarAvance) return;
+                          setPublicando(true);
+                          try {
+                            await onPublicarAvance(hitoPublicarId, [...archivosSeleccionados], descripcionAvance);
 
-                {tarea.archivos.length > 0 && (
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    {tarea.archivos.map((archivo) => (
-                      <label
-                        key={archivo.id}
-                        className="flex cursor-pointer items-center gap-3 rounded py-2 px-2 hover:bg-gray-100"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={archivosSeleccionados.has(archivo.id)}
-                          onChange={(e) => {
-                            const nuevos = new Set(archivosSeleccionados);
-                            if (e.target.checked) {
-                              nuevos.add(archivo.id);
-                            } else {
-                              nuevos.delete(archivo.id);
+                            // Refrescar los hitos para mostrar los archivos publicados
+                            if (tarea.proyectoId) {
+                              console.log("🔄 Recargando hitos después de publicar...");
+                              const hitosActualizados = await getHitosConContenido(tarea.proyectoId);
+                              setHitosProyecto(hitosActualizados);
                             }
-                            setArchivosSeleccionados(nuevos);
-                          }}
-                          className="h-4 w-4 rounded border-gray-300 cursor-pointer"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-700 truncate">
-                            {archivo.nombre}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {(archivo.tamaño / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onEliminarArchivo?.(archivo.id);
-                          }}
-                          className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                        >
-                          Eliminar
-                        </button>
-                      </label>
-                    ))}
+
+                            setArchivosSeleccionados(new Set());
+                            setDescripcionAvance("");
+                            setHitoPublicarId(undefined);
+                          } finally {
+                            setPublicando(false);
+                          }
+                        }}
+                        style={{ background: '#10b981', borderColor: '#10b981' }}
+                        className="flex-1 text-xs font-semibold"
+                      >
+                        ✨ Publicar Avance
+                      </Button>
+                      <button
+                        onClick={() => {
+                          setArchivosSeleccionados(new Set());
+                          setDescripcionAvance("");
+                          setHitoPublicarId(undefined);
+                        }}
+                        className="text-xs text-emerald-600 px-3 font-semibold hover:text-emerald-700 hover:bg-emerald-100/50 rounded transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
-
-                <ArchivoUploader
-                  archivos={tarea.archivos}
-                  onAgregar={onAgregarArchivos || (() => {})}
-                  onEliminar={onEliminarArchivo || (() => {})}
-                  compact
-                />
-                <BibliotecaSelector
-                  archivosDisponibles={archivosProyecto}
-                  archivosYaAdjuntos={tarea.archivos.map((a) => a.id)}
-                  onAdjuntar={onAgregarArchivos || (() => {})}
-                  isLoading={cargandoBiblioteca}
-                />
               </div>
-            </div>
+            )}
 
             {/* Comentarios */}
             <div>
@@ -491,15 +750,38 @@ export default function TareaDetalleModal({
                 § Comentarios / Actividad
               </h3>
               <div className="flex max-h-52 flex-col gap-2.5 overflow-y-auto pr-1">
-                {comentarios.map((c) => (
-                  <div key={c.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <div className="mb-1 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-gray-700">{c.autor}</p>
-                      <p className="text-xs text-gray-400">{c.fecha}</p>
-                    </div>
-                    <p className="text-xs text-gray-600">{c.texto}</p>
+                {cargandoComentarios ? (
+                  <div className="flex justify-center py-4">
+                    <Spin size="small" />
                   </div>
-                ))}
+                ) : comentarios.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-4">Sin comentarios aún</p>
+                ) : (
+                  comentarios.map((c) => (
+                    <div key={c.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-gray-700">{c.autor?.name || "Anónimo"}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-400">
+                            {c.createdAt ? new Date(c.createdAt).toLocaleDateString("es", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                          </p>
+                          {c.autor?.id === user?.id && (
+                            <button
+                              onClick={async () => {
+                                await eliminarComentario(c.id);
+                                setComentarios((prev) => prev.filter((x) => x.id !== c.id));
+                              }}
+                              className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">{c.contenido}</p>
+                    </div>
+                  ))
+                )}
               </div>
               <div className="mt-3 flex gap-2">
                 <input
@@ -541,6 +823,103 @@ export default function TareaDetalleModal({
                 ]}
               />
           </div>
+
+          {/* Tipo y Proyecto (Solo Admin) */}
+          {isAdmin && (
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                § Tipo y Proyecto
+              </h3>
+              <div className="flex flex-col gap-3">
+                {/* Tipo */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Tipo</label>
+                  <Select
+                    value={tipo}
+                    onChange={(value) => guardarTipo(value as "CLIENTE" | "INDEPENDIENTE")}
+                    options={[
+                      { value: "CLIENTE", label: "Cliente" },
+                      { value: "INDEPENDIENTE", label: "Independiente" },
+                    ]}
+                    className="w-full"
+                    disabled={guardando}
+                  />
+                </div>
+
+                {/* Proyecto (solo si es CLIENTE) */}
+                {tipo === "CLIENTE" && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-500">Proyecto</label>
+                    <Select
+                      value={proyectoId}
+                      onChange={async (value) => {
+                        setProyectoId(value);
+                        try {
+                          setGuardando(true);
+                          await onGuardarEdicion(tarea.id, {
+                            titulo,
+                            descripcion,
+                            tipo,
+                            proyectoId: value,
+                            hitoId: tarea.hitoId,
+                            arquitectoIds: tarea.arquitectos.map((a) => a.id),
+                            fechaEntregaEstimada: fechaEntrega,
+                          });
+                        } catch (error) {
+                          console.error("Error guardando proyecto:", error);
+                        } finally {
+                          setGuardando(false);
+                        }
+                      }}
+                      placeholder="Selecciona proyecto"
+                      options={proyectos.map((p) => ({
+                        value: p.id,
+                        label: `${p.nombre} · ${p.clienteNombre}`,
+                      }))}
+                      className="w-full"
+                      disabled={guardando}
+                    />
+                  </div>
+                )}
+
+                {/* Fecha de entrega */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Fecha de entrega</label>
+                  <Tooltip
+                    title={tarea.fechaEntregaEstimada ? "Fecha bloqueada. Usa Reprogramar para cambiarla." : ""}
+                    placement="bottom"
+                  >
+                    <DatePicker
+                      value={fechaEntrega ? dayjs(fechaEntrega) : null}
+                      onChange={async (date) => {
+                        const nuevaFecha = date ? date.toISOString() : undefined;
+                        setFechaEntrega(nuevaFecha);
+                        try {
+                          setGuardando(true);
+                          await onGuardarEdicion(tarea.id, {
+                            titulo,
+                            descripcion,
+                            tipo,
+                            proyectoId: tipo === "CLIENTE" ? proyectoId : undefined,
+                            hitoId: tarea.hitoId,
+                            arquitectoIds: tarea.arquitectos.map((a) => a.id),
+                            fechaEntregaEstimada: nuevaFecha,
+                          });
+                        } catch (error) {
+                          console.error("Error guardando fecha:", error);
+                        } finally {
+                          setGuardando(false);
+                        }
+                      }}
+                      className="w-full"
+                      disabled={guardando || !!tarea.fechaEntregaEstimada}
+                      placeholder="Selecciona fecha"
+                    />
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Arquitectos */}
           <div>
@@ -702,193 +1081,201 @@ export default function TareaDetalleModal({
             </div>
           </div>
 
-            {/* Fechas de entrega */}
-            <div>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                § Fechas de entrega
-              </h3>
-              <div className="flex flex-col gap-2">
-                {[
-                  {
-                    label: "Original",
-                    fecha: tarea.fechaEntregaOriginal,
-                    highlight: false,
-                  },
-                  {
-                    label: "Estimada",
-                    fecha: tarea.fechaEntregaEstimada,
-                    highlight: mostrarReprogramar,
-                  },
-                  {
-                    label: "Entrega real",
-                    fecha: tarea.fechaCompletacion,
-                    highlight: tarea.estado === "COMPLETADA",
-                  },
-                ].map((f) => (
-                  <div
-                    key={f.label}
-                    className={`rounded-lg p-2.5 text-xs transition-colors duration-200 ${
-                      f.highlight ? "border border-sky-200 bg-sky-50" : "bg-gray-50"
-                    }`}
-                  >
-                    <p className="font-semibold text-gray-400">{f.label}</p>
-                    <p className="mt-0.5 font-semibold text-gray-800">
-                      {f.fecha ? fmtFecha(f.fecha) : "—"}
-                    </p>
-                  </div>
-                ))}
+            {/* Fechas de entrega - solo si hay fecha */}
+            {tieneFechaEntrega && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                  § Fechas de entrega
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {[
+                    {
+                      label: "Original",
+                      fecha: tarea.fechaEntregaOriginal,
+                      highlight: false,
+                    },
+                    {
+                      label: "Estimada",
+                      fecha: tarea.fechaEntregaEstimada,
+                      highlight: mostrarReprogramar,
+                    },
+                    {
+                      label: "Entrega real",
+                      fecha: tarea.fechaCompletacion,
+                      highlight: tarea.estado === "COMPLETADA",
+                    },
+                  ].map((f) => (
+                    <div
+                      key={f.label}
+                      className={`rounded-lg p-2.5 text-xs transition-colors duration-200 ${
+                        f.highlight ? "border border-sky-200 bg-sky-50" : "bg-gray-50"
+                      }`}
+                    >
+                      <p className="font-semibold text-gray-400">{f.label}</p>
+                      <p className="mt-0.5 font-semibold text-gray-800">
+                        {f.fecha ? fmtFecha(f.fecha) : "—"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          {/* RESCHEDULE PANEL - solo si hay fecha */}
+          {tieneFechaEntrega && (
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                mostrarReprogramar ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/40 p-4">
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Reprogramar deja un <strong>registro con motivo</strong> y afecta la eficiencia.
+                </p>
+
+                <Field
+                  label="Nueva fecha de entrega"
+                  error={reprogramarForm.formState.errors.fechaNueva?.message}
+                >
+                  <Controller
+                    name="fechaNueva"
+                    control={reprogramarForm.control}
+                    rules={{ required: "Selecciona la nueva fecha" }}
+                    render={({ field }) => (
+                      <DatePicker
+                        className="w-full"
+                        format="DD/MM/YYYY"
+                        placeholder="Selecciona fecha"
+                        value={field.value ? dayjs(field.value) : null}
+                        onChange={(d) => field.onChange(d ? d.toISOString() : "")}
+                      />
+                    )}
+                  />
+                </Field>
+
+                <Field
+                  label="Motivo del cambio"
+                  error={reprogramarForm.formState.errors.motivo?.message}
+                >
+                  <Controller
+                    name="motivo"
+                    control={reprogramarForm.control}
+                    rules={{
+                      required: "El motivo es obligatorio",
+                      minLength: { value: 5, message: "Describe brevemente el motivo" },
+                    }}
+                    render={({ field }) => (
+                      <Input.TextArea
+                        {...field}
+                        rows={2}
+                        placeholder="Ej: El cliente solicitó cambios que extienden el plazo…"
+                      />
+                    )}
+                  />
+                </Field>
+
+                <Button
+                  block
+                  type="primary"
+                  loading={reprogramarForm.formState.isSubmitting}
+                  onClick={handleConfirmarReprog}
+                  icon={<CalendarClock size={14} />}
+                  style={{ background: "#ef4444", borderColor: "#ef4444" }}
+                >
+                  Confirmar reprogramar
+                </Button>
               </div>
             </div>
+          )}
 
-          {/* RESCHEDULE PANEL */}
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              mostrarReprogramar ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/40 p-4">
-              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Reprogramar deja un <strong>registro con motivo</strong> y afecta la eficiencia.
-              </p>
+          {/* RECHAZO PANEL - solo si hay fecha */}
+          {tieneFechaEntrega && (
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                mostrarRechazo ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50/40 p-4">
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                  Registrar rechazo vuelve la tarea a <strong>En proceso</strong> y afecta la eficiencia.
+                </p>
 
-              <Field
-                label="Nueva fecha de entrega"
-                error={reprogramarForm.formState.errors.fechaNueva?.message}
-              >
-                <Controller
-                  name="fechaNueva"
-                  control={reprogramarForm.control}
-                  rules={{ required: "Selecciona la nueva fecha" }}
-                  render={({ field }) => (
-                    <DatePicker
-                      className="w-full"
-                      format="DD/MM/YYYY"
-                      placeholder="Selecciona fecha"
-                      value={field.value ? dayjs(field.value) : null}
-                      onChange={(d) => field.onChange(d ? d.toISOString() : "")}
-                    />
-                  )}
-                />
-              </Field>
+                <Field
+                  label="Detalle del rechazo"
+                  error={rechazoForm.formState.errors.motivo?.message}
+                >
+                  <Controller
+                    name="motivo"
+                    control={rechazoForm.control}
+                    rules={{
+                      required: "Describe el rechazo",
+                      minLength: {
+                        value: 5,
+                        message: "Describe brevemente el rechazo",
+                      },
+                    }}
+                    render={({ field }) => (
+                      <Input.TextArea
+                        {...field}
+                        rows={2}
+                        placeholder="Ej: Los colores no coinciden con la paleta del cliente…"
+                      />
+                    )}
+                  />
+                </Field>
 
-              <Field
-                label="Motivo del cambio"
-                error={reprogramarForm.formState.errors.motivo?.message}
-              >
-                <Controller
-                  name="motivo"
-                  control={reprogramarForm.control}
-                  rules={{
-                    required: "El motivo es obligatorio",
-                    minLength: { value: 5, message: "Describe brevemente el motivo" },
+                <Button
+                  block
+                  type="primary"
+                  loading={rechazoForm.formState.isSubmitting}
+                  onClick={handleConfirmarRechazo}
+                  danger
+                >
+                  Confirmar rechazo
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ACTION TOGGLE - Solo para admin y si hay fecha */}
+          {isAdmin && tieneFechaEntrega && (
+            <div className="pt-4">
+              <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-gray-100 p-1 w-full">
+                <button
+                  onClick={() => {
+                    setMostrarReprogramar(!mostrarReprogramar);
+                    setMostrarRechazo(false);
                   }}
-                  render={({ field }) => (
-                    <Input.TextArea
-                      {...field}
-                      rows={2}
-                      placeholder="Ej: El cliente solicitó cambios que extienden el plazo…"
-                    />
-                  )}
-                />
-              </Field>
-
-              <Button
-                block
-                type="primary"
-                loading={reprogramarForm.formState.isSubmitting}
-                onClick={handleConfirmarReprog}
-                icon={<CalendarClock size={14} />}
-                style={{ background: "#ef4444", borderColor: "#ef4444" }}
-              >
-                Confirmar reprogramar
-              </Button>
-            </div>
-          </div>
-
-          {/* RECHAZO PANEL */}
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              mostrarRechazo ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <div className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50/40 p-4">
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                Registrar rechazo vuelve la tarea a <strong>En proceso</strong> y afecta la eficiencia.
-              </p>
-
-              <Field
-                label="Detalle del rechazo"
-                error={rechazoForm.formState.errors.motivo?.message}
-              >
-                <Controller
-                  name="motivo"
-                  control={rechazoForm.control}
-                  rules={{
-                    required: "Describe el rechazo",
-                    minLength: {
-                      value: 5,
-                      message: "Describe brevemente el rechazo",
-                    },
+                  className={`
+                    px-4 py-2.5 rounded-md font-semibold text-xs transition-all duration-200 ease-out
+                    ${mostrarReprogramar
+                      ? "bg-red-500 text-white shadow-md scale-100"
+                      : "bg-transparent text-gray-600 hover:text-gray-900 scale-95"
+                    }
+                  `}
+                >
+                  <CalendarClock size={14} className="inline mr-1.5 -mt-0.5" />
+                  Reprogramar
+                </button>
+                <button
+                  onClick={() => {
+                    setMostrarRechazo(!mostrarRechazo);
+                    setMostrarReprogramar(false);
                   }}
-                  render={({ field }) => (
-                    <Input.TextArea
-                      {...field}
-                      rows={2}
-                      placeholder="Ej: Los colores no coinciden con la paleta del cliente…"
-                    />
-                  )}
-                />
-              </Field>
-
-              <Button
-                block
-                type="primary"
-                loading={rechazoForm.formState.isSubmitting}
-                onClick={handleConfirmarRechazo}
-                danger
-              >
-                Confirmar rechazo
-              </Button>
+                  className={`
+                    px-4 py-2.5 rounded-md font-semibold text-xs transition-all duration-200 ease-out
+                    ${mostrarRechazo
+                      ? "bg-red-500 text-white shadow-md scale-100"
+                      : "bg-transparent text-gray-600 hover:text-gray-900 scale-95"
+                    }
+                  `}
+                >
+                  <AlertCircle size={14} className="inline mr-1.5 -mt-0.5" />
+                  Rechazo
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/* ACTION TOGGLE */}
-          <div className="pt-4">
-            <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-gray-100 p-1 w-full">
-              <button
-                onClick={() => {
-                  setMostrarReprogramar(!mostrarReprogramar);
-                  setMostrarRechazo(false);
-                }}
-                className={`
-                  px-4 py-2.5 rounded-md font-semibold text-xs transition-all duration-200 ease-out
-                  ${mostrarReprogramar
-                    ? "bg-red-500 text-white shadow-md scale-100"
-                    : "bg-transparent text-gray-600 hover:text-gray-900 scale-95"
-                  }
-                `}
-              >
-                <CalendarClock size={14} className="inline mr-1.5 -mt-0.5" />
-                Reprogramar
-              </button>
-              <button
-                onClick={() => {
-                  setMostrarRechazo(!mostrarRechazo);
-                  setMostrarReprogramar(false);
-                }}
-                className={`
-                  px-4 py-2.5 rounded-md font-semibold text-xs transition-all duration-200 ease-out
-                  ${mostrarRechazo
-                    ? "bg-red-500 text-white shadow-md scale-100"
-                    : "bg-transparent text-gray-600 hover:text-gray-900 scale-95"
-                  }
-                `}
-              >
-                <AlertCircle size={14} className="inline mr-1.5 -mt-0.5" />
-                Rechazo
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </Modal>

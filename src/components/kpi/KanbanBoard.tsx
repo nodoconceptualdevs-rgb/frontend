@@ -30,6 +30,7 @@ interface KanbanBoardProps {
   onRechazo: (t: TareaConKpi) => void;
   onPublicar: (t: TareaConKpi) => void;
   onEliminar: (t: TareaConKpi) => void;
+  onCrear?: () => void;
 }
 
 type Columnas = Record<EstadoTarea, TareaConKpi[]>;
@@ -55,6 +56,7 @@ export default function KanbanBoard({
   onRechazo,
   onPublicar,
   onEliminar,
+  onCrear,
 }: KanbanBoardProps) {
   const [columnas, setColumnas] = useState<Columnas>(() => agrupar(tareas));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -189,7 +191,7 @@ export default function KanbanBoard({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
+      <div className="grid min-h-[500px] grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
         {ESTADOS_TAREA.map((estado) => (
           <KanbanColumn
             key={estado}
@@ -201,6 +203,7 @@ export default function KanbanBoard({
             onRechazo={onRechazo}
             onPublicar={onPublicar}
             onEliminar={onEliminar}
+            onCrear={onCrear}
           />
         ))}
       </div>

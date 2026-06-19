@@ -148,16 +148,6 @@ export default function TareaCard({
 
   const menuItems: MenuProps["items"] = [
     { key: "editar", label: "Editar tarea", icon: <Pencil size={14} /> },
-    {
-      key: "reprogramar",
-      label: "Reprogramar entrega",
-      icon: <CalendarClock size={14} />,
-    },
-    {
-      key: "rechazo",
-      label: "Registrar rechazo",
-      icon: <RotateCcw size={14} />,
-    },
     ...(!esIndependiente
       ? [
           {
@@ -179,8 +169,6 @@ export default function TareaCard({
   const onMenuClick: MenuProps["onClick"] = ({ key, domEvent }) => {
     domEvent.stopPropagation();
     if (key === "editar") onEditar?.(tarea);
-    if (key === "reprogramar") onReprogramar?.(tarea);
-    if (key === "rechazo") onRechazo?.(tarea);
     if (key === "publicar") onPublicar?.(tarea);
     if (key === "eliminar") onEliminar?.(tarea);
   };

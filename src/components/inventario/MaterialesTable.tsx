@@ -1,21 +1,15 @@
 "use client";
 
 import React from "react";
-import { Table, Tag } from "antd";
-import { AlertCircle, TrendingUp } from "lucide-react";
-import type { MaterialConEstado, HistorialPrecio } from "@/types/inventario";
-import { ESTADO_STOCK_LABEL } from "@/types/inventario";
+import { Table, Button, Space, Popconfirm } from "antd";
+import { TrendingUp, Edit2, Trash2 } from "lucide-react";
+import type { MaterialConEstado } from "@/types/inventario";
 
 interface MaterialesTableProps {
   materiales: MaterialConEstado[];
+  onEditar?: (material: MaterialConEstado) => void;
+  onEliminar?: (id: number) => Promise<void>;
 }
-
-const ESTADO_COLOR: Record<string, { color: string; bg: string }> = {
-  NORMAL: { color: "text-emerald-700", bg: "bg-emerald-50" },
-  BAJO: { color: "text-amber-700", bg: "bg-amber-50" },
-  CRITICO: { color: "text-red-700", bg: "bg-red-50" },
-  SIN_STOCK: { color: "text-red-900", bg: "bg-red-100" },
-};
 
 function HistorialExpandable({ material }: { material: MaterialConEstado }) {
   const historial = material.historialPrecios || [];
@@ -68,7 +62,7 @@ function HistorialExpandable({ material }: { material: MaterialConEstado }) {
   );
 }
 
-export default function MaterialesTable({ materiales }: MaterialesTableProps) {
+export default function MaterialesTable({ materiales, onEditar, onEliminar }: MaterialesTableProps) {
   const columns = [
     {
       title: "Material",
@@ -155,22 +149,40 @@ export default function MaterialesTable({ materiales }: MaterialesTableProps) {
       ),
     },
     {
-      title: "Estado",
-      dataIndex: "estadoStock",
-      key: "estado",
-      width: 140,
-      render: (estado: string) => {
-        const config = ESTADO_COLOR[estado] || ESTADO_COLOR.NORMAL;
-        const esAlerta = estado !== "NORMAL";
-        return (
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${config.bg} ${config.color}`}
-          >
-            {esAlerta && <AlertCircle size={14} />}
-            {ESTADO_STOCK_LABEL[estado as any]}
-          </div>
-        );
-      },
+      title: "Acciones",
+      key: "acciones",
+      width: 120,
+      render: (_: unknown, record: MaterialConEstado) => (
+        <Space size="small">
+          {onEditar && (
+            <Button
+              type="text"
+              size="small"
+              icon={<Edit2 size={16} />}
+              onClick={() => onEditar(record)}
+              title="Editar"
+            />
+          )}
+          {onEliminar && (
+            <Popconfirm
+              title="Eliminar material"
+              description="¿Está seguro de que desea eliminar este material?"
+              onConfirm={() => onEliminar(record.id)}
+              okText="Eliminar"
+              okType="danger"
+              cancelText="Cancelar"
+            >
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<Trash2 size={16} />}
+                title="Eliminar"
+              />
+            </Popconfirm>
+          )}
+        </Space>
+      ),
     },
   ];
 
