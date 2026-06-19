@@ -6,8 +6,10 @@ import {
   DollarOutlined,
   TeamOutlined,
   UserOutlined,
+  BarChartOutlined,
+  ShoppingCartOutlined,
+  BuildOutlined,
 } from "@ant-design/icons";
-import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 export default function AdminLayout({
@@ -15,16 +17,27 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
-  
   const menuItems = useMemo(() => {
-    const isAdmin = user?.role?.type === "admin";
-    
-    const adminMenuItems = [
+    return [
       {
         key: "/admin/proyectos",
         icon: <ProjectOutlined />,
         label: "Proyectos",
+      },
+      {
+        key: "/admin/productividad",
+        icon: <BarChartOutlined />,
+        label: "Tareas",
+      },
+      {
+        key: "/admin/inventario",
+        icon: <ShoppingCartOutlined />,
+        label: "Inventario",
+      },
+      {
+        key: "/admin/obras",
+        icon: <BuildOutlined />,
+        label: "Obras",
       },
       {
         key: "/admin/cursos",
@@ -47,22 +60,7 @@ export default function AdminLayout({
         label: "Mi Perfil",
       },
     ];
-    
-    const gerenteMenuItems = [
-      {
-        key: "/admin/proyectos",
-        icon: <ProjectOutlined />,
-        label: "Proyectos",
-      },
-      {
-        key: "/admin/mi-perfil",
-        icon: <UserOutlined />,
-        label: "Mi Perfil",
-      },
-    ];
-    
-    return isAdmin ? adminMenuItems : gerenteMenuItems;
-  }, [user?.role?.type]);
+  }, []);
 
   return <DashboardLayout menuItems={menuItems}>{children}</DashboardLayout>;
 }

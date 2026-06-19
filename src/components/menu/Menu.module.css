@@ -7,29 +7,116 @@
 
 /* Ajustes para móviles */
 @media (max-width: 768px) {
-  .logoSection img {
-    width: 120px !important;
-    height: auto !important;
-  }
-  
   .menuContainer {
     height: auto;
-    min-height: 60px;
-    padding: 0.5em 0.2em;
-    margin: 1em auto;
+    min-height: auto;
+    padding: 0;
+    margin: 0.5rem auto;
+    border-radius: 0.75rem;
+    flex-direction: column;
   }
-  
+
+  .menuContent {
+    width: 100%;
+    max-width: 100%;
+    flex-direction: column;
+    padding: 0.75rem 0;
+    gap: 0.5rem;
+  }
+
+  .logoSection {
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .logoSection img {
+    width: 100px !important;
+    height: auto !important;
+  }
+
   .menuLinks {
-    padding: 1em 1.5em;
+    width: 100% !important;
+    max-width: none !important;
+    position: static !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    z-index: 999;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    display: none;
+    border-top: 1px solid #e5e5e5;
   }
-  
+
+  .menuLinks.open {
+    display: flex !important;
+  }
+
+  .menuLinks li {
+    border-bottom: 1px solid #e5e5e5 !important;
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  .menuLinks li:last-child {
+    border-bottom: none !important;
+  }
+
+  .menuLinks li button,
+  .menuLinks li a {
+    font-size: 0.95rem;
+    width: 100%;
+    padding: 0.75rem 1.25rem !important;
+    text-align: left;
+    border-radius: 0 !important;
+    justify-content: flex-start;
+  }
+
   .themeToggle {
-    margin-left: 0.5rem;
+    margin-left: 0;
+    padding: 0.3rem;
+    width: 36px;
+    height: 36px;
+    align-self: center;
   }
-  
+
   .themeToggle svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .hamburger {
+    display: flex !important;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+  }
+
+  .hamburger span {
     width: 20px;
-    height: 20px;
+    height: 2.5px;
+    margin: 2px 0;
+  }
+
+  :global(body.dark-theme) .logoSection {
+    border-bottom-color: #444444 !important;
+  }
+
+  :global(body.dark-theme) .menuLinks {
+    background: transparent !important;
+  }
+
+  :global(body.dark-theme) .menuLinks li {
+    border-bottom-color: #444444 !important;
   }
 }
 .menuContainer {
@@ -145,8 +232,10 @@ body.dark-theme .menuContainer {
   background: none;
   border: none;
   cursor: pointer;
-  z-index: 100;
+  z-index: 101;
+  padding: 0;
 }
+
 .hamburger span {
   display: block;
   width: 28px;
@@ -154,53 +243,133 @@ body.dark-theme .menuContainer {
   margin: 4px 0;
   background: #292929;
   border-radius: 2px;
-  transition: 0.3s;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: center;
+}
+
+.hamburger.open span:nth-child(1) {
+  transform: rotate(45deg) translateY(11px);
+}
+
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.hamburger.open span:nth-child(3) {
+  transform: rotate(-45deg) translateY(-11px);
+}
+
+:global(body.dark-theme) .hamburger span {
+  background: #e0e0e0 !important;
 }
 
 /* Activar menú hamburguesa en tablets */
-@media (max-width: 1100px) {
+@media (min-width: 769px) and (max-width: 1100px) {
   .menuContainer {
     border-radius: 1.5rem;
     height: auto;
     min-height: 60px;
-    z-index: 1000; /* Mantener por encima en móvil */
+    z-index: 1000;
+    padding: 0.5rem 0;
   }
-  
+
   .menuContent {
     flex-direction: row;
     padding: 0.5rem clamp(0.5rem, 2vw, 1rem);
-  }
-  
-  .menuLinks {
-    position: absolute;
-    top: 100%;
-    left: 0;
     width: 100%;
+    max-width: none;
+  }
+
+  .menuLinks {
+    position: fixed;
+    top: calc(10vh + 2em + 0.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 2rem);
+    max-width: 500px;
     background: #fafafa;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1.5em;
-    padding: 1.5em 2em;
-    border-radius: 0 0 1.5em 1.5em;
-    box-shadow: 0 2px 12px #0002;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     display: none;
-    z-index: 100;
+    z-index: 999;
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    pointer-events: none;
+    overflow: hidden;
   }
-  
+
   .menuLinks.open {
     display: flex;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
   }
-  
-  .menuLinks li button {
+
+  .menuLinks li {
+    border-bottom: 1px solid #e5e5e5;
+    margin: 0;
+  }
+
+  .menuLinks li:last-child {
+    border-bottom: none;
+  }
+
+  .menuLinks li button,
+  .menuLinks li a {
     font-size: 1rem;
     width: 100%;
     text-align: left;
-    padding: 0.5em 1em;
+    padding: 1rem 1.5rem;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    transition: all 0.2s ease;
   }
-  
+
+  .menuLinks li button:active,
+  .menuLinks li a:active {
+    background-color: #f0f0f0;
+  }
+
+  .menuLinks li a.active,
+  .menuLinks li button.active {
+    background-color: #fff5f5;
+    color: #ab2731;
+    font-weight: 500;
+  }
+
   .hamburger {
     display: flex;
+    margin-left: auto;
   }
+}
+
+/* Dark theme dropdown */
+:global(body.dark-theme) .menuLinks {
+  background: #333333 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+:global(body.dark-theme) .menuLinks li {
+  border-bottom-color: #444444 !important;
+}
+
+:global(body.dark-theme) .menuLinks li button:active,
+:global(body.dark-theme) .menuLinks li a:active {
+  background-color: #404040 !important;
+}
+
+:global(body.dark-theme) .menuLinks li a.active,
+:global(body.dark-theme) .menuLinks li button.active {
+  background-color: #2a1a1a !important;
+  color: #d4af6a !important;
 }
 
 /* Botón de login/register dentro del menú hamburguesa - oculto en desktop */
@@ -212,8 +381,13 @@ body.dark-theme .menuContainer {
   .mobileButtonItem {
     display: list-item !important;
     width: 100%;
-    padding-top: 0.5em;
-    border-top: 1px solid #eee;
+    border: none !important;
+    padding: 1rem 1.5rem !important;
+    margin: 0;
+  }
+
+  .mobileButtonItem button {
+    width: 100%;
   }
 }
 

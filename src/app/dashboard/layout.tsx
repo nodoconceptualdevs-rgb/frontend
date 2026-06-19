@@ -6,6 +6,8 @@ import {
   UserOutlined,
   ProjectOutlined,
   VideoCameraOutlined,
+  BarChartOutlined,
+  BuildOutlined,
 } from "@ant-design/icons";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -33,7 +35,7 @@ export default function ClientDashboardLayout({
         {
           key: "/dashboard/gerente-cursos",
           icon: <VideoCameraOutlined />,
-          label: "Gestión de Cursos",
+          label: "Cursos",
         },
         {
           key: "/dashboard/mi-perfil",

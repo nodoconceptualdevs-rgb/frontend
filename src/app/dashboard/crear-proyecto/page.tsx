@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createProyecto } from "@/services/proyectos";
+import { createObra } from "@/services/obras";
 import { getClientes } from "@/services/usuarios";
 import { alerts } from "@/lib/alerts";
 import { Toaster } from "react-hot-toast";
@@ -26,7 +27,10 @@ export default function NuevoProyectoGerentePage() {
     cliente: "",
     estado_general: "En Planificación",
     fecha_inicio: new Date().toISOString().split("T")[0],
+    fecha_fin_planificada: "",
+    presupuesto_total: "",
     es_publico: true,
+    crear_obra: true,
   });
 
   useEffect(() => {
@@ -56,26 +60,42 @@ export default function NuevoProyectoGerentePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.presupuesto_total || !formData.fecha_fin_planificada) {
+      alerts.error("El presupuesto y la fecha de fin son requeridos");
+      return;
+    }
     setLoading(true);
 
     try {
-      await alerts.promise(
+      const result = await alerts.promise(
         createProyecto({
           nombre_proyecto: formData.nombre_proyecto,
           fecha_inicio: formData.fecha_inicio,
           estado_general: formData.estado_general,
           cliente: formData.cliente ? parseInt(formData.cliente) : undefined,
-          gerente_proyecto: user?.id, // Asignar automáticamente el gerente
-          es_publico: formData.es_publico
+          gerente_proyecto: user?.id,
+          es_publico: formData.es_publico,
         }),
         {
-          loading: 'Creando proyecto...',
-          success: 'Proyecto creado exitosamente',
-          error: 'Error al crear el proyecto'
+          loading: "Creando proyecto...",
+          success: "Proyecto creado exitosamente",
+          error: "Error al crear el proyecto",
         }
       );
-      
-      // Esperar un poco para que se vea la alerta de éxito
+
+      const proyectoId = (result as any)?.data?.id ?? (result as any)?.id;
+      if (proyectoId && formData.crear_obra) {
+        await createObra({
+          nombre: formData.nombre_proyecto,
+          proyectoId,
+          estado: "PREPARACION",
+          fechaInicio: new Date(formData.fecha_inicio).toISOString(),
+          fechaFinPlanificada: new Date(formData.fecha_fin_planificada).toISOString(),
+          presupuestoTotal: parseFloat(formData.presupuesto_total),
+          notas: "Obra generada automáticamente al crear el proyecto",
+        });
+      }
+
       setTimeout(() => {
         router.push("/dashboard/mi-proyecto");
       }, 1000);
@@ -186,6 +206,39 @@ export default function NuevoProyectoGerentePage() {
                 />
               </div>
 
+              {/* Fecha Fin Planificada */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fecha Fin Planificada *
+                </label>
+                <input
+                  type="date"
+                  name="fecha_fin_planificada"
+                  value={formData.fecha_fin_planificada}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                />
+              </div>
+
+              {/* Presupuesto */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Presupuesto de Obra *
+                </label>
+                <input
+                  type="number"
+                  name="presupuesto_total"
+                  value={formData.presupuesto_total}
+                  onChange={handleChange}
+                  required
+                  min={0}
+                  placeholder="Ej: 45000000"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                />
+                <p className="text-xs text-gray-500 mt-1">Monto total del contrato de obra</p>
+              </div>
+
               {/* Proyecto Público */}
               <div className="md:col-span-2">
                 <label className="flex items-center space-x-3 cursor-pointer">
@@ -203,6 +256,24 @@ export default function NuevoProyectoGerentePage() {
                   </span>
                 </label>
               </div>
+
+              {/* Crear Obra */}
+              <div className="md:col-span-2">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="crear_obra"
+                    checked={formData.crear_obra}
+                    onChange={(e) =>
+                      setFormData({ ...formData, crear_obra: e.target.checked })
+                    }
+                    className="w-5 h-5 text-red-600 border-2 border-gray-300 rounded focus:ring-red-200"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Crear obra vinculada (desmarca si es solo diseño)
+                  </span>
+                </label>
+              </div>
             </div>
 
             {/* Información Adicional */}
@@ -213,6 +284,9 @@ export default function NuevoProyectoGerentePage() {
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>
                   • Se generará automáticamente un <strong>token NFC único</strong>
+                </li>
+                <li>
+                  • Se creará automáticamente la <strong>obra vinculada</strong> al proyecto
                 </li>
                 <li>
                   • Podrás <strong>crear los hitos</strong> del proyecto manualmente

@@ -137,6 +137,21 @@ export default function Menu() {
         isVisible={showOverlay}
         onComplete={handleTransitionComplete}
       />
+      {open && typeof window !== "undefined" && window.innerWidth <= 1100 && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 99,
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.2)",
+          }}
+          onClick={() => setOpen(false)}
+        />
+      )}
       <div style={{ padding: "0 clamp(1rem, 5vw, 5rem)" }}>
         <nav
           className={`${styles.menuContainer} ${isDarkMode ? styles.darkTheme : ""}`}
@@ -163,9 +178,10 @@ export default function Menu() {
               </button>
             </div>
             <button
-              className={styles.hamburger}
+              className={`${styles.hamburger} ${open ? styles.open : ""}`}
               onClick={() => setOpen((v) => !v)}
               aria-label="Abrir menú"
+              aria-expanded={open}
             >
               <span />
               <span />

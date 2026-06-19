@@ -73,7 +73,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       onCancel={handleCancel}
       footer={null}
       width={500}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

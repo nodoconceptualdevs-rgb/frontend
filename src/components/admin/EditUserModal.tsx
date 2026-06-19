@@ -84,7 +84,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       onCancel={handleCancel}
       footer={null}
       width={500}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
