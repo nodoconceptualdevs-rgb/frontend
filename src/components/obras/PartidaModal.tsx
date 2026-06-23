@@ -8,6 +8,7 @@ interface Props {
   obraId: number;
   partida: Partida | null;
   defaultEsExtra?: boolean;
+  defaultValues?: Partial<PartidaFormValues>;
   onClose: () => void;
   onSubmit: (values: PartidaFormValues) => Promise<void>;
 }
@@ -17,6 +18,7 @@ export default function PartidaModal({
   obraId,
   partida,
   defaultEsExtra = false,
+  defaultValues,
   onClose,
   onSubmit,
 }: Props) {
@@ -39,18 +41,20 @@ export default function PartidaModal({
         cantidadPresupuestada: partida.cantidadPresupuestada,
         precioUnitario: partida.precioUnitario,
         esExtra: partida.esExtra,
+        partidaOriginalId: partida.partidaOriginalId,
       });
     } else {
       setForm({
-        codigo: "",
-        descripcion: "",
-        unidad: "",
-        cantidadPresupuestada: 0,
-        precioUnitario: 0,
-        esExtra: defaultEsExtra,
+        codigo: defaultValues?.codigo ?? "",
+        descripcion: defaultValues?.descripcion ?? "",
+        unidad: defaultValues?.unidad ?? "",
+        cantidadPresupuestada: defaultValues?.cantidadPresupuestada ?? 0,
+        precioUnitario: defaultValues?.precioUnitario ?? 0,
+        esExtra: defaultValues?.esExtra ?? defaultEsExtra,
+        partidaOriginalId: defaultValues?.partidaOriginalId,
       });
     }
-  }, [partida, open, defaultEsExtra]);
+  }, [partida, open, defaultEsExtra, defaultValues]);
 
   const handleSubmit = async () => {
     if (!form.codigo) {

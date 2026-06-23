@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Table, Button, Tag, Popconfirm } from "antd";
+import { Table, Button, Tag, Popconfirm, Image as AntImage } from "antd";
 import { Trash2 } from "lucide-react";
 import type { ReporteDiario, Obra } from "@/types/obras";
 import dayjs from "dayjs";
@@ -238,10 +238,18 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                       }
                     }
 
+                    const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0;
+
                     return (
                       <React.Fragment key={r.id}>
-                        <tr style={{ cursor: "pointer" }} onClick={() => toggleReporte(r.id)}>
-                          <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontSize: 10, color: "#6b7280" }}>{isExpanded ? "▼" : "▶"}</td>
+                        <tr style={{ cursor: hasDetail ? "pointer" : "default" }} onClick={() => hasDetail && toggleReporte(r.id)}>
+                          <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, width: 28 }}>
+                            {hasDetail && (
+                              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 3, background: isExpanded ? "#1e293b" : "#f1f5f9", border: "1px solid #cbd5e1", fontSize: 8, color: isExpanded ? "#f8fafc" : "#64748b" }}>
+                                {isExpanded ? "▼" : "▶"}
+                              </span>
+                            )}
+                          </td>
                           <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontWeight: 700 }}>{idx + 1}</td>
                           {cell(r.partidaCodigo, "center")}
                           {cell(r.partidaDescripcion, "left")}
@@ -252,68 +260,80 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                           {cell(<strong style={{ color: "#06b6d4" }}>${r.costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                           {cell(<strong style={{ color: "#374151", fontWeight: 700 }}>${(r.costoManoObra + r.costoMateriales + costoSegunAvance).toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
                           {onEliminar && <td style={{ border: "1px solid #e5e7eb", padding: "3px 5px", background: rowBg, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                            <Popconfirm
-                              title="Eliminar reporte"
-                              description="¿Está seguro?"
-                              onConfirm={() => onEliminar(r.id)}
-                              okText="Sí"
-                              cancelText="No"
-                            >
+                            <Popconfirm title="Eliminar reporte" description="¿Está seguro?" onConfirm={() => onEliminar(r.id)} okText="Sí" cancelText="No">
                               <Button type="text" size="small" danger icon={<Trash2 size={14} />} />
                             </Popconfirm>
                           </td>}
                         </tr>
-                        {isExpanded && (
-                          <tr style={{ background: "#f3f4f6" }}>
-                            <td colSpan={10} style={{ padding: "8px", borderBottom: "1px solid #e5e7eb" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                {(r.personal?.length || 0) > 0 && (
-                                  <div>
-                                    <p style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#374151" }}>PERSONAL ({r.personal?.length})</p>
-                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                                      <thead>
-                                        <tr style={{ background: "#e3f2fd" }}>
-                                          <th style={{ border: "1px solid #90caf9", padding: 4, textAlign: "left", fontSize: 10 }}>Trabajador</th>
-                                          <th style={{ border: "1px solid #90caf9", padding: 4, textAlign: "center", fontSize: 10 }}>Horas</th>
-                                          <th style={{ border: "1px solid #90caf9", padding: 4, textAlign: "right", fontSize: 10 }}>Subtotal</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {r.personal?.map((p, i) => (
-                                          <tr key={i}>
-                                            <td style={{ border: "1px solid #e3f2fd", padding: 4, fontSize: 11 }}>{p.personalNombre}</td>
-                                            <td style={{ border: "1px solid #e3f2fd", padding: 4, textAlign: "center", fontSize: 11 }}>{p.horasTrabajadas.toFixed(1)}h</td>
-                                            <td style={{ border: "1px solid #e3f2fd", padding: 4, textAlign: "right", fontSize: 11, fontWeight: 600 }}>${p.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                                {(r.materiales?.length || 0) > 0 && (
-                                  <div>
-                                    <p style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#374151" }}>MATERIALES ({r.materiales?.length})</p>
-                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                                      <thead>
-                                        <tr style={{ background: "#cffafe" }}>
-                                          <th style={{ border: "1px solid #67e8f9", padding: 4, textAlign: "left", fontSize: 10 }}>Material</th>
-                                          <th style={{ border: "1px solid #67e8f9", padding: 4, textAlign: "center", fontSize: 10 }}>Cantidad</th>
-                                          <th style={{ border: "1px solid #67e8f9", padding: 4, textAlign: "right", fontSize: 10 }}>Subtotal</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {r.materiales?.map((m, i) => (
-                                          <tr key={i}>
-                                            <td style={{ border: "1px solid #cffafe", padding: 4, fontSize: 11 }}>{m.materialNombre}</td>
-                                            <td style={{ border: "1px solid #cffafe", padding: 4, textAlign: "center", fontSize: 11 }}>{m.cantidad.toFixed(2)} {m.unidad}</td>
-                                            <td style={{ border: "1px solid #cffafe", padding: 4, textAlign: "right", fontSize: 11, fontWeight: 600 }}>${m.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </div>
+                        {hasDetail && isExpanded && (
+                          <tr>
+                            <td colSpan={onEliminar ? 11 : 10} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+                              {r.observaciones && (
+                                <div style={{ padding: "6px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", marginRight: 6 }}>OBS:</span>
+                                  <span style={{ fontSize: 11, color: "#374151" }}>{r.observaciones}</span>
+                                </div>
+                              )}
+                              {(r.imagenes?.length || 0) > 0 && (
+                                <div style={{ padding: "10px 16px", borderBottom: ((r.personal?.length || 0) + (r.materiales?.length || 0)) > 0 ? "1px solid #e5e7eb" : "none", background: "#fff" }}>
+                                  <p style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em", marginBottom: 8 }}>FOTOS DEL AVANCE · {r.imagenes?.length}</p>
+                                  <AntImage.PreviewGroup>
+                                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                      {r.imagenes?.map((img: any, i: number) => (
+                                        <AntImage key={i} src={img.url} alt={img.name || `Foto ${i + 1}`} width={96} height={72}
+                                          style={{ objectFit: "cover", borderRadius: 4, border: "1px solid #e5e7eb", display: "block" }}
+                                          preview={{ src: img.url }} />
+                                      ))}
+                                    </div>
+                                  </AntImage.PreviewGroup>
+                                </div>
+                              )}
+                              {((r.personal?.length || 0) > 0 || (r.materiales?.length || 0) > 0) && (
+                                <div style={{ display: "grid", gridTemplateColumns: (r.personal?.length || 0) > 0 && (r.materiales?.length || 0) > 0 ? "1fr 1fr" : "1fr", gap: 0 }}>
+                                  {(r.personal?.length || 0) > 0 && (
+                                    <div style={{ padding: "10px 16px", borderRight: (r.materiales?.length || 0) > 0 ? "1px solid #e5e7eb" : "none" }}>
+                                      <p style={{ fontSize: 9, fontWeight: 700, color: "#1e40af", letterSpacing: "0.1em", marginBottom: 8 }}>PERSONAL · {r.personal?.length}</p>
+                                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead><tr>
+                                          {["TRABAJADOR","HRS","SUBTOTAL"].map((h, i) => (
+                                            <th key={i} style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textAlign: i===0?"left":i===1?"center":"right", padding: "2px 4px 6px", borderBottom: "1px solid #e5e7eb", letterSpacing: "0.07em" }}>{h}</th>
+                                          ))}
+                                        </tr></thead>
+                                        <tbody>
+                                          {r.personal?.map((p, i) => (
+                                            <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                              <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px" }}>{p.personalNombre}</td>
+                                              <td style={{ fontSize: 11, color: "#6b7280", padding: "5px 4px", textAlign: "center" }}>{p.horasTrabajadas.toFixed(1)}h</td>
+                                              <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px", textAlign: "right", fontWeight: 600 }}>${p.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                  {(r.materiales?.length || 0) > 0 && (
+                                    <div style={{ padding: "10px 16px" }}>
+                                      <p style={{ fontSize: 9, fontWeight: 700, color: "#065f46", letterSpacing: "0.1em", marginBottom: 8 }}>MATERIALES · {r.materiales?.length}</p>
+                                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead><tr>
+                                          {["MATERIAL","CANT.","SUBTOTAL"].map((h, i) => (
+                                            <th key={i} style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textAlign: i===0?"left":i===1?"center":"right", padding: "2px 4px 6px", borderBottom: "1px solid #e5e7eb", letterSpacing: "0.07em" }}>{h}</th>
+                                          ))}
+                                        </tr></thead>
+                                        <tbody>
+                                          {r.materiales?.map((m, i) => (
+                                            <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                              <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px" }}>{m.materialNombre}</td>
+                                              <td style={{ fontSize: 11, color: "#6b7280", padding: "5px 4px", textAlign: "center" }}>{m.cantidad.toFixed(2)} {m.unidad}</td>
+                                              <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px", textAlign: "right", fontWeight: 600 }}>${m.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}

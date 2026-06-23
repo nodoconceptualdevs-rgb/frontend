@@ -9,7 +9,9 @@ import {
   Tabs,
   Upload,
 } from "antd";
-import { Plus, Trash2, Users, Package, Image, X } from "lucide-react";
+import { Plus, Trash2, Users, Package, Image, X, FolderOpen, Camera } from "lucide-react";
+import BibliotecaArchivos from "@/components/BibliotecaArchivos";
+import type { MediaFile } from "@/services/mediaLibrary";
 import type {
   Obra,
   MaterialDisponible,
@@ -33,7 +35,7 @@ interface Props {
 interface LineaPartida {
   id: string;
   partidaId?: number;
-  avanceLogrado: number;
+  montoAplicado: number;
   personal: { id: string; personalId?: number; horasTrabajadas: number }[];
   materiales: {
     id: string;
@@ -61,14 +63,17 @@ export default function ReporteFormSection({
   const [observaciones, setObservaciones] = useState<string>("");
   const [imagenesArchivos, setImagenesArchivos] = useState<File[]>([]);
   const [previewImagenes, setPreviewImagenes] = useState<string[]>([]);
+  const [imagenesFromLibrary, setImagenesFromLibrary] = useState<MediaFile[]>([]);
+  const [bibliotecaOpen, setBibliotecaOpen] = useState(false);
   const [partidasLineas, setPartidasLineas] = useState<LineaPartida[]>([]);
   const [activeTabPartida, setActiveTabPartida] = useState<string | null>(null);
+  const [tabKeys, setTabKeys] = useState<Record<string, string>>({});
 
   const handleAgregarPartida = () => {
     const newPartida: LineaPartida = {
       id: uuidLocal(),
       partidaId: undefined,
-      avanceLogrado: 0,
+      montoAplicado: 0,
       personal: [],
       materiales: [],
       herramientas: [],
@@ -250,8 +255,8 @@ export default function ReporteFormSection({
       toast.error("Debe agregar al menos una partida");
       return;
     }
-    if (partidasLineas.some((p) => !p.partidaId || p.avanceLogrado <= 0)) {
-      toast.error("Todas las partidas deben tener partida seleccionada y avance > 0");
+    if (partidasLineas.some((p) => !p.partidaId || p.montoAplicado <= 0)) {
+      toast.error("Todas las partidas deben tener partida seleccionada y monto > 0");
       return;
     }
 
@@ -286,7 +291,7 @@ export default function ReporteFormSection({
           obraId: obra.id,
           partidaId: partida.partidaId!,
           fecha,
-          avanceLogrado: partida.avanceLogrado,
+          montoAplicado: partida.montoAplicado,
           observaciones: observaciones || undefined,
           personal: partida.personal
             .map((p) => ({
@@ -303,6 +308,7 @@ export default function ReporteFormSection({
             .filter((m) => m.materialId),
           // Solo adjuntar imágenes al primer reporte
           imagenesArchivos: i === 0 && imagenesArchivos.length > 0 ? imagenesArchivos : undefined,
+          existingImageIds: i === 0 && imagenesFromLibrary.length > 0 ? imagenesFromLibrary.map(f => f.id) : undefined,
         };
         await onSubmit(values);
       }
@@ -311,6 +317,7 @@ export default function ReporteFormSection({
       setObservaciones("");
       setImagenesArchivos([]);
       setPreviewImagenes([]);
+      setImagenesFromLibrary([]);
       setPartidasLineas([]);
       setActiveTabPartida(null);
       toast.success("Reportes guardados exitosamente");
@@ -701,48 +708,129 @@ export default function ReporteFormSection({
 
         {/* Fotos del avance */}
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <span className="label-small flex items-center gap-2">
-            <Image size={16} />
-            Fotos del Avance
-          </span>
-          <Upload.Dragger
-            accept="image/*"
-            multiple
-            beforeUpload={(file) => {
-              handleAgregarImagenes([file]);
-              return false;
-            }}
-            style={{ marginTop: "8px", fontSize: "12px" }}
-          >
-            <p className="text-xs">Arrastra imágenes aquí o haz clic para seleccionar</p>
-            <p className="text-gray-400 text-xs">(PNG, JPG, GIF, etc.)</p>
-          </Upload.Dragger>
+          <div className="flex items-center justify-between mb-2">
+            <span className="label-small flex items-center gap-2">
+              <Image size={14} />
+              Fotos del Avance
+              {(previewImagenes.length + imagenesFromLibrary.length) > 0 && (
+                <span style={{ background: "#1e3a5f", color: "#fff", borderRadius: "10px", padding: "1px 7px", fontSize: "10px", fontWeight: 700 }}>
+                  {previewImagenes.length + imagenesFromLibrary.length}
+                </span>
+              )}
+            </span>
+            <div className="flex gap-2">
+              {/* Subir nuevas fotos */}
+              <Upload
+                accept="image/*"
+                multiple
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  handleAgregarImagenes([file]);
+                  return false;
+                }}
+              >
+                <Button
+                  size="small"
+                  icon={<Camera size={13} />}
+                  style={{ fontSize: "11px", borderColor: "#d1d5db" }}
+                >
+                  Subir foto
+                </Button>
+              </Upload>
+              {/* Seleccionar de biblioteca */}
+              <Button
+                size="small"
+                icon={<FolderOpen size={13} />}
+                onClick={() => setBibliotecaOpen(true)}
+                style={{ fontSize: "11px", borderColor: "#1e3a5f", color: "#1e3a5f" }}
+              >
+                Abrir Biblioteca
+              </Button>
+            </div>
+          </div>
 
-          {/* Vista previa de imágenes */}
-          {previewImagenes.length > 0 && (
-            <div className="mt-3 grid grid-cols-4 gap-2">
+          {/* Grid de previews unificado */}
+          {(previewImagenes.length > 0 || imagenesFromLibrary.length > 0) ? (
+            <div className="grid grid-cols-4 gap-2">
+              {/* Nuevas fotos subidas */}
               {previewImagenes.map((preview, idx) => (
-                <div key={idx} className="relative group">
+                <div key={`new-${idx}`} className="relative group">
                   <img
                     src={preview}
                     alt="Preview"
-                    className="w-full h-24 object-cover rounded border border-gray-200"
+                    className="w-full h-20 object-cover rounded border border-gray-200"
                   />
+                  <div className="absolute top-1 left-1 bg-blue-500 text-white rounded text-xs px-1" style={{ fontSize: "8px", fontWeight: 700 }}>
+                    NUEVA
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleEliminarImagen(idx)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <X size={14} />
+                    <X size={12} />
                   </button>
                 </div>
               ))}
+              {/* Fotos de biblioteca */}
+              {imagenesFromLibrary.map((file) => {
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "https://backend-production-2ce7.up.railway.app";
+                const imgUrl = file.url.startsWith("http") ? file.url : `${baseUrl}${file.url}`;
+                return (
+                  <div key={`lib-${file.id}`} className="relative group">
+                    <img
+                      src={imgUrl}
+                      alt={file.name}
+                      className="w-full h-20 object-cover rounded border border-green-200"
+                    />
+                    <div className="absolute top-1 left-1 bg-green-600 text-white rounded text-xs px-1" style={{ fontSize: "8px", fontWeight: 700 }}>
+                      BIBLIO
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setImagenesFromLibrary(prev => prev.filter(f => f.id !== file.id))}
+                      className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              style={{
+                border: "1.5px dashed #d1d5db",
+                borderRadius: "6px",
+                padding: "16px",
+                textAlign: "center",
+                color: "#9ca3af",
+                fontSize: "11px",
+                cursor: "pointer",
+              }}
+              onClick={() => setBibliotecaOpen(true)}
+            >
+              <Image size={20} style={{ margin: "0 auto 6px", opacity: 0.4 }} />
+              <p>Sin fotos — sube nuevas o selecciona de la biblioteca</p>
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-2">
-            {imagenesArchivos.length} {imagenesArchivos.length === 1 ? "imagen" : "imágenes"} agregada(s)
-          </p>
         </div>
+
+        {/* Modal Biblioteca */}
+        <BibliotecaArchivos
+          visible={bibliotecaOpen}
+          onClose={() => setBibliotecaOpen(false)}
+          onSelect={(files) => {
+            setImagenesFromLibrary(prev => {
+              const existingIds = new Set(prev.map(f => f.id));
+              const newFiles = files.filter(f => !existingIds.has(f.id));
+              return [...prev, ...newFiles];
+            });
+            setBibliotecaOpen(false);
+          }}
+          maxSelection={20}
+          defaultFilter="image"
+        />
       </div>
 
       {/* Partidas */}
@@ -750,19 +838,84 @@ export default function ReporteFormSection({
         {partidasLineas.map((partida, idx) => {
           const costoPartida = calcularCostoPartida(partida);
           const isActive = activeTabPartida === partida.id;
+          const pd = obra.partidas.find(p => p.id === partida.partidaId);
+          const montoPresup = pd ? pd.cantidadPresupuestada * pd.precioUnitario : 0;
+          const montoEjec = pd?.montoEjecutado ?? 0;
+          const montoDisp = Math.max(0, montoPresup - montoEjec);
+          const pct = montoPresup > 0 ? Math.round((montoEjec / montoPresup) * 100) : 0;
+          const completada = pct >= 100;
+          const statusColor = completada ? "#ef4444" : pct >= 80 ? "#f97316" : "#22c55e";
 
           return (
-            <div key={partida.id} className="partida-item">
-              {/* Header Partida */}
-              <div className="partida-header mb-3">
-                <div className="partida-num">{idx + 1}</div>
+            <div
+              key={partida.id}
+              className="partida-item"
+              style={{
+                background: "#ffffff",
+                border: `1.5px solid ${completada ? "#fecaca" : pct >= 80 ? "#fed7aa" : "#dcfce7"}`,
+                borderRadius: "8px",
+                padding: "14px",
+                marginBottom: "14px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
+                e.currentTarget.style.borderColor = statusColor;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+                e.currentTarget.style.borderColor = completada ? "#fecaca" : pct >= 80 ? "#fed7aa" : "#dcfce7";
+              }}
+            >
+              {/* Header: Partida num + Status badge */}
+              <div className="flex items-center justify-between mb-3">
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "6px",
+                      background: statusColor,
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: "13px",
+                      fontFamily: '"Dosis", system-ui, sans-serif',
+                    }}
+                  >
+                    {idx + 1}
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: "12px", color: "#6b7280" }}>
+                    PARTIDA {idx + 1}
+                  </div>
+                </div>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<Trash2 size={16} />}
+                  style={{ color: "#ef4444" }}
+                  onClick={() => handleEliminarPartida(partida.id)}
+                />
+              </div>
+
+              {/* Selector de Partida */}
+              <div className="mb-4">
+                <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Partida
+                </label>
                 <Select
-                  placeholder="Buscar partida..."
+                  placeholder="Seleccionar partida..."
                   value={partida.partidaId}
                   onChange={(v) => handleUpdatePartida(partida.id, "partidaId", v)}
                   options={obra.partidas.map((p) => ({
-                    label: `${p.codigo} - ${p.descripcion}`,
+                    label: (p.avancePorcentaje ?? 0) >= 100
+                      ? `${p.codigo} - ${p.descripcion} ✓`
+                      : `${p.codigo} - ${p.descripcion}`,
                     value: p.id,
+                    disabled: (p.avancePorcentaje ?? 0) >= 100,
                   }))}
                   showSearch
                   optionFilterProp="label"
@@ -770,37 +923,115 @@ export default function ReporteFormSection({
                     (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
                   size="middle"
-                  style={{ fontSize: "12px" }}
-                />
-                <div className="text-center">
-                  <span className="label-small">Avance</span>
-                  <InputNumber
-                    value={partida.avanceLogrado}
-                    onChange={(v) => handleUpdatePartida(partida.id, "avanceLogrado", v)}
-                    min={0}
-                    max={100}
-                    step={5}
-                    size="small"
-                    style={{ width: "100%", fontSize: "12px" }}
-                  />
-                </div>
-                <div>
-                  <span className="label-small">%</span>
-                </div>
-                <Button
-                  type="text"
-                  danger
-                  size="small"
-                  icon={<Trash2 size={14} />}
-                  onClick={() => handleEliminarPartida(partida.id)}
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 500,
+                  }}
+                  status={!partida.partidaId ? "warning" : undefined}
                 />
               </div>
 
-              {/* Tabs */}
-              <Tabs
-                activeKey={isActive ? "personal" : undefined}
-                onChange={() => setActiveTabPartida(isActive ? null : partida.id)}
-                size="small"
+              {/* Monto Ejecutado + Progreso */}
+              {!completada ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                  {/* Input Monto */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Monto a ejecutar
+                    </label>
+                    <InputNumber
+                      value={partida.montoAplicado || undefined}
+                      onChange={(v) => handleUpdatePartida(partida.id, "montoAplicado", v ?? 0)}
+                      min={0}
+                      max={montoDisp || undefined}
+                      step={1000}
+                      size="middle"
+                      prefix="$"
+                      formatter={(v) => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+                      parser={(v) => v ? parseFloat(v.replace(/,/g, "")) : 0}
+                      style={{
+                        width: "100%",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        borderColor: statusColor,
+                      }}
+                    />
+                  </div>
+
+                  {/* Resumen Montos */}
+                  {pd && montoPresup > 0 && (
+                    <div
+                      style={{
+                        background: "#f8fafc",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: `1px solid #e2e8f0`,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: "9px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "3px", letterSpacing: "0.5px" }}>
+                        Presupuesto
+                      </div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b", marginBottom: "4px" }}>
+                        ${montoPresup.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                      </div>
+                      <div style={{ height: "4px", borderRadius: "2px", background: "#e2e8f0", overflow: "hidden", marginBottom: "4px", display: "flex" }}>
+                        {/* Monto ejecutado (barra principal) */}
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            background: statusColor,
+                            transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                          }}
+                        />
+                        {/* Monto a ejecutar ahora (barra secundaria en color más claro) */}
+                        {partida.montoAplicado > 0 && (
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${(partida.montoAplicado / montoPresup) * 100}%`,
+                              background: statusColor === "#22c55e" ? "#86efac" : statusColor === "#f97316" ? "#fed7aa" : "#fecaca",
+                              transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                              opacity: 0.6,
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div style={{ fontSize: "9px", color: "#94a3b8", fontWeight: 600 }}>
+                        {pct}% ({(partida.montoAplicado > 0 ? `+${((partida.montoAplicado / montoPresup) * 100).toFixed(0)}% nuevo` : 'sin cambios')})
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "#fee2e2",
+                    border: "1px solid #fca5a5",
+                    borderRadius: "6px",
+                    padding: "10px 12px",
+                    marginBottom: "12px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#dc2626" }}>
+                    ✓ Partida completada al 100%
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#b91c1c", marginTop: "4px" }}>
+                    Crea una partida extra para trabajo adicional
+                  </div>
+                </div>
+              )}
+
+              {/* Tabs - Siempre visibles */}
+              <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
+                <Tabs
+                  activeKey={tabKeys[partida.id] || "personal"}
+                  onChange={(key) => setTabKeys(prev => ({ ...prev, [partida.id]: key }))}
+                    size="small"
                 items={[
                   {
                     key: "personal",
@@ -1111,46 +1342,65 @@ export default function ReporteFormSection({
                     ),
                   },
                 ]}
-              />
+                />
 
-              {/* Subtotal compacto */}
-              {isActive && (
-                <div className="mt-2 pt-2 border-t border-gray-200 grid grid-cols-4 gap-2 text-xs">
-                  <div>
-                    <span className="text-gray-600">MO:</span>
-                    <div className="font-semibold text-gray-900">
-                      ${partida.personal
-                        .reduce((s, p) => {
-                          const pers = personal.find((x) => x.id === p.personalId);
-                          return s + (pers ? p.horasTrabajadas * pers.costoPorHora : 0);
-                        }, 0)
-                        .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                {/* Subtotal - Siempre visible */}
+                <div
+                    style={{
+                      marginTop: "12px",
+                      paddingTop: "12px",
+                      borderTop: "1px solid #e2e8f0",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                      gap: "12px",
+                      fontSize: "11px",
+                    }}
+                  >
+                    <div style={{ background: "#f8fafc", padding: "8px", borderRadius: "4px" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "4px" }}>Mano de Obra</div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>
+                        ${partida.personal
+                          .reduce((s, p) => {
+                            const pers = personal.find((x) => x.id === p.personalId);
+                            return s + (pers ? p.horasTrabajadas * pers.costoPorHora : 0);
+                          }, 0)
+                          .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Mat:</span>
-                    <div className="font-semibold text-gray-900">
-                      ${partida.materiales
-                        .reduce((s, m) => s + m.cantidad * m.precioUnitario, 0)
-                        .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    <div style={{ background: "#f8fafc", padding: "8px", borderRadius: "4px" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "4px" }}>Materiales</div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>
+                        ${partida.materiales
+                          .reduce((s, m) => s + m.cantidad * m.precioUnitario, 0)
+                          .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Her:</span>
-                    <div className="font-semibold text-gray-900">
-                      ${partida.herramientas
-                        .reduce((s, h) => s + h.cantidad * h.costoUnitario, 0)
-                        .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    <div style={{ background: "#f8fafc", padding: "8px", borderRadius: "4px" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "4px" }}>Herramientas</div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>
+                        ${partida.herramientas
+                          .reduce((s, h) => s + h.cantidad * h.costoUnitario, 0)
+                          .toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-gray-600">Sub:</span>
-                    <div className="font-bold text-gray-900">
-                      ${costoPartida.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                    <div style={{ background: statusColor + "20", padding: "8px", borderRadius: "4px", border: `1.5px solid ${statusColor}` }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, color: statusColor, textTransform: "uppercase", marginBottom: "4px" }}>Total de Costos</div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: statusColor }}>
+                        ${(costoPartida + (partida.montoAplicado || 0)).toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                      </div>
+                      <div style={{ fontSize: "8px", color: statusColor, marginTop: "4px", opacity: 0.7 }}>
+                        {costoPartida > 0 ? (
+                          <>Personal/Mat/Her: ${costoPartida.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</>
+                        ) : (
+                          <>Sin Personal/Materiales</>
+                        )}
+                        {partida.montoAplicado > 0 && (
+                          <> + Monto: ${partida.montoAplicado.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</>
+                        )}
+                      </div>
                     </div>
-                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

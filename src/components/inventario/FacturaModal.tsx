@@ -365,8 +365,8 @@ export default function FacturaModal({
         fecha: fecha.toISOString(),
         fechaRecepcion: fechaRecepcion?.toISOString(),
         // Si no hay selector de obra visible, dejar que el backend derive el proyectoId de la obra
-        proyectoId: mostrarSelectorObra ? proyectoId : undefined,
-        proyectoNombre: mostrarSelectorObra ? proyectoNombre : undefined,
+        proyectoId: proyectoId,
+        proyectoNombre: proyectoNombre,
         obraId,
         items: lineas.map((l) => ({
           materialId: l.materialId,

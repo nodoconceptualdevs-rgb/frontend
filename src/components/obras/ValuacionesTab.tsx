@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Table, Button, Empty, Tag, Tooltip } from "antd";
+import { Table, Button, Empty, Tag, Tooltip, Image as AntImage } from "antd";
 import { CheckCircle2, Clock, Calendar } from "lucide-react";
 import dayjs from "dayjs";
 import type { ValuacionDoc, ReporteDiario, Partida } from "@/types/obras";
@@ -34,7 +34,11 @@ export default function ValuacionesTab({
     for (const r of reportesPendientes) {
       const p = partidas.find((p) => p.id === r.partidaId);
       if (!p) continue;
-      const cant = (r.avanceLogrado / 100) * p.cantidadPresupuestada;
+      // Use montoAplicado if available, otherwise derive from %
+      const montoEjecReporte = r.montoAplicado > 0
+        ? r.montoAplicado
+        : (r.avanceLogrado / 100) * p.cantidadPresupuestada * p.precioUnitario;
+      const cant = p.precioUnitario > 0 ? montoEjecReporte / p.precioUnitario : (r.avanceLogrado / 100) * p.cantidadPresupuestada;
       map.set(r.partidaId, (map.get(r.partidaId) || 0) + cant);
     }
     return partidas
@@ -353,7 +357,15 @@ export default function ValuacionesTab({
                               {cell(r.partidaCodigo, "center")}
                               {cell(r.partidaDescripcion, "left")}
                               {cell(r.unidad || "—", "center")}
-                              {cell(<span style={{ fontWeight: 600, color: "#d97706" }}>{r.avanceLogrado}%</span>)}
+                              {cell(
+                                <Tooltip title={`${r.avanceLogrado.toFixed(1)}% del presupuesto`}>
+                                  <span style={{ fontWeight: 600, color: "#d97706" }}>
+                                    {r.montoAplicado > 0
+                                      ? `$${r.montoAplicado.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`
+                                      : `${r.avanceLogrado}%`}
+                                  </span>
+                                </Tooltip>
+                              )}
                               {cell(<span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>{r.personal?.length || 0}P</span>)}
                               {cell(<strong style={{ color: "#2563eb" }}>${r.costoManoObra.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                               {cell(<strong style={{ color: "#06b6d4" }}>${r.costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
@@ -410,6 +422,26 @@ export default function ValuacionesTab({
                                       </div>
                                     )}
                                   </div>
+                                  {(r.imagenes?.length || 0) > 0 && (
+                                    <div style={{ marginTop: 12 }}>
+                                      <p style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#374151" }}>FOTOS DEL AVANCE ({r.imagenes?.length})</p>
+                                      <AntImage.PreviewGroup>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                          {r.imagenes?.map((img: any, i: number) => (
+                                            <AntImage
+                                              key={i}
+                                              src={img.url}
+                                              alt={img.name || `Foto ${i + 1}`}
+                                              width={100}
+                                              height={75}
+                                              style={{ objectFit: "cover", borderRadius: 4, border: "1px solid #e5e7eb" }}
+                                              preview={{ src: img.url }}
+                                            />
+                                          ))}
+                                        </div>
+                                      </AntImage.PreviewGroup>
+                                    </div>
+                                  )}
                                 </td>
                               </tr>
                             )}

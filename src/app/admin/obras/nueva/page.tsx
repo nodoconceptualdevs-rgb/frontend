@@ -6,10 +6,9 @@ import { useRouter } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
   createObra,
-  getPersonal,
   getProyectosParaObra,
 } from "@/services/obras";
-import type { ObraFormValues, Personal, EstadoObra } from "@/types/obras";
+import type { ObraFormValues, EstadoObra } from "@/types/obras";
 import { ESTADO_OBRA_LABEL } from "@/types/obras";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -17,7 +16,6 @@ import dayjs from "dayjs";
 export default function NuevaObraPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [personal, setPersonal] = useState<Personal[]>([]);
   const [proyectos, setProyectos] = useState<
     { id: number; nombre: string }[]
   >([]);
@@ -36,11 +34,7 @@ export default function NuevaObraPage() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [p, pr] = await Promise.all([
-          getPersonal(),
-          getProyectosParaObra(),
-        ]);
-        setPersonal(p);
+        const pr = await getProyectosParaObra();
         setProyectos(pr);
       } catch (error) {
         console.error("Error cargando datos:", error);
@@ -116,20 +110,6 @@ export default function NuevaObraPage() {
 
         {/* Row 2: Capataz | Estado */}
         <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Capataz (Opcional)
-            </label>
-            <Select
-              placeholder="Seleccionar capataz"
-              allowClear
-              value={form.capatazId}
-              onChange={(val) => setForm({ ...form, capatazId: val })}
-              options={personal.map((p) => ({ label: p.nombre, value: p.id }))}
-              size="large"
-              style={{ width: "100%" }}
-            />
-          </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Estado Inicial

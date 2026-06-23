@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Select, Spin, Empty } from "antd";
-import {
-  getObras,
-  getResumenObras,
-} from "@/services/obras";
+import { getObras } from "@/services/obras";
+import { calcularResumenObras } from "@/lib/obras";
 import {
   ObrasTable,
   ObrasResumenCards,
@@ -33,12 +31,9 @@ export default function GerenteObrasPage() {
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
-      const [o, r] = await Promise.all([
-        getObras(),
-        getResumenObras(),
-      ]);
+      const o = await getObras();
       setObras(o);
-      setResumen(r);
+      setResumen(calcularResumenObras(o.map(ob => ({ ...ob, reportes: ob.reportes || [] }))));
     } catch (error) {
       console.error("Error cargando obras:", error);
       toast.error("Error al cargar las obras");
