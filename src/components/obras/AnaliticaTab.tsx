@@ -14,6 +14,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import dayjs from "dayjs";
+import { calcularMontoPresupuestado, calcularMontoEjecutado } from "@/lib/obras";
 import type {
   Obra,
   ValuacionFinal,
@@ -156,11 +157,9 @@ export default function AnaliticaTab({ obra, valuacion, valuaciones, materiales 
     },
   ];
 
-  const porcEjecucion = Math.round(
-    obra.presupuestoTotal > 0
-      ? (obra.presupuestoConsumido / obra.presupuestoTotal) * 100
-      : 0
-  );
+  const totalMontoPresup = obra.partidas.reduce((s, p) => s + calcularMontoPresupuestado(p), 0);
+  const totalMontoEjec = obra.partidas.reduce((s, p) => s + calcularMontoEjecutado(p), 0);
+  const porcEjecucion = Math.round(totalMontoPresup > 0 ? (totalMontoEjec / totalMontoPresup) * 100 : 0);
 
   const diasColor =
     valuacion.diasTranscurridos > valuacion.diasPlanificados
@@ -195,7 +194,7 @@ export default function AnaliticaTab({ obra, valuacion, valuaciones, materiales 
             <p className="text-xs font-semibold uppercase text-gray-500">Presupuesto</p>
           </div>
           <p className="text-lg font-bold text-gray-900">{fmt(obra.presupuestoTotal)}</p>
-          <p className="text-xs text-gray-500 mt-1">Costo real: {fmt(obra.presupuestoConsumido)}</p>
+          <p className="text-xs text-gray-500 mt-1">Costo real: {fmt(obra.partidas.reduce((s, p) => s + p.montoEjecutado, 0))}</p>
         </div>
 
         {/* Días */}

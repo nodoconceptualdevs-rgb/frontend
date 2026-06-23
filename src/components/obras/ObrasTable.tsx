@@ -44,32 +44,6 @@ export default function ObrasTable({ obras }: Props) {
       width: 100,
     },
     {
-      title: "Avance",
-      dataIndex: "presupuestoConsumido",
-      key: "avance",
-      width: 120,
-      render: (
-        _: number,
-        record: Obra
-      ) => {
-        const porcentaje =
-          record.presupuestoTotal > 0
-            ? (record.presupuestoConsumido / record.presupuestoTotal) * 100
-            : 0;
-        return (
-          <div className="flex items-center gap-2">
-            <Progress
-              type="circle"
-              percent={Math.round(porcentaje)}
-              width={40}
-              strokeWidth={6}
-            />
-            <span className="text-sm">{Math.round(porcentaje)}%</span>
-          </div>
-        );
-      },
-    },
-    {
       title: "Presupuesto",
       dataIndex: "presupuestoTotal",
       key: "presupuestoTotal",

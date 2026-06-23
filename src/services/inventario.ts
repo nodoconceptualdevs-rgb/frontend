@@ -115,9 +115,7 @@ export async function getFactura(id: number): Promise<FacturaCompra> {
 }
 
 export async function getFacturasByObra(obraId: number): Promise<FacturaCompra[]> {
-  const res = await api.get(
-    `/factura-compras?filters[obraId][$eq]=${obraId}&populate[items]=true&populate[proveedor]=true&sort=fecha:desc`
-  );
+  const res = await api.get(`/obras/${obraId}/factura-compras`);
   return (res.data.data as any[]).map(mapFactura);
 }
 
@@ -139,8 +137,9 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
   }
 
   // Resolver nombres de materiales antes de enviar
-  const materialIds = values.items.map((i) => i.materialId).join(",");
-  const mRes = await api.get(`/material-catalogos?filters[id][$in]=${materialIds}`);
+  const materialIds = values.items.map((i) => i.materialId);
+  const inParams = materialIds.map((id, i) => `filters[id][$in][${i}]=${id}`).join("&");
+  const mRes = await api.get(`/material-catalogos?${inParams}`);
   const materiales: any[] = mRes.data.data ?? [];
 
   const items = values.items.map((item) => {
@@ -180,7 +179,7 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
     payload.proveedor = values.proveedorId;
   }
 
-  const res = await api.post("/factura-compras", { data: payload });
+  const res = await api.post(`/obras/${values.obraId}/factura-compras`, { data: payload });
   return mapFactura(res.data.data);
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Calendar, TrendingUp, DollarSign, FileText, Layers } from "lucide-react";
+import { ChevronLeft, Calendar, TrendingUp, DollarSign, FileText, Pencil, Check, X } from "lucide-react";
 import dayjs from "dayjs";
 import type { Obra, EstadoObra, ValuacionFinal } from "@/types/obras";
 import { ESTADO_OBRA_LABEL } from "@/types/obras";
@@ -63,19 +63,52 @@ interface Props {
   activeTab: string;
   onTabChange: (key: string) => void;
   onEstadoChange: (estado: EstadoObra) => void;
+  onPresupuestoChange?: (monto: number) => Promise<void>;
 }
 
-export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange, onEstadoChange }: Props) {
+export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange, onEstadoChange, onPresupuestoChange }: Props) {
   const router = useRouter();
   const estadoStyle = ESTADO_STYLE[obra.estado];
   const pct = valuacion ? Math.round(valuacion.porcentajeEjecucion) : 0;
+  const costoReal = obra.partidas.reduce((s, p) => s + p.montoEjecutado, 0);
+
+  const [editingPresupuesto, setEditingPresupuesto] = useState(false);
+  const [presupuestoInput, setPresupuestoInput] = useState("");
+  const [savingPresupuesto, setSavingPresupuesto] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingPresupuesto && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingPresupuesto]);
+
+  const handleStartEdit = () => {
+    setPresupuestoInput(String(obra.presupuestoTotal));
+    setEditingPresupuesto(true);
+  };
+
+  const handleSavePresupuesto = async () => {
+    const monto = parseFloat(presupuestoInput.replace(/[^0-9.]/g, ""));
+    if (isNaN(monto) || !onPresupuestoChange) { setEditingPresupuesto(false); return; }
+    setSavingPresupuesto(true);
+    try {
+      await onPresupuestoChange(monto);
+    } finally {
+      setSavingPresupuesto(false);
+      setEditingPresupuesto(false);
+    }
+  };
 
   const ESTADOS: EstadoObra[] = ["PREPARACION", "EN_CURSO", "PAUSADA", "COMPLETADA"];
 
   const fmt = (n: number) =>
-    n >= 1_000_000
-      ? `$${(n / 1_000_000).toFixed(1)}M`
-      : `$${(n / 1000).toFixed(0)}k`;
+    `$${n.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
+  const montoPresupuestadoPartidas = obra.partidas.reduce(
+    (s, p) => s + (p.cantidadPresupuestada * p.precioUnitario),
+    0
+  );
 
   return (
     <div className="relative overflow-hidden bg-slate-900">
@@ -167,17 +200,49 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
         </div>
 
         {/* KPI strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-5">
+          {/* Presupuesto — editable */}
+          <div className="flex items-center gap-3 bg-white/5 hover:bg-white/8 border border-white/10 rounded-xl px-4 py-3 transition-colors min-w-0 group">
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/20">
+              <span className="text-amber-400"><DollarSign size={15} /></span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 leading-none mb-1">Presupuesto</p>
+              {editingPresupuesto ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-amber-400 font-mono text-sm">$</span>
+                  <input
+                    ref={inputRef}
+                    value={presupuestoInput}
+                    onChange={e => setPresupuestoInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") handleSavePresupuesto(); if (e.key === "Escape") setEditingPresupuesto(false); }}
+                    className="bg-white/10 text-amber-400 font-mono text-sm font-bold border border-amber-400/40 rounded px-1 w-24 outline-none"
+                    disabled={savingPresupuesto}
+                  />
+                  <button onClick={handleSavePresupuesto} disabled={savingPresupuesto} className="text-emerald-400 hover:text-emerald-300"><Check size={13} /></button>
+                  <button onClick={() => setEditingPresupuesto(false)} className="text-slate-400 hover:text-slate-200"><X size={13} /></button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <p className="font-mono text-base font-bold leading-none tabular-nums truncate text-amber-400">{fmt(obra.presupuestoTotal)}</p>
+                  {onPresupuestoChange && (
+                    <button onClick={handleStartEdit} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-amber-300">
+                      <Pencil size={11} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
           <KpiCard
             icon={<DollarSign size={15} />}
-            label="Presupuesto"
-            value={fmt(obra.presupuestoTotal)}
-            accent
+            label="Monto Presupuestado"
+            value={fmt(montoPresupuestadoPartidas)}
           />
           <KpiCard
             icon={<DollarSign size={15} />}
             label="Costo Real"
-            value={fmt(obra.presupuestoConsumido)}
+            value={fmt(costoReal)}
           />
           <KpiCard
             icon={<TrendingUp size={15} />}

@@ -82,10 +82,11 @@ export function calcularValuacion(obra: Obra): ValuacionFinal {
     avancePorcentaje: calcularAvancePartida(p),
   }));
 
-  const costoReal = obra.presupuestoConsumido;
+  const costoReal = partidas.reduce((s, p) => s + p.montoEjecutado, 0);
   const variacionTotal = costoReal - obra.presupuestoTotal;
-  const porcentajeEjecucion =
-    obra.presupuestoTotal > 0 ? (costoReal / obra.presupuestoTotal) * 100 : 0;
+  const totalMontoPresup = partidas.reduce((s, p) => s + p.montoPresupuestado, 0);
+  const totalMontoEjec = partidas.reduce((s, p) => s + p.montoEjecutado, 0);
+  const porcentajeEjecucion = totalMontoPresup > 0 ? (totalMontoEjec / totalMontoPresup) * 100 : 0;
 
   const totalPersonalRegistros = obra.reportes.reduce(
     (sum, r) => sum + r.personal.length,
@@ -112,8 +113,9 @@ export function calcularValuacion(obra: Obra): ValuacionFinal {
 }
 
 export function calcularPorcentajeEjecucionTotal(obra: Obra): number {
-  if (obra.presupuestoTotal === 0) return 0;
-  return (obra.presupuestoConsumido / obra.presupuestoTotal) * 100;
+  const totalPresup = obra.partidas.reduce((s, p) => s + p.cantidadPresupuestada * p.precioUnitario, 0);
+  const totalEjec = obra.partidas.reduce((s, p) => s + p.cantidadEjecutada * p.precioUnitario, 0);
+  return totalPresup > 0 ? (totalEjec / totalPresup) * 100 : 0;
 }
 
 export function calcularValuacionDocConReportes(

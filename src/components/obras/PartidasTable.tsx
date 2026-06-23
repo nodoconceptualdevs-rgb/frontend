@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Table, Button, Popconfirm, Tooltip } from "antd";
-import { Edit2, Trash2, History } from "lucide-react";
+import { Edit2, Trash2, History, PlusCircle } from "lucide-react";
 import type { Partida } from "@/types/obras";
 import AvanceGauge from "./AvanceGauge";
 import PrecioHistorialDrawer from "./PrecioHistorialDrawer";
@@ -13,21 +13,17 @@ interface Props {
   partidas: Partida[];
   onEditar: (partida: Partida) => void;
   onEliminar: (id: number) => void;
+  onCrearExtra?: (partida: Partida) => void;
 }
 
-export default function PartidasTable({ partidas, onEditar, onEliminar }: Props) {
+export default function PartidasTable({ partidas, onEditar, onEliminar, onCrearExtra }: Props) {
   const [historialPartida, setHistorialPartida] = useState<Partida | null>(null);
 
-  const totalPresupuestado = partidas.reduce(
-    (sum, p) => sum + calcularMontoPresupuestado(p),
-    0
-  );
-  const totalEjecutado = partidas.reduce(
-    (sum, p) => sum + calcularMontoEjecutado(p),
-    0
-  );
+  const totalPresupuestado = partidas.reduce((sum, p) => sum + calcularMontoPresupuestado(p), 0);
+  const totalEjecutado = partidas.reduce((sum, p) => sum + calcularMontoEjecutado(p), 0);
 
-  const columns = [
+  // ─── Vista Individual columns ─────────────────────────────────────────────────
+  const columnsIndividual = [
     {
       title: "N°",
       key: "numero",
@@ -130,9 +126,9 @@ export default function PartidasTable({ partidas, onEditar, onEliminar }: Props)
     {
       title: "Acciones",
       key: "acciones",
-      width: 90,
+      width: onCrearExtra ? 130 : 90,
       render: (_: unknown, record: Partida, index: number) => (
-        <div className="flex gap-2">
+        <div className="flex gap-1 items-center">
           <Button
             type="text"
             size="small"
@@ -148,21 +144,34 @@ export default function PartidasTable({ partidas, onEditar, onEliminar }: Props)
           >
             <Button type="text" size="small" danger icon={<Trash2 size={16} />} />
           </Popconfirm>
+          {onCrearExtra && !record.esExtra && record.avancePorcentaje >= 100 && (
+            <Tooltip title="Crear Partida Extra ligada a esta">
+              <Button
+                type="text"
+                size="small"
+                icon={<PlusCircle size={15} />}
+                style={{ color: "#16a34a" }}
+                onClick={() => onCrearExtra(record)}
+              />
+            </Tooltip>
+          )}
         </div>
       ),
     },
   ];
 
+
   return (
     <>
       <Table
-        columns={columns}
+        columns={columnsIndividual as any}
         dataSource={partidas}
         rowKey="id"
         size="small"
         bordered
         scroll={{ x: 1200 }}
         pagination={false}
+        rowClassName={(record: Partida) => record.esExtra ? "bg-green-50" : ""}
         footer={() => (
           <div className="flex justify-end gap-8 font-semibold">
             <span>

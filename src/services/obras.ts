@@ -1,4 +1,7 @@
 import api from "@/lib/api";
+
+const STRAPI_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2ce7.up.railway.app/api").replace(/\/api$/, "");
+const toAbsoluteUrl = (url: string) => (url?.startsWith("http") ? url : `${STRAPI_BASE}${url}`);
 import {
   Obra,
   ObraFormValues,
@@ -102,9 +105,12 @@ export async function getObras(): Promise<Obra[]> {
 
 export async function getObra(id: number): Promise<Obra> {
   try {
-    const res = await api.get(`/obras?filters[id][$eq]=${id}&populate[proyecto]=*`);
-    const item = res.data.data?.[0];
+    const res = await api.get(`/obras?filters[id][$eq]=${id}&populate[proyecto]=*&pagination[pageSize]=1`);
+    const items: any[] = res.data.data ?? [];
+    // Explicitly match by id in case Strapi v5 filter is not applied
+    const item = items.find((o: any) => o.id === id) ?? items[0];
     if (!item) throw new Error(`Obra ${id} no encontrada`);
+    if (item.id !== id) throw new Error(`Obra ${id} no encontrada`);
     return mapStrapiObra(item);
   } catch (error) {
     console.error('Error fetching obra:', error);
@@ -188,7 +194,7 @@ export async function getResumenObras(): Promise<ObrasResumen> {
 export async function getPartidas(obraId: number): Promise<Partida[]> {
   try {
     const res = await api.get(`/obras/${obraId}/partidas`);
-    return (res.data.data || []).map((p: any) => ({ ...p, obraId }));
+    return (res.data.data || []).map((p: any) => ({ ...p, obraId, partidaOriginalId: p.partidaOriginalId ?? undefined }));
   } catch (error) {
     console.error('Error fetching partidas:', error);
     throw error;
@@ -209,7 +215,8 @@ export async function createPartida(
         cantidadPresupuestada: values.cantidadPresupuestada,
         precioUnitario: values.precioUnitario,
         montoPresupuestado,
-        esExtra: values.esExtra || false
+        esExtra: values.esExtra || false,
+        ...(values.partidaOriginalId !== undefined && { partidaOriginalId: values.partidaOriginalId }),
       }
     });
     return res.data.data;
@@ -274,9 +281,9 @@ export async function getHistorialPrecios(partidaId: number): Promise<import('@/
 let personalCache: Personal[] = [];
 let materialesCache: Array<{ id: number; nombre: string; unidad: string }> = [];
 
-async function ensurePersonalCache(): Promise<void> {
+async function ensurePersonalCache(obraId: number): Promise<void> {
   if (personalCache.length === 0) {
-    personalCache = await getPersonal();
+    personalCache = await getPersonal(obraId);
   }
 }
 
@@ -299,6 +306,7 @@ function mapStrapiReporte(r: any, obraId: number): ReporteDiario {
     partidaDescripcion: r.partidaDescripcion || '',
     fecha: r.fecha,
     avanceLogrado: r.avanceLogrado ?? 0,
+    montoAplicado: r.montoAplicado ?? 0,
     observaciones: r.observaciones || '',
     personal: r.personal || [],
     materiales: r.materiales || [],
@@ -307,7 +315,7 @@ function mapStrapiReporte(r: any, obraId: number): ReporteDiario {
     costoTotal: r.costoTotal ?? 0,
     creadoEn: r.createdAt || r.fecha,
     valuacionId: r.valuacionId ?? undefined,
-    imagenes: r.imagenes || [],
+    imagenes: (r.imagenes || []).map((img: any) => ({ ...img, url: toAbsoluteUrl(img.url) })),
   };
 }
 
@@ -322,7 +330,7 @@ export async function getReportes(obraId: number): Promise<ReporteDiario[]> {
 }
 
 export async function createReporte(values: ReporteFormValues): Promise<ReporteDiario> {
-  await ensurePersonalCache();
+  await ensurePersonalCache(values.obraId);
   await ensureMaterialesCache();
 
   // Resolve personal names/costs from cache
@@ -369,13 +377,14 @@ export async function createReporte(values: ReporteFormValues): Promise<ReporteD
     formData.append('data', JSON.stringify({
       partidaId: values.partidaId,
       fecha: values.fecha,
-      avanceLogrado: values.avanceLogrado,
+      montoAplicado: values.montoAplicado,
       observaciones: values.observaciones,
       personal,
       materiales,
       costoManoObra,
       costoMateriales,
       costoTotal,
+      existingImageIds: values.existingImageIds || [],
     }));
 
     // Agregar imágenes si existen
@@ -420,9 +429,9 @@ function mapStrapiPersonal(item: any): Personal {
   };
 }
 
-export async function getPersonal(): Promise<Personal[]> {
+export async function getPersonal(obraId: number): Promise<Personal[]> {
   try {
-    const res = await api.get('/personals?pagination[pageSize]=200');
+    const res = await api.get(`/obras/${obraId}/personal`);
     const result = (res.data.data as any[]).map(mapStrapiPersonal);
     personalCache = result;
     return result;
@@ -432,9 +441,9 @@ export async function getPersonal(): Promise<Personal[]> {
   }
 }
 
-export async function createPersonal(values: PersonalFormValues): Promise<Personal> {
+export async function createPersonal(obraId: number, values: PersonalFormValues): Promise<Personal> {
   try {
-    const res = await api.post('/personals', { data: values });
+    const res = await api.post(`/obras/${obraId}/personal`, { data: values });
     const item = mapStrapiPersonal(res.data.data);
     personalCache = [];
     return item;
@@ -445,16 +454,27 @@ export async function createPersonal(values: PersonalFormValues): Promise<Person
 }
 
 export async function updatePersonal(
+  obraId: number,
   id: number,
   values: Partial<PersonalFormValues>
 ): Promise<Personal> {
   try {
-    const res = await api.put(`/personals/${id}`, { data: values });
+    const res = await api.put(`/obras/${obraId}/personal/${id}`, { data: values });
     const item = mapStrapiPersonal(res.data.data);
     personalCache = [];
     return item;
   } catch (error) {
     console.error('Error updating personal:', error);
+    throw error;
+  }
+}
+
+export async function deletePersonal(obraId: number, id: number): Promise<void> {
+  try {
+    await api.delete(`/obras/${obraId}/personal/${id}`);
+    personalCache = [];
+  } catch (error) {
+    console.error('Error deleting personal:', error);
     throw error;
   }
 }
@@ -536,7 +556,7 @@ export async function createValuacion(
 export async function getMaterialesDisponibles(): Promise<MaterialDisponible[]> {
   try {
     const res = await api.get('/material-catalogos?sort=nombre:asc&pagination[pageSize]=200');
-    return (res.data.data as any[]).map((item: any) => {
+    const result = (res.data.data as any[]).map((item: any) => {
       const raw = item.attributes ?? item;
       const stockActual = raw.stockActual ?? 0;
       const stockMinimo = raw.stockMinimo ?? undefined;
@@ -549,6 +569,9 @@ export async function getMaterialesDisponibles(): Promise<MaterialDisponible[]> 
         estadoStock: calcularEstadoStock(stockActual, stockMinimo),
       };
     });
+    // Keep cache in sync on every call (same pattern as getPersonal)
+    materialesCache = result.map((m) => ({ id: m.materialId, nombre: m.materialNombre, unidad: m.unidad }));
+    return result;
   } catch (error) {
     console.error('Error fetching materiales disponibles:', error);
     throw error;

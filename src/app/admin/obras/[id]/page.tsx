@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Spin, Empty, Button, Modal, DatePicker } from "antd";
+import { Spin, Empty, Button, Modal, DatePicker, Image as AntImage } from "antd";
 import dayjs from "dayjs";
 import { Plus, FileUp } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -22,6 +22,7 @@ import {
   createPersonal,
   updatePersonal,
   createValuacion,
+  updateObra,
 } from "@/services/obras";
 import { getHerramientas } from "@/services/inventario";
 import { calcularValuacion } from "@/lib/obras";
@@ -75,6 +76,7 @@ export default function ObraDetallePage() {
   const [partidaModalOpen, setPartidaModalOpen] = useState(false);
   const [importarModalOpen, setImportarModalOpen] = useState(false);
   const [editingPartida, setEditingPartida] = useState<Partida | null>(null);
+  const [partidaExtraDefaults, setPartidaExtraDefaults] = useState<import("@/types/obras").PartidaFormValues | null>(null);
   const [personalModalOpen, setPersonalModalOpen] = useState(false);
   const [reporteModalOpen, setReporteModalOpen] = useState(false);
   const [personalEditable, setPersonalEditable] = useState<Personal | null>(null);
@@ -92,13 +94,12 @@ export default function ObraDetallePage() {
   const [reporteDetalleOpen, setReporteDetalleOpen] = useState(false);
 
 
-  // Cargar datos
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
       const [o, p, m, h, vals, f2] = await Promise.all([
         getObra(obraId),
-        getPersonal(),
+        getPersonal(obraId),
         getMaterialesDisponibles(),
         getHerramientas(),
         getValuaciones(obraId),
@@ -113,52 +114,34 @@ export default function ObraDetallePage() {
       const partidas = partidasResult.status === "fulfilled" ? partidasResult.value : [];
       const reportes = reportesResult.status === "fulfilled" ? reportesResult.value : [];
 
-      // Calcular stock disponible por material en esta obra:
-      // total comprado en facturas - ya consumido en reportes existentes
       const compradoPorMaterial = new Map<number, number>();
       f2.filter(f => !f.inhabilitada && f.estado !== "ANULADA").forEach(factura =>
         (factura.items || []).forEach(item => {
           compradoPorMaterial.set(item.materialId, (compradoPorMaterial.get(item.materialId) || 0) + item.cantidad);
         })
       );
-
       const consumidoPorMaterial = new Map<number, number>();
       reportes.forEach(reporte =>
-        (reporte.materiales || []).forEach(mat => {
+        (reporte.materiales || []).forEach((mat: any) => {
           consumidoPorMaterial.set(mat.materialId, (consumidoPorMaterial.get(mat.materialId) || 0) + mat.cantidad);
         })
       );
-
       const materialesObra = m
         .filter(mat => compradoPorMaterial.has(mat.materialId))
-        .map(mat => ({
-          ...mat,
-          stockActual: Math.max(0, (compradoPorMaterial.get(mat.materialId) || 0) - (consumidoPorMaterial.get(mat.materialId) || 0)),
-        }));
+        .map(mat => ({ ...mat, stockActual: Math.max(0, (compradoPorMaterial.get(mat.materialId) || 0) - (consumidoPorMaterial.get(mat.materialId) || 0)) }));
 
-      // Calcular stock de herramientas: cantidad total - consumido en reportes
       const consumidoHerramientas = new Map<number, number>();
       reportes.forEach(reporte => {
-        if (reporte.herramientas) {
-          // Buscar herramientas en el reporte (si las hay)
-          // Por ahora asumimos que herramientas en reportes tienen cantidad
-          reporte.herramientas.forEach((h: any) => {
-            if (h.herramientaId) {
-              consumidoHerramientas.set(h.herramientaId, (consumidoHerramientas.get(h.herramientaId) || 0) + (h.cantidad || 1));
-            }
-          });
-        }
+        (reporte.herramientas || []).forEach((h: any) => {
+          if (h.herramientaId) consumidoHerramientas.set(h.herramientaId, (consumidoHerramientas.get(h.herramientaId) || 0) + (h.cantidad || 1));
+        });
       });
-
-      const herramientasObra = h.map(herr => ({
-        ...herr,
-        cantidad: Math.max(0, (herr.cantidad || 0) - (consumidoHerramientas.get(herr.id) || 0)),
-      }));
+      const herramientasObra = h.map(herr => ({ ...herr, cantidad: Math.max(0, (herr.cantidad || 0) - (consumidoHerramientas.get(herr.id) || 0)) }));
 
       const obraConDatos = { ...o, partidas, reportes };
       setObra(obraConDatos);
       setPersonal(p);
-      setMateriales(materialesObra.length > 0 ? materialesObra : m);
+      setMateriales(materialesObra);
       setMaterialesDisponibles(m);
       setHerramientas(herramientasObra);
       setValuacion(calcularValuacion(obraConDatos));
@@ -173,6 +156,8 @@ export default function ObraDetallePage() {
   }, [obraId]);
 
   useEffect(() => {
+    setObra(null);
+    setValuacion(null);
     cargarDatos();
   }, [cargarDatos]);
 
@@ -191,6 +176,18 @@ export default function ObraDetallePage() {
     }
   };
 
+  const handlePresupuestoChange = async (monto: number) => {
+    if (!obra?.documentId) return;
+    setObra((prev) => prev ? { ...prev, presupuestoTotal: monto } : prev);
+    try {
+      await updateObra(obra.documentId, { presupuestoTotal: monto });
+      toast.success("Presupuesto actualizado");
+    } catch (error) {
+      await cargarDatos();
+      toast.error("Error al actualizar el presupuesto");
+    }
+  };
+
   const handleAgregarPartida = async (values: PartidaFormValues) => {
     try {
       if (editingPartida) {
@@ -202,11 +199,26 @@ export default function ObraDetallePage() {
       }
       setPartidaModalOpen(false);
       setEditingPartida(null);
+      setPartidaExtraDefaults(null);
       await cargarDatos();
     } catch (error) {
       console.error("Error guardando partida:", error);
       toast.error("Error al guardar la partida");
     }
+  };
+
+  const handleCrearExtra = (partida: Partida) => {
+    setEditingPartida(null);
+    setPartidaExtraDefaults({
+      codigo: partida.codigo + "-E",
+      descripcion: "Extra: " + partida.descripcion,
+      unidad: partida.unidad,
+      cantidadPresupuestada: 0,
+      precioUnitario: partida.precioUnitario,
+      esExtra: true,
+      partidaOriginalId: partida.id,
+    });
+    setPartidaModalOpen(true);
   };
 
   const handleEliminarPartida = async (partidaId: number) => {
@@ -254,10 +266,10 @@ export default function ObraDetallePage() {
   const handleAgregarPersonal = async (values: PersonalFormValues) => {
     try {
       if (personalEditable) {
-        await updatePersonal(personalEditable.id, values);
+        await updatePersonal(obraId, personalEditable.id, values);
         toast.success("Personal actualizado");
       } else {
-        await createPersonal(values);
+        await createPersonal(obraId, values);
         toast.success("Personal agregado");
       }
       setPersonalModalOpen(false);
@@ -362,9 +374,11 @@ export default function ObraDetallePage() {
             partidas={obra.partidas}
             onEditar={(partida) => {
               setEditingPartida(partida);
+              setPartidaExtraDefaults(null);
               setPartidaModalOpen(true);
             }}
             onEliminar={handleEliminarPartida}
+            onCrearExtra={handleCrearExtra}
           />
         </div>
       ),
@@ -441,28 +455,33 @@ export default function ObraDetallePage() {
                           <tbody>
                             {reportes.map((r, idx) => {
                               const isExpanded = expandedReportesPendientes.has(r.id);
+                              const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0;
                               const rowBg = idx % 2 === 0 ? "#fff" : "#f9fafb";
                               const cell = (content: React.ReactNode, align = "right", bold = false) => (
                                 <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: align as any, background: rowBg, whiteSpace: "nowrap", fontWeight: bold ? 600 : 400 }}>{content}</td>
                               );
 
-                              // Calcular costo presupuestado de la partida según el avance
                               const partida = obra?.partidas?.find((p) => p.id === r.partidaId);
                               const costoPresupuestadoPartida = partida ? partida.cantidadPresupuestada * partida.precioUnitario : 0;
                               const costoSegunAvance = (costoPresupuestadoPartida * r.avanceLogrado) / 100;
 
+                              const toggleRow = () => {
+                                if (!hasDetail) return;
+                                const newSet = new Set(expandedReportesPendientes);
+                                if (isExpanded) newSet.delete(r.id); else newSet.add(r.id);
+                                setExpandedReportesPendientes(newSet);
+                              };
+
                               return (
                                 <React.Fragment key={r.id}>
-                                  <tr style={{ cursor: "pointer" }} onClick={() => {
-                                    const newSet = new Set(expandedReportesPendientes);
-                                    if (isExpanded) {
-                                      newSet.delete(r.id);
-                                    } else {
-                                      newSet.add(r.id);
-                                    }
-                                    setExpandedReportesPendientes(newSet);
-                                  }}>
-                                    <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontSize: 10, color: "#6b7280" }}>{isExpanded ? "▼" : "▶"}</td>
+                                  <tr style={{ cursor: hasDetail ? "pointer" : "default" }} onClick={toggleRow}>
+                                    <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, width: 28 }}>
+                                      {hasDetail && (
+                                        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 3, background: isExpanded ? "#1e293b" : "#f1f5f9", border: "1px solid #cbd5e1", fontSize: 8, color: isExpanded ? "#f8fafc" : "#64748b", transition: "all .15s" }}>
+                                          {isExpanded ? "▼" : "▶"}
+                                        </span>
+                                      )}
+                                    </td>
                                     <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontWeight: 700 }}>{idx + 1}</td>
                                     {cell(r.partidaCodigo, "center")}
                                     {cell(r.partidaDescripcion, "left")}
@@ -473,57 +492,75 @@ export default function ObraDetallePage() {
                                     {cell(<strong style={{ color: "#06b6d4" }}>${r.costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                                     {cell(<strong style={{ color: "#374151", fontWeight: 700 }}>${(r.costoManoObra + r.costoMateriales + costoSegunAvance).toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
                                   </tr>
-                                  {isExpanded && (
-                                    <tr style={{ background: "#f3f4f6" }}>
-                                      <td colSpan={9} style={{ padding: "8px", borderBottom: "1px solid #fed7aa" }}>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                          {(r.personal?.length || 0) > 0 && (
-                                            <div>
-                                              <p style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#374151" }}>PERSONAL ({r.personal?.length})</p>
-                                              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                                                <thead>
-                                                  <tr style={{ background: "#e3f2fd" }}>
-                                                    <th style={{ border: "1px solid #90caf9", padding: 4, textAlign: "left", fontSize: 10 }}>Trabajador</th>
-                                                    <th style={{ border: "1px solid #90caf9", padding: 4, textAlign: "center", fontSize: 10 }}>Horas</th>
-                                                    <th style={{ border: "1px solid #90caf9", padding: 4, textAlign: "right", fontSize: 10 }}>Subtotal</th>
-                                                  </tr>
-                                                </thead>
-                                                <tbody>
-                                                  {r.personal?.map((p, i) => (
-                                                    <tr key={i}>
-                                                      <td style={{ border: "1px solid #e3f2fd", padding: 4, fontSize: 11 }}>{p.personalNombre}</td>
-                                                      <td style={{ border: "1px solid #e3f2fd", padding: 4, textAlign: "center", fontSize: 11 }}>{p.horasTrabajadas.toFixed(1)}h</td>
-                                                      <td style={{ border: "1px solid #e3f2fd", padding: 4, textAlign: "right", fontSize: 11, fontWeight: 600 }}>${p.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
-                                                    </tr>
-                                                  ))}
-                                                </tbody>
-                                              </table>
-                                            </div>
-                                          )}
-                                          {(r.materiales?.length || 0) > 0 && (
-                                            <div>
-                                              <p style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#374151" }}>MATERIALES ({r.materiales?.length})</p>
-                                              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                                                <thead>
-                                                  <tr style={{ background: "#cffafe" }}>
-                                                    <th style={{ border: "1px solid #67e8f9", padding: 4, textAlign: "left", fontSize: 10 }}>Material</th>
-                                                    <th style={{ border: "1px solid #67e8f9", padding: 4, textAlign: "center", fontSize: 10 }}>Cantidad</th>
-                                                    <th style={{ border: "1px solid #67e8f9", padding: 4, textAlign: "right", fontSize: 10 }}>Subtotal</th>
-                                                  </tr>
-                                                </thead>
-                                                <tbody>
-                                                  {r.materiales?.map((m, i) => (
-                                                    <tr key={i}>
-                                                      <td style={{ border: "1px solid #cffafe", padding: 4, fontSize: 11 }}>{m.materialNombre}</td>
-                                                      <td style={{ border: "1px solid #cffafe", padding: 4, textAlign: "center", fontSize: 11 }}>{m.cantidad.toFixed(2)} {m.unidad}</td>
-                                                      <td style={{ border: "1px solid #cffafe", padding: 4, textAlign: "right", fontSize: 11, fontWeight: 600 }}>${m.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
-                                                    </tr>
-                                                  ))}
-                                                </tbody>
-                                              </table>
-                                            </div>
-                                          )}
-                                        </div>
+                                  {hasDetail && isExpanded && (
+                                    <tr>
+                                      <td colSpan={10} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+                                        {r.observaciones && (
+                                          <div style={{ padding: "6px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
+                                            <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", marginRight: 6 }}>OBS:</span>
+                                            <span style={{ fontSize: 11, color: "#374151" }}>{r.observaciones}</span>
+                                          </div>
+                                        )}
+                                        {(r.imagenes?.length || 0) > 0 && (
+                                          <div style={{ padding: "10px 16px", borderBottom: ((r.personal?.length || 0) + (r.materiales?.length || 0)) > 0 ? "1px solid #e5e7eb" : "none", background: "#fff" }}>
+                                            <p style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em", marginBottom: 8 }}>FOTOS DEL AVANCE · {r.imagenes?.length}</p>
+                                            <AntImage.PreviewGroup>
+                                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                                {r.imagenes?.map((img: any, i: number) => (
+                                                  <AntImage key={i} src={img.url} alt={img.name || `Foto ${i + 1}`} width={96} height={72}
+                                                    style={{ objectFit: "cover", borderRadius: 4, border: "1px solid #e5e7eb", display: "block" }}
+                                                    preview={{ src: img.url }} />
+                                                ))}
+                                              </div>
+                                            </AntImage.PreviewGroup>
+                                          </div>
+                                        )}
+                                        {((r.personal?.length || 0) > 0 || (r.materiales?.length || 0) > 0) && (
+                                          <div style={{ display: "grid", gridTemplateColumns: (r.personal?.length || 0) > 0 && (r.materiales?.length || 0) > 0 ? "1fr 1fr" : "1fr", gap: 0 }}>
+                                            {(r.personal?.length || 0) > 0 && (
+                                              <div style={{ padding: "10px 16px", borderRight: (r.materiales?.length || 0) > 0 ? "1px solid #e5e7eb" : "none" }}>
+                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#1e40af", letterSpacing: "0.1em", marginBottom: 8 }}>PERSONAL · {r.personal?.length}</p>
+                                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                                  <thead><tr>
+                                                    {["TRABAJADOR","HRS","SUBTOTAL"].map((h, i) => (
+                                                      <th key={i} style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textAlign: i===0?"left":i===1?"center":"right", padding: "2px 4px 6px", borderBottom: "1px solid #e5e7eb", letterSpacing: "0.07em" }}>{h}</th>
+                                                    ))}
+                                                  </tr></thead>
+                                                  <tbody>
+                                                    {r.personal?.map((p, i) => (
+                                                      <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                                        <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px" }}>{p.personalNombre}</td>
+                                                        <td style={{ fontSize: 11, color: "#6b7280", padding: "5px 4px", textAlign: "center" }}>{p.horasTrabajadas.toFixed(1)}h</td>
+                                                        <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px", textAlign: "right", fontWeight: 600 }}>${p.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
+                                                      </tr>
+                                                    ))}
+                                                  </tbody>
+                                                </table>
+                                              </div>
+                                            )}
+                                            {(r.materiales?.length || 0) > 0 && (
+                                              <div style={{ padding: "10px 16px" }}>
+                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#065f46", letterSpacing: "0.1em", marginBottom: 8 }}>MATERIALES · {r.materiales?.length}</p>
+                                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                                  <thead><tr>
+                                                    {["MATERIAL","CANT.","SUBTOTAL"].map((h, i) => (
+                                                      <th key={i} style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textAlign: i===0?"left":i===1?"center":"right", padding: "2px 4px 6px", borderBottom: "1px solid #e5e7eb", letterSpacing: "0.07em" }}>{h}</th>
+                                                    ))}
+                                                  </tr></thead>
+                                                  <tbody>
+                                                    {r.materiales?.map((m, i) => (
+                                                      <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                                        <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px" }}>{m.materialNombre}</td>
+                                                        <td style={{ fontSize: 11, color: "#6b7280", padding: "5px 4px", textAlign: "center" }}>{m.cantidad.toFixed(2)} {m.unidad}</td>
+                                                        <td style={{ fontSize: 11, color: "#374151", padding: "5px 4px", textAlign: "right", fontWeight: 600 }}>${m.subtotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</td>
+                                                      </tr>
+                                                    ))}
+                                                  </tbody>
+                                                </table>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
                                       </td>
                                     </tr>
                                   )}
@@ -644,6 +681,7 @@ export default function ObraDetallePage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onEstadoChange={handleEstadoChange}
+        onPresupuestoChange={handlePresupuestoChange}
       />
 
       {/* Tab content */}
@@ -661,9 +699,11 @@ export default function ObraDetallePage() {
         open={partidaModalOpen}
         obraId={obraId}
         partida={editingPartida}
+        defaultValues={partidaExtraDefaults ?? undefined}
         onClose={() => {
           setPartidaModalOpen(false);
           setEditingPartida(null);
+          setPartidaExtraDefaults(null);
         }}
         onSubmit={handleAgregarPartida}
       />
@@ -695,6 +735,7 @@ export default function ObraDetallePage() {
       >
         {obra && (
           <ReporteFormSection
+            key={obra.id}
             obra={obra}
             personal={personal}
             materiales={materiales}

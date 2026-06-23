@@ -50,6 +50,7 @@ export interface Partida {
   montoEjecutado: number;
   avancePorcentaje: number;
   esExtra: boolean; // true = obra extra, no estaba en presupuesto original
+  partidaOriginalId?: number; // only set when esExtra === true
 }
 
 export interface PartidaFormValues {
@@ -59,6 +60,7 @@ export interface PartidaFormValues {
   cantidadPresupuestada: number;
   precioUnitario: number;
   esExtra?: boolean;
+  partidaOriginalId?: number;
 }
 
 // ─── Líneas de Reporte Diario ─────────────────────────────────────────────────
@@ -94,6 +96,7 @@ export interface ReporteDiario {
   partidaDescripcion: string;
   fecha: string;
   avanceLogrado: number;
+  montoAplicado: number;
   observaciones?: string;
   personal: LineaPersonal[];
   materiales: LineaMaterial[];
@@ -115,7 +118,7 @@ export interface ReporteFormValues {
   obraId: number;
   partidaId: number;
   fecha: string;
-  avanceLogrado: number;
+  montoAplicado: number;
   observaciones?: string;
   personal: {
     personalId: number;
@@ -127,6 +130,7 @@ export interface ReporteFormValues {
     precioUnitario: number;
   }[];
   imagenesArchivos?: File[];
+  existingImageIds?: number[];
 }
 
 // ─── Precio Historial ────────────────────────────────────────────────────────
