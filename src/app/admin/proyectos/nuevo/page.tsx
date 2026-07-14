@@ -63,8 +63,8 @@ export default function NuevoProyectoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.presupuesto_total || !formData.fecha_fin_planificada) {
-      alerts.error("El presupuesto y la fecha de fin son requeridos");
+    if (formData.crear_obra && (!formData.presupuesto_total || !formData.fecha_fin_planificada)) {
+      alerts.error("El presupuesto y la fecha de fin son requeridos para crear la obra");
       return;
     }
     setLoading(true);
@@ -102,7 +102,7 @@ export default function NuevoProyectoPage() {
       }
 
       setTimeout(() => {
-        router.push("/admin/obras");
+        router.push("/admin/proyectos");
       }, 1000);
     } catch (error: any) {
       console.error("Error creando proyecto:", error);
@@ -238,44 +238,6 @@ export default function NuevoProyectoPage() {
               </div>
             </div>
 
-            {/* Obra — Presupuesto y Fecha Fin */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Presupuesto de Obra *
-                </label>
-                <input
-                  type="number"
-                  name="presupuesto_total"
-                  value={formData.presupuesto_total}
-                  onChange={handleChange}
-                  required
-                  min={0}
-                  placeholder="Ej: 45000000"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Monto total del contrato de obra
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Fecha Fin Planificada *
-                </label>
-                <input
-                  type="date"
-                  name="fecha_fin_planificada"
-                  value={formData.fecha_fin_planificada}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Fecha estimada de entrega de la obra
-                </p>
-              </div>
-            </div>
-
             {/* Privacidad del Proyecto */}
             <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
               <div className="flex items-center justify-between">
@@ -354,6 +316,44 @@ export default function NuevoProyectoPage() {
                   </button>
                 </div>
               </div>
+              {formData.crear_obra && (
+                <div className="grid md:grid-cols-2 gap-6 mt-5 pt-5 border-t border-gray-200">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Presupuesto de Obra *
+                    </label>
+                    <input
+                      type="number"
+                      name="presupuesto_total"
+                      value={formData.presupuesto_total}
+                      onChange={handleChange}
+                      required
+                      min={0}
+                      placeholder="Ej: 45000000"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Monto total del contrato de obra
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Fecha Fin Planificada *
+                    </label>
+                    <input
+                      type="date"
+                      name="fecha_fin_planificada"
+                      value={formData.fecha_fin_planificada}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Fecha estimada de entrega de la obra
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Info Box */}
