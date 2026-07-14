@@ -60,8 +60,8 @@ export default function NuevoProyectoGerentePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.presupuesto_total || !formData.fecha_fin_planificada) {
-      alerts.error("El presupuesto y la fecha de fin son requeridos");
+    if (formData.crear_obra && (!formData.presupuesto_total || !formData.fecha_fin_planificada)) {
+      alerts.error("El presupuesto y la fecha de fin son requeridos para crear la obra");
       return;
     }
     setLoading(true);
@@ -206,39 +206,6 @@ export default function NuevoProyectoGerentePage() {
                 />
               </div>
 
-              {/* Fecha Fin Planificada */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Fecha Fin Planificada *
-                </label>
-                <input
-                  type="date"
-                  name="fecha_fin_planificada"
-                  value={formData.fecha_fin_planificada}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
-              </div>
-
-              {/* Presupuesto */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Presupuesto de Obra *
-                </label>
-                <input
-                  type="number"
-                  name="presupuesto_total"
-                  value={formData.presupuesto_total}
-                  onChange={handleChange}
-                  required
-                  min={0}
-                  placeholder="Ej: 45000000"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
-                />
-                <p className="text-xs text-gray-500 mt-1">Monto total del contrato de obra</p>
-              </div>
-
               {/* Proyecto Público */}
               <div className="md:col-span-2">
                 <label className="flex items-center space-x-3 cursor-pointer">
@@ -273,6 +240,40 @@ export default function NuevoProyectoGerentePage() {
                     Crear obra vinculada (desmarca si es solo diseño)
                   </span>
                 </label>
+                {formData.crear_obra && (
+                  <div className="grid md:grid-cols-2 gap-6 mt-4 pt-4 border-t border-gray-200">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Presupuesto de Obra *
+                      </label>
+                      <input
+                        type="number"
+                        name="presupuesto_total"
+                        value={formData.presupuesto_total}
+                        onChange={handleChange}
+                        required
+                        min={0}
+                        placeholder="Ej: 45000000"
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Monto total del contrato de obra</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Fecha Fin Planificada *
+                      </label>
+                      <input
+                        type="date"
+                        name="fecha_fin_planificada"
+                        value={formData.fecha_fin_planificada}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Fecha estimada de entrega de la obra</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
