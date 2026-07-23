@@ -48,9 +48,6 @@ const m = (id: string, mId: string, nomId: string, nom: string, ud: string, cant
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const delay = <T,>(valor: T): Promise<T> =>
-  new Promise((resolve) => setTimeout(() => resolve(valor), 280));
-
 const uuidLocal = () => Math.random().toString(36).slice(2, 11);
 
 // ─── Helper para mapear respuesta Strapi a tipo Obra ─────────────────────────
@@ -74,8 +71,14 @@ function mapStrapiObra(item: any): Obra {
     id: item.id,
     documentId: item.documentId,
     nombre: item.nombre,
-    proyectoId: item.proyecto?.id ?? 0,
-    proyectoNombre: item.proyecto?.nombre_proyecto ?? '',
+    proyectoId: item.proyecto?.id ?? undefined,
+    proyectoNombre: item.proyecto?.nombre_proyecto ?? undefined,
+    gerentes: (item.gerentes || []).map((g: any) => ({
+      id: g.id,
+      username: g.username,
+      email: g.email,
+      name: g.name,
+    })),
     capatazId: undefined,
     capatazNombre: undefined,
     estado: item.estado,
@@ -123,7 +126,8 @@ export async function createObra(values: ObraFormValues): Promise<Obra> {
     const res = await api.post('/obras', {
       data: {
         nombre: values.nombre,
-        proyecto: values.proyectoId,
+        proyecto: values.proyectoId ?? null,
+        gerentes: values.gerentesIds ?? [],
         estado: values.estado,
         fecha_inicio: values.fechaInicio,
         fecha_fin_planificada: values.fechaFinPlanificada,
@@ -578,15 +582,65 @@ export async function getMaterialesDisponibles(): Promise<MaterialDisponible[]> 
   }
 }
 
-export async function getProyectosParaObra(): Promise<
-  { id: number; nombre: string }[]
-> {
-  return delay([
-    { id: 1, nombre: "Casa Moderna García" },
-    { id: 2, nombre: "Edificio Comercial Centro" },
-    { id: 3, nombre: "Reforma Casa Molina" },
-    { id: 4, nombre: "Casa de Playa" },
-    { id: 5, nombre: "Oficinas Tecnológicas" },
-  ]);
+export async function getProyectosDisponiblesParaObra(
+  proyectoActualId?: number
+): Promise<{ id: number; nombre: string }[]> {
+  const res = await api.get('/proyectos?populate[obras]=*');
+  const proyectos: any[] = res.data.data ?? [];
+  return proyectos
+    .filter((p) => (p.obras ?? []).length === 0 || p.id === proyectoActualId)
+    .map((p) => ({ id: p.id, nombre: p.nombre_proyecto }));
+}
+
+export async function getObrasDisponiblesParaProyecto(
+  obraActualId?: number
+): Promise<{ id: number; documentId: string; nombre: string }[]> {
+  const res = await api.get('/obras?populate[proyecto]=*');
+  const obras: any[] = res.data.data ?? [];
+  return obras
+    .filter((o) => !o.proyecto || o.id === obraActualId)
+    .map((o) => ({ id: o.id, documentId: o.documentId, nombre: o.nombre }));
+}
+
+export async function vincularProyectoAObra(
+  obraDocumentId: string,
+  proyectoId: number
+): Promise<Obra> {
+  try {
+    const res = await api.put(`/obras/${obraDocumentId}`, {
+      data: { proyecto: proyectoId },
+    });
+    return mapStrapiObra(res.data.data);
+  } catch (error) {
+    console.error('Error vinculando proyecto a obra:', error);
+    throw error;
+  }
+}
+
+export async function desvincularProyectoDeObra(obraDocumentId: string): Promise<Obra> {
+  try {
+    const res = await api.put(`/obras/${obraDocumentId}`, {
+      data: { proyecto: null },
+    });
+    return mapStrapiObra(res.data.data);
+  } catch (error) {
+    console.error('Error desvinculando proyecto de obra:', error);
+    throw error;
+  }
+}
+
+export async function actualizarGerentesObra(
+  obraDocumentId: string,
+  gerenteIds: number[]
+): Promise<Obra> {
+  try {
+    const res = await api.put(`/obras/${obraDocumentId}`, {
+      data: { gerentes: gerenteIds },
+    });
+    return mapStrapiObra(res.data.data);
+  } catch (error) {
+    console.error('Error actualizando gerentes de obra:', error);
+    throw error;
+  }
 }
 
