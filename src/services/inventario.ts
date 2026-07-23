@@ -130,7 +130,7 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
   let proyectoNombre = values.proyectoNombre;
   if (!proyectoId) {
     const obraRes = await api.get(`/obras?filters[id][$eq]=${values.obraId}&populate[proyecto]=*`);
-    const obraData = obraRes.data.data?.[0];
+    const obraData = (obraRes.data.data as any[])?.find((o) => o.id === values.obraId);
     proyectoId = obraData?.proyecto?.id ?? undefined;
     proyectoNombre = obraData?.proyecto?.nombre_proyecto ?? undefined;
   }
