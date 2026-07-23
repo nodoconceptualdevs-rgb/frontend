@@ -125,15 +125,14 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
   if (!values.proveedorNombre) throw new Error("Proveedor es requerido");
   if (!values.items || values.items.length === 0) throw new Error("Debe agregar al menos un ítem");
 
-  // Si no viene proyectoId, obtenerlo desde la obra
+  // Si no viene proyectoId, obtenerlo desde la obra (puede quedar sin proyecto)
   let proyectoId = values.proyectoId;
   let proyectoNombre = values.proyectoNombre;
   if (!proyectoId) {
     const obraRes = await api.get(`/obras?filters[id][$eq]=${values.obraId}&populate[proyecto]=*`);
     const obraData = obraRes.data.data?.[0];
-    proyectoId = obraData?.proyecto?.id;
-    proyectoNombre = obraData?.proyecto?.nombre_proyecto;
-    if (!proyectoId) throw new Error("No se pudo obtener el proyecto de la obra");
+    proyectoId = obraData?.proyecto?.id ?? undefined;
+    proyectoNombre = obraData?.proyecto?.nombre_proyecto ?? undefined;
   }
 
   // Resolver nombres de materiales antes de enviar
