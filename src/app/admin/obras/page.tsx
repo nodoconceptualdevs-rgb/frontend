@@ -25,7 +25,7 @@ export default function ObrasPage() {
   const [filtroEstado, setFiltroEstado] = useState<EstadoObra | "TODAS">(
     "TODAS"
   );
-  const [filtroProyectoId, setFiltroProyectoId] = useState<number | undefined>(
+  const [filtroProyectoId, setFiltroProyectoId] = useState<number | "SIN_PROYECTO" | undefined>(
     undefined
   );
 
@@ -54,8 +54,12 @@ export default function ObrasPage() {
       if (filtroEstado !== "TODAS" && o.estado !== filtroEstado) {
         return false;
       }
+      if (filtroProyectoId === "SIN_PROYECTO" && o.proyectoId !== undefined) {
+        return false;
+      }
       if (
         filtroProyectoId !== undefined &&
+        filtroProyectoId !== "SIN_PROYECTO" &&
         o.proyectoId !== filtroProyectoId
       ) {
         return false;
@@ -67,7 +71,11 @@ export default function ObrasPage() {
   // Extraer proyectos únicos para el filtro
   const proyectosUnicos = useMemo(() => {
     return Array.from(
-      new Map(obras.map((o) => [o.proyectoId, o.proyectoNombre])).entries()
+      new Map(
+        obras
+          .filter((o) => o.proyectoId !== undefined)
+          .map((o) => [o.proyectoId as number, o.proyectoNombre as string])
+      ).entries()
     ).map(([id, nombre]) => ({ id, nombre }));
   }, [obras]);
 
@@ -125,6 +133,7 @@ export default function ObrasPage() {
             allowClear
             options={[
               { label: "Todos los proyectos", value: undefined },
+              { label: "Sin proyecto", value: "SIN_PROYECTO" },
               ...proyectosUnicos.map((p) => ({
                 label: p.nombre,
                 value: p.id,
