@@ -27,6 +27,7 @@ export interface ProyectoCardProps {
       name?: string;
       username?: string;
     }>;
+    obras?: Array<{ id: number; nombre: string; estado: string }>;
     hitos?: Array<{
       estado_completado: boolean;
     }>;
@@ -147,6 +148,16 @@ export default function ProyectoCard({ proyecto, isAdmin, isGerente, isCliente, 
         >
           {proyecto.estado_general}
         </span>
+        {" "}
+        {proyecto.obras && proyecto.obras.length > 0 ? (
+          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold border bg-emerald-100 text-emerald-800 border-emerald-300">
+            Obra: {proyecto.obras[0].nombre}
+          </span>
+        ) : (
+          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-600 border-gray-300">
+            Sin obra vinculada
+          </span>
+        )}
       </div>
 
       {/* Progress */}
