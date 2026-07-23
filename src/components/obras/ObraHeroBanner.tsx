@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Calendar, TrendingUp, DollarSign, FileText, Pencil, Check, X } from "lucide-react";
+import { ChevronLeft, Calendar, TrendingUp, DollarSign, FileText, Pencil, Check, X, Link2, Unlink } from "lucide-react";
 import dayjs from "dayjs";
 import type { Obra, EstadoObra, ValuacionFinal } from "@/types/obras";
 import { ESTADO_OBRA_LABEL } from "@/types/obras";
@@ -64,9 +64,11 @@ interface Props {
   onTabChange: (key: string) => void;
   onEstadoChange: (estado: EstadoObra) => void;
   onPresupuestoChange?: (monto: number) => Promise<void>;
+  onVincularProyecto: () => void;
+  onDesvincularProyecto: () => void;
 }
 
-export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange, onEstadoChange, onPresupuestoChange }: Props) {
+export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange, onEstadoChange, onPresupuestoChange, onVincularProyecto, onDesvincularProyecto }: Props) {
   const router = useRouter();
   const estadoStyle = ESTADO_STYLE[obra.estado];
   const pct = valuacion ? Math.round(valuacion.porcentajeEjecucion) : 0;
@@ -172,9 +174,26 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
               Obra #{obra.id}
             </span>
             <span className="text-slate-700 text-sm">·</span>
-            <span className="text-[11px] text-slate-500 font-medium truncate max-w-xs">
-              {obra.proyectoNombre}
-            </span>
+            {obra.proyectoNombre ? (
+              <span className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                <span className="truncate max-w-xs">{obra.proyectoNombre}</span>
+                <button
+                  onClick={onDesvincularProyecto}
+                  className="text-slate-500 hover:text-red-400 transition-colors"
+                  title="Desvincular proyecto"
+                >
+                  <Unlink size={11} />
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={onVincularProyecto}
+                className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 font-medium transition-colors"
+              >
+                <Link2 size={11} />
+                Sin proyecto vinculado — Vincular
+              </button>
+            )}
           </div>
           <h1 className="text-white text-xl font-bold leading-snug line-clamp-2 max-w-2xl">
             {obra.nombre}

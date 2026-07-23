@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, Fragment } from "react";
 import { Tabs, Spin, Empty, Button, Modal, DatePicker, Image as AntImage } from "antd";
 import dayjs from "dayjs";
-import { Plus, ChevronLeft, FileUp } from "lucide-react";
+import { Plus, ChevronLeft, FileUp, Link2, Unlink } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -22,7 +22,9 @@ import {
   createPersonal,
   updatePersonal,
   createValuacion,
+  desvincularProyectoDeObra,
 } from "@/services/obras";
+import VincularProyectoModal from "@/components/obras/VincularProyectoModal";
 import { calcularValuacion } from "@/lib/obras";
 import { getFacturasByObra, updateEstadoFactura, createFactura, getHerramientas } from "@/services/inventario";
 import type { EstadoFactura, FacturaCompra, FacturaFormValues } from "@/types/inventario";
@@ -91,6 +93,8 @@ export default function GerenteObraDetallePage() {
   // Estado para ver detalle de reporte
   const [reporteSeleccionado, setReporteSeleccionado] = useState<ReporteDiario | null>(null);
   const [reporteDetalleOpen, setReporteDetalleOpen] = useState(false);
+
+  const [vincularProyectoModalOpen, setVincularProyectoModalOpen] = useState(false);
 
 
   // Cargar datos
@@ -188,6 +192,19 @@ export default function GerenteObraDetallePage() {
     } catch (error) {
       console.error("Error actualizando estado:", error);
       toast.error("Error al actualizar el estado");
+    }
+  };
+
+  const handleDesvincularProyecto = async () => {
+    if (!obra?.documentId) return;
+    if (!confirm("¿Desvincular el proyecto de esta obra?")) return;
+    try {
+      await desvincularProyectoDeObra(obra.documentId);
+      toast.success("Proyecto desvinculado");
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error desvinculando proyecto:", error);
+      toast.error("Error al desvincular el proyecto");
     }
   };
 
@@ -695,7 +712,22 @@ export default function GerenteObraDetallePage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{obra.nombre}</h1>
-            <p className="text-sm text-gray-600 mt-1">{obra.proyectoNombre} · Estado: {obra.estado}</p>
+            <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
+              {obra.proyectoNombre ? (
+                <span className="flex items-center gap-1">
+                  {obra.proyectoNombre}
+                  <button onClick={handleDesvincularProyecto} className="text-gray-400 hover:text-red-500" title="Desvincular proyecto">
+                    <Unlink size={13} />
+                  </button>
+                </span>
+              ) : (
+                <button onClick={() => setVincularProyectoModalOpen(true)} className="flex items-center gap-1 text-red-600 hover:text-red-700 font-medium">
+                  <Link2 size={13} />
+                  Sin proyecto vinculado — Vincular
+                </button>
+              )}
+              · Estado: {obra.estado}
+            </p>
           </div>
         </div>
       </div>
@@ -837,6 +869,15 @@ export default function GerenteObraDetallePage() {
           precioPromedio: m.precioPromedio,
         }))}
       />
+
+      {obra?.documentId && (
+        <VincularProyectoModal
+          open={vincularProyectoModalOpen}
+          obraDocumentId={obra.documentId}
+          onClose={() => setVincularProyectoModalOpen(false)}
+          onVinculado={cargarDatos}
+        />
+      )}
 
     </div>
   );

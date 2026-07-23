@@ -23,7 +23,12 @@ import {
   updatePersonal,
   createValuacion,
   updateObra,
+  desvincularProyectoDeObra,
+  actualizarGerentesObra,
 } from "@/services/obras";
+import { getGerentes } from "@/services/usuarios";
+import UserSelector from "@/components/proyectos/UserSelector";
+import VincularProyectoModal from "@/components/obras/VincularProyectoModal";
 import { getHerramientas } from "@/services/inventario";
 import { calcularValuacion } from "@/lib/obras";
 import { getFacturasByObra, updateEstadoFactura, createFactura } from "@/services/inventario";
@@ -93,6 +98,9 @@ export default function ObraDetallePage() {
   const [reporteSeleccionado, setReporteSeleccionado] = useState<ReporteDiario | null>(null);
   const [reporteDetalleOpen, setReporteDetalleOpen] = useState(false);
 
+  const [vincularProyectoModalOpen, setVincularProyectoModalOpen] = useState(false);
+  const [gerentesDisponibles, setGerentesDisponibles] = useState<{ id: number; username: string; email: string; name?: string }[]>([]);
+
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -161,6 +169,12 @@ export default function ObraDetallePage() {
     cargarDatos();
   }, [cargarDatos]);
 
+  useEffect(() => {
+    getGerentes()
+      .then((g) => setGerentesDisponibles(Array.isArray(g) ? g : []))
+      .catch((error) => console.error("Error cargando gerentes:", error));
+  }, []);
+
   // Handlers
   const handleEstadoChange = async (newEstado: EstadoObra) => {
     if (!obra?.documentId) return;
@@ -185,6 +199,31 @@ export default function ObraDetallePage() {
     } catch (error) {
       await cargarDatos();
       toast.error("Error al actualizar el presupuesto");
+    }
+  };
+
+  const handleDesvincularProyecto = async () => {
+    if (!obra?.documentId) return;
+    if (!confirm("¿Desvincular el proyecto de esta obra?")) return;
+    try {
+      await desvincularProyectoDeObra(obra.documentId);
+      toast.success("Proyecto desvinculado");
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error desvinculando proyecto:", error);
+      toast.error("Error al desvincular el proyecto");
+    }
+  };
+
+  const handleActualizarGerentes = async (gerenteIds: number[]) => {
+    if (!obra?.documentId) return;
+    try {
+      await actualizarGerentesObra(obra.documentId, gerenteIds);
+      toast.success("Gerentes actualizados");
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error actualizando gerentes:", error);
+      toast.error("Error al actualizar los gerentes");
     }
   };
 
@@ -682,7 +721,20 @@ export default function ObraDetallePage() {
         onTabChange={setActiveTab}
         onEstadoChange={handleEstadoChange}
         onPresupuestoChange={handlePresupuestoChange}
+        onVincularProyecto={() => setVincularProyectoModalOpen(true)}
+        onDesvincularProyecto={handleDesvincularProyecto}
       />
+
+      <div className="px-6 pt-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 max-w-3xl">
+          <UserSelector
+            label="Gerentes con acceso a esta obra"
+            availableUsers={gerentesDisponibles}
+            selectedUsers={obra.gerentes ?? []}
+            onSelectionChange={handleActualizarGerentes}
+          />
+        </div>
+      </div>
 
       {/* Tab content */}
       <div className="px-6 pt-6">
@@ -767,6 +819,15 @@ export default function ObraDetallePage() {
             proyectoId: obra.proyectoId,
             proyectoNombre: obra.proyectoNombre,
           }]}
+        />
+      )}
+
+      {obra?.documentId && (
+        <VincularProyectoModal
+          open={vincularProyectoModalOpen}
+          obraDocumentId={obra.documentId}
+          onClose={() => setVincularProyectoModalOpen(false)}
+          onVinculado={cargarDatos}
         />
       )}
 
