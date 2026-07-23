@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createProyecto } from "@/services/proyectos";
-import { createObra } from "@/services/obras";
+import { createObra, getObrasDisponiblesParaProyecto, vincularProyectoAObra } from "@/services/obras";
 import { getClientes } from "@/services/usuarios";
 import { alerts } from "@/lib/alerts";
 import { Toaster } from "react-hot-toast";
@@ -16,12 +16,15 @@ interface Usuario {
   name?: string;
 }
 
+type ObraOpcion = "ninguna" | "nueva" | "existente";
+
 export default function NuevoProyectoGerentePage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [clientes, setClientes] = useState<Usuario[]>([]);
+  const [obrasDisponibles, setObrasDisponibles] = useState<{ id: number; documentId: string; nombre: string }[]>([]);
   const [formData, setFormData] = useState({
     nombre_proyecto: "",
     cliente: "",
@@ -30,7 +33,8 @@ export default function NuevoProyectoGerentePage() {
     fecha_fin_planificada: "",
     presupuesto_total: "",
     es_publico: true,
-    crear_obra: true,
+    obra_opcion: "nueva" as ObraOpcion,
+    obra_existente_id: "",
   });
 
   useEffect(() => {
@@ -44,9 +48,12 @@ export default function NuevoProyectoGerentePage() {
     async function fetchClientes() {
       try {
         setLoadingClientes(true);
-        const clientesData = await getClientes();
-        console.log("Clientes cargados:", clientesData);
+        const [clientesData, obrasData] = await Promise.all([
+          getClientes(),
+          getObrasDisponiblesParaProyecto(),
+        ]);
         setClientes(Array.isArray(clientesData) ? clientesData : []);
+        setObrasDisponibles(obrasData);
       } catch (error) {
         console.error("Error cargando clientes:", error);
         setClientes([]);
@@ -60,8 +67,12 @@ export default function NuevoProyectoGerentePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.crear_obra && (!formData.presupuesto_total || !formData.fecha_fin_planificada)) {
+    if (formData.obra_opcion === "nueva" && (!formData.presupuesto_total || !formData.fecha_fin_planificada)) {
       alerts.error("El presupuesto y la fecha de fin son requeridos para crear la obra");
+      return;
+    }
+    if (formData.obra_opcion === "existente" && !formData.obra_existente_id) {
+      alerts.error("Selecciona la obra que quieres vincular");
       return;
     }
     setLoading(true);
@@ -84,16 +95,24 @@ export default function NuevoProyectoGerentePage() {
       );
 
       const proyectoId = (result as any)?.data?.id ?? (result as any)?.id;
-      if (proyectoId && formData.crear_obra) {
+      if (proyectoId && formData.obra_opcion === "nueva") {
         await createObra({
           nombre: formData.nombre_proyecto,
           proyectoId,
+          gerentesIds: user?.id ? [user.id] : [],
           estado: "PREPARACION",
           fechaInicio: new Date(formData.fecha_inicio).toISOString(),
           fechaFinPlanificada: new Date(formData.fecha_fin_planificada).toISOString(),
           presupuestoTotal: parseFloat(formData.presupuesto_total),
           notas: "Obra generada automáticamente al crear el proyecto",
         });
+      } else if (proyectoId && formData.obra_opcion === "existente" && formData.obra_existente_id) {
+        const obraSeleccionada = obrasDisponibles.find(
+          (o) => o.id === parseInt(formData.obra_existente_id)
+        );
+        if (obraSeleccionada) {
+          await vincularProyectoAObra(obraSeleccionada.documentId, proyectoId);
+        }
       }
 
       setTimeout(() => {
@@ -224,23 +243,31 @@ export default function NuevoProyectoGerentePage() {
                 </label>
               </div>
 
-              {/* Crear Obra */}
+              {/* Opción de obra */}
               <div className="md:col-span-2">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="crear_obra"
-                    checked={formData.crear_obra}
-                    onChange={(e) =>
-                      setFormData({ ...formData, crear_obra: e.target.checked })
-                    }
-                    className="w-5 h-5 text-red-600 border-2 border-gray-300 rounded focus:ring-red-200"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    Crear obra vinculada (desmarca si es solo diseño)
-                  </span>
-                </label>
-                {formData.crear_obra && (
+                <p className="text-sm font-semibold text-gray-700 mb-2">Obra</p>
+                <div className="flex gap-2">
+                  {([
+                    { value: "ninguna", label: "Sin obra" },
+                    { value: "nueva", label: "Crear obra nueva" },
+                    { value: "existente", label: "Vincular obra existente" },
+                  ] as const).map((opcion) => (
+                    <button
+                      key={opcion.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, obra_opcion: opcion.value })}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold border-2 transition ${
+                        formData.obra_opcion === opcion.value
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {opcion.label}
+                    </button>
+                  ))}
+                </div>
+
+                {formData.obra_opcion === "nueva" && (
                   <div className="grid md:grid-cols-2 gap-6 mt-4 pt-4 border-t border-gray-200">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -272,6 +299,26 @@ export default function NuevoProyectoGerentePage() {
                       />
                       <p className="text-xs text-gray-500 mt-1">Fecha estimada de entrega de la obra</p>
                     </div>
+                  </div>
+                )}
+
+                {formData.obra_opcion === "existente" && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Obra a vincular *
+                    </label>
+                    <select
+                      value={formData.obra_existente_id}
+                      onChange={(e) => setFormData({ ...formData, obra_existente_id: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition"
+                    >
+                      <option value="">Selecciona una obra sin proyecto</option>
+                      {obrasDisponibles.map((obra) => (
+                        <option key={obra.id} value={obra.id}>
+                          {obra.nombre}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
               </div>
