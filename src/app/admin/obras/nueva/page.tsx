@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Input, InputNumber, Select, DatePicker, TextArea, Spin } from "antd";
-import { useRouter } from "next/navigation";
+import { Button, Input, InputNumber, Select, DatePicker } from "antd";
+import { useRouter, useSearchParams } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
   createObra,
-  getProyectosParaObra,
+  getProyectosDisponiblesParaObra,
 } from "@/services/obras";
+import { getGerentes } from "@/services/usuarios";
+import UserSelector from "@/components/proyectos/UserSelector";
 import type { ObraFormValues, EstadoObra } from "@/types/obras";
 import { ESTADO_OBRA_LABEL } from "@/types/obras";
 import toast from "react-hot-toast";
@@ -15,14 +17,21 @@ import dayjs from "dayjs";
 
 export default function NuevaObraPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const proyectoIdPrefill = searchParams.get("proyectoId");
   const [loading, setLoading] = useState(false);
   const [proyectos, setProyectos] = useState<
     { id: number; nombre: string }[]
   >([]);
+  const [gerentesDisponibles, setGerentesDisponibles] = useState<
+    { id: number; username: string; email: string; name?: string }[]
+  >([]);
+  const [loadingGerentes, setLoadingGerentes] = useState(true);
+  const [gerentesIds, setGerentesIds] = useState<number[]>([]);
 
   const [form, setForm] = useState<Partial<ObraFormValues>>({
     nombre: "",
-    proyectoId: undefined,
+    proyectoId: proyectoIdPrefill ? Number(proyectoIdPrefill) : undefined,
     capatazId: undefined,
     estado: "PREPARACION" as EstadoObra,
     fechaInicio: dayjs().toISOString(),
@@ -34,11 +43,17 @@ export default function NuevaObraPage() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const pr = await getProyectosParaObra();
+        const [pr, ger] = await Promise.all([
+          getProyectosDisponiblesParaObra(),
+          getGerentes(),
+        ]);
         setProyectos(pr);
+        setGerentesDisponibles(Array.isArray(ger) ? ger : []);
       } catch (error) {
         console.error("Error cargando datos:", error);
         toast.error("Error al cargar datos");
+      } finally {
+        setLoadingGerentes(false);
       }
     };
     cargarDatos();
@@ -49,10 +64,6 @@ export default function NuevaObraPage() {
       toast.error("El nombre de la obra es requerido");
       return;
     }
-    if (!form.proyectoId) {
-      toast.error("Debe seleccionar un proyecto");
-      return;
-    }
     if (!form.presupuestoTotal || form.presupuestoTotal === 0) {
       toast.error("El presupuesto debe ser mayor a 0");
       return;
@@ -60,7 +71,7 @@ export default function NuevaObraPage() {
 
     try {
       setLoading(true);
-      const nueva = await createObra(form as ObraFormValues);
+      const nueva = await createObra({ ...form, gerentesIds } as ObraFormValues);
       toast.success("Obra creada exitosamente");
       router.push(`/admin/obras/${nueva.id}`);
     } catch (error) {
@@ -95,10 +106,11 @@ export default function NuevaObraPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Proyecto *
+              Proyecto
             </label>
             <Select
-              placeholder="Seleccionar proyecto"
+              placeholder="Sin proyecto (opcional)"
+              allowClear
               value={form.proyectoId}
               onChange={(val) => setForm({ ...form, proyectoId: val })}
               options={proyectos.map((p) => ({ label: p.nombre, value: p.id }))}
@@ -106,6 +118,18 @@ export default function NuevaObraPage() {
               style={{ width: "100%" }}
             />
           </div>
+        </div>
+
+        {/* Row: Gerentes */}
+        <div>
+          <UserSelector
+            label="Gerentes con acceso a esta obra"
+            availableUsers={gerentesDisponibles}
+            selectedUsers={gerentesIds}
+            onSelectionChange={setGerentesIds}
+            loading={loadingGerentes}
+            placeholder="Buscar gerentes..."
+          />
         </div>
 
         {/* Row 2: Capataz | Estado */}
