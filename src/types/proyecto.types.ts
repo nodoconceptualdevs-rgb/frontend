@@ -41,6 +41,7 @@ export interface Proyecto {
   gerentes?: Usuario[] | number[];
   hitos?: Hito[];
   es_publico?: boolean;
+  obras?: Array<{ id: number; documentId: string; nombre: string; estado: string }>;
   createdAt: string;
   updatedAt: string;
 }

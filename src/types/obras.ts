@@ -1,3 +1,5 @@
+import type { Usuario } from "./proyecto.types";
+
 // ─── Estado Obra ──────────────────────────────────────────────────────────────
 
 export type EstadoObra = "PREPARACION" | "EN_CURSO" | "PAUSADA" | "COMPLETADA";
@@ -148,8 +150,9 @@ export interface Obra {
   id: number;
   documentId?: string;
   nombre: string;
-  proyectoId: number;
-  proyectoNombre: string;
+  proyectoId?: number;
+  proyectoNombre?: string;
+  gerentes?: Usuario[];
   capatazId?: number;
   capatazNombre?: string;
   estado: EstadoObra;
@@ -166,7 +169,8 @@ export interface Obra {
 
 export interface ObraFormValues {
   nombre: string;
-  proyectoId: number;
+  proyectoId?: number;
+  gerentesIds?: number[];
   capatazId?: number;
   estado: EstadoObra;
   fechaInicio: string;
