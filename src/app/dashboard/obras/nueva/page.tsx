@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input, InputNumber, Select, DatePicker } from "antd";
 import { createObra, getProyectosDisponiblesParaObra } from "@/services/obras";
@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 
-export default function NuevaObraGerentePage() {
+function NuevaObraGerentePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const proyectoIdPrefill = searchParams.get("proyectoId");
@@ -275,5 +275,13 @@ export default function NuevaObraGerentePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NuevaObraGerentePage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaObraGerentePageContent />
+    </Suspense>
   );
 }

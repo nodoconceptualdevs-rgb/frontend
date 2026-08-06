@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import LoginForm from "../../../components/LoginForm";
 import styles from "./loginPage.module.css";
 import { useAuth } from "@/context/AuthContext";
 
-export default function LoginPage() {
+interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useAuth();
@@ -18,23 +23,18 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  interface LoginFormData {
-    email: string;
-    password: string;
-  }
-
   const handleLogin = async (data: LoginFormData) => {
     setLoading(true);
     setError("");
     try {
       // Intentar login con credenciales
       await login(data.email, data.password);
-      
+
       // La redirección se maneja automáticamente en AuthContext según el rol
     } catch (err: unknown) {
       console.error('❌ Error de login:', err);
-      const errorMessage = err instanceof Error 
-        ? err.message 
+      const errorMessage = err instanceof Error
+        ? err.message
         : "Error al iniciar sesión. Por favor, intenta nuevamente.";
       setError(errorMessage);
     } finally {
@@ -42,6 +42,10 @@ export default function LoginPage() {
     }
   };
 
+  return <LoginForm onSubmit={handleLogin} loading={loading} error={error} />;
+}
+
+export default function LoginPage() {
   return (
     <div
       className={styles.bgContainer}
@@ -53,7 +57,9 @@ export default function LoginPage() {
       }}
     >
       <div className={styles.centeredBox} style={{ filter: "none" }}>
-        <LoginForm onSubmit={handleLogin} loading={loading} error={error} />
+        <Suspense fallback={null}>
+          <LoginPageContent />
+        </Suspense>
       </div>
     </div>
   );

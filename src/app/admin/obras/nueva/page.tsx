@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { Input, InputNumber, Select, DatePicker, Modal } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -15,7 +15,7 @@ import { ESTADO_OBRA_LABEL } from "@/types/obras";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 
-export default function NuevaObraPage() {
+function NuevaObraPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const proyectoIdPrefill = searchParams.get("proyectoId");
@@ -379,5 +379,13 @@ export default function NuevaObraPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function NuevaObraPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaObraPageContent />
+    </Suspense>
   );
 }
