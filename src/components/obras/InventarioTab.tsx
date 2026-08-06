@@ -2,17 +2,20 @@
 
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { Table, Button } from "antd";
-import { Package, AlertTriangle, Plus, ChevronDown, Check, Loader2 } from "lucide-react";
+import { Package, AlertTriangle, Plus, ChevronDown, Check, Loader2, ArrowRightLeft } from "lucide-react";
 import type { ReporteDiario, MaterialDisponible } from "@/types/obras";
 import type { EstadoFactura, FacturaCompra } from "@/types/inventario";
+import TransferirMaterialModal from "./TransferirMaterialModal";
 import dayjs from "dayjs";
 
 interface Props {
   reportes: ReporteDiario[];
   materiales: MaterialDisponible[];
   facturas?: FacturaCompra[];
+  otrasObras?: { id: number; nombre: string }[];
   onCambiarEstado?: (facturaId: number, estado: EstadoFactura) => Promise<void>;
   onAgregarFactura?: () => void;
+  onTransferirMaterial?: (input: { materialId: number; cantidad: number; obraDestinoId?: number; nota?: string }) => Promise<void>;
 }
 
 const fmt = (n: number) =>
@@ -115,8 +118,9 @@ function EstadoBadge({
   );
 }
 
-export default function InventarioTab({ reportes, materiales, facturas = [], onCambiarEstado, onAgregarFactura }: Props) {
+export default function InventarioTab({ reportes, materiales, facturas = [], otrasObras = [], onCambiarEstado, onAgregarFactura, onTransferirMaterial }: Props) {
   const [loadingEstado, setLoadingEstado] = useState<number | null>(null);
+  const [materialATransferir, setMaterialATransferir] = useState<MaterialDisponible | null>(null);
   // Materiales consumidos en reportes
   const materialesGastados = useMemo(() => {
     const map = new Map<
@@ -176,6 +180,7 @@ export default function InventarioTab({ reportes, materiales, facturas = [], onC
             size="small"
             bordered
             pagination={false}
+            scroll={{ x: 500 }}
             dataSource={materialesGastados.map((m) => ({ ...m, key: m.id }))}
             columns={[
               { title: "Material", dataIndex: "nombre", key: "nombre" },
@@ -230,6 +235,7 @@ export default function InventarioTab({ reportes, materiales, facturas = [], onC
             size="small"
             bordered
             pagination={false}
+            scroll={{ x: 500 }}
             dataSource={stockDisponible.map((m) => ({ ...m, key: m.materialId }))}
             columns={[
               { title: "Material", dataIndex: "materialNombre", key: "nombre" },
@@ -272,14 +278,43 @@ export default function InventarioTab({ reportes, materiales, facturas = [], onC
                   return null;
                 },
               },
+              ...(onTransferirMaterial
+                ? [
+                    {
+                      title: "",
+                      key: "transferir",
+                      width: 40,
+                      render: (_: unknown, r: MaterialDisponible) => (
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<ArrowRightLeft size={14} />}
+                          disabled={r.stockActual <= 0}
+                          onClick={() => setMaterialATransferir(r)}
+                          title="Transferir a otra obra o a Nodo"
+                        />
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         )}
       </section>
 
+      {onTransferirMaterial && (
+        <TransferirMaterialModal
+          open={materialATransferir !== null}
+          material={materialATransferir}
+          otrasObras={otrasObras}
+          onClose={() => setMaterialATransferir(null)}
+          onSubmit={onTransferirMaterial}
+        />
+      )}
+
       {/* ── Historial de Compras ───────────────────────────────────────────── */}
       <section>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
           <div className="flex items-center gap-2">
             <Package size={16} className="text-gray-600" />
             <h3 className="font-semibold text-gray-800">
@@ -307,6 +342,7 @@ export default function InventarioTab({ reportes, materiales, facturas = [], onC
             size="small"
             bordered
             pagination={false}
+            scroll={{ x: 700 }}
             dataSource={facturas.map((f) => ({ ...f, key: f.id }))}
             expandable={{
               expandRowByClick: true,
@@ -314,6 +350,7 @@ export default function InventarioTab({ reportes, materiales, facturas = [], onC
                 <Table
                   size="small"
                   pagination={false}
+                  scroll={{ x: 450 }}
                   dataSource={f.items.map((i, idx) => ({ ...i, key: idx }))}
                   columns={[
                     { title: "Material", dataIndex: "materialNombre", key: "mat" },

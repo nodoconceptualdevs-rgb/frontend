@@ -15,6 +15,7 @@ import FacturaModal from "@/components/inventario/FacturaModal";
 import FacturaDetalleModal from "@/components/inventario/FacturaDetalleModal";
 import HerramientasTable from "@/components/inventario/HerramientasTable";
 import HerramientaModal from "@/components/inventario/HerramientaModal";
+import TransferirMaterialModal from "@/components/obras/TransferirMaterialModal";
 import PeriodoSelector from "@/components/kpi/PeriodoSelector";
 import type { Granularidad } from "@/lib/periodo";
 import { rangoPeriodo } from "@/lib/periodo";
@@ -32,13 +33,18 @@ import {
   anularFactura,
   getMateriales,
   getResumenInventario,
+  getDistribucionInventario,
   getHerramientas,
   createHerramienta,
   updateHerramienta,
   deleteHerramienta,
+  deleteHerramientasMasivo,
   deleteMaterial,
+  deleteMaterialsMasivo,
+  type DistribucionInventario,
 } from "@/services/inventario";
-import { getObras } from "@/services/obras";
+import { calcularEstadoStock } from "@/lib/inventario";
+import { getObras, crearTransferenciaMaterial } from "@/services/obras";
 import { getProyectos } from "@/services/proyectos";
 import type { Obra } from "@/types/obras";
 import type { Proyecto } from "@/types/proyectos";
@@ -71,6 +77,10 @@ export default function InventarioPage() {
   // Filtro por proyecto
   const [proyectoIdFiltro, setProyectoIdFiltro] = useState<number | undefined>(undefined);
 
+  // Distribución de stock por obra / Inventario General de Nodo
+  const [distribucion, setDistribucion] = useState<DistribucionInventario | null>(null);
+  const [filtroUbicacion, setFiltroUbicacion] = useState<string>("TODAS");
+
   // Cargar datos
   const cargarDatos = useCallback(async () => {
     try {
@@ -102,6 +112,14 @@ export default function InventarioPage() {
       setResumen(r);
     } catch (error) {
       console.warn("No se pudo cargar el resumen de inventario", error);
+    }
+
+    // Distribución de stock por obra/Nodo — tampoco bloquea la carga principal
+    try {
+      const d = await getDistribucionInventario();
+      setDistribucion(d);
+    } catch (error) {
+      console.warn("No se pudo cargar la distribución de inventario", error);
     }
   }, []);
 
@@ -180,6 +198,30 @@ export default function InventarioPage() {
     };
   }, [facturasFiltradasPorFecha]);
 
+  // Materiales ajustados a la ubicación elegida (obra específica o Inventario
+  // General de Nodo). "TODAS" muestra el stock global tal como viene de la API.
+  const materialesFiltrados = useMemo((): MaterialConEstado[] => {
+    if (filtroUbicacion === "TODAS" || !distribucion) return materiales;
+
+    const obraIdSeleccionada = filtroUbicacion === "NODO" ? null : Number(filtroUbicacion);
+    const cantidadPorMaterial = new Map<number, number>();
+    distribucion.filas
+      .filter((fila) => fila.obraId === obraIdSeleccionada)
+      .forEach((fila) => cantidadPorMaterial.set(fila.materialId, fila.cantidad));
+
+    return materiales
+      .filter((m) => cantidadPorMaterial.has(m.id))
+      .map((m) => {
+        const stockActual = cantidadPorMaterial.get(m.id) || 0;
+        return {
+          ...m,
+          stockActual,
+          valorTotalStock: stockActual * (m.precioPromedio || 0),
+          estadoStock: calcularEstadoStock(stockActual, m.stockMinimo),
+        };
+      });
+  }, [materiales, distribucion, filtroUbicacion]);
+
   const handleCrearMaterial = async (material: MaterialConEstado) => {
     try {
       setMateriales([...materiales, material]);
@@ -225,6 +267,24 @@ export default function InventarioPage() {
     }
   };
 
+  const [materialATransferir, setMaterialATransferir] = useState<MaterialConEstado | null>(null);
+
+  const handleTransferirMaterial = async (input: { materialId: number; cantidad: number; obraDestinoId?: number; nota?: string }) => {
+    try {
+      await crearTransferenciaMaterial({
+        ...input,
+        obraOrigenId: filtroUbicacion === "NODO" || filtroUbicacion === "TODAS" ? undefined : Number(filtroUbicacion),
+      });
+      const d = await getDistribucionInventario();
+      setDistribucion(d);
+      toast.success("Material transferido");
+    } catch (error: any) {
+      console.error("Error transfiriendo material:", error);
+      toast.error(error?.response?.data?.error?.message || "Error al transferir el material");
+      throw error;
+    }
+  };
+
   const handleCrearHerramienta = async (values: HerramientaFormValues) => {
     try {
       const nueva = await createHerramienta(values);
@@ -241,7 +301,8 @@ export default function InventarioPage() {
   const handleActualizarHerramienta = async (values: HerramientaFormValues) => {
     if (!herramientaSeleccionada) return;
     try {
-      const actualizada = await updateHerramienta(herramientaSeleccionada.id, values);
+      if (!herramientaSeleccionada.documentId) throw new Error("La herramienta no tiene documentId");
+      const actualizada = await updateHerramienta(herramientaSeleccionada.documentId, values);
       setHerramientas(herramientas.map((h) => (h.id === actualizada.id ? actualizada : h)));
       setModalHerramientaOpen(false);
       setHerramientaSeleccionada(null);
@@ -426,16 +487,54 @@ export default function InventarioPage() {
             />
           </div>
 
+          {/* Filtro por ubicación */}
+          <div className="flex items-center gap-3 px-1">
+            <label className="text-sm font-semibold text-gray-700">Ver stock de:</label>
+            <Select
+              value={filtroUbicacion}
+              onChange={setFiltroUbicacion}
+              style={{ width: 260 }}
+              options={[
+                { value: "TODAS", label: "Todas las ubicaciones (stock total)" },
+                { value: "NODO", label: "Inventario General de Nodo" },
+                ...(distribucion?.obras ?? []).map((o) => ({ value: String(o.id), label: o.nombre })),
+              ]}
+            />
+          </div>
+
           {/* Tabla */}
-          {materiales.length === 0 ? (
+          {materialesFiltrados.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16">
-              <Empty description="No hay materiales" />
+              <Empty
+                description={
+                  filtroUbicacion === "TODAS"
+                    ? "No hay materiales"
+                    : "No hay materiales con stock en esta ubicación"
+                }
+              />
             </div>
           ) : (
             <MaterialesTable
-              materiales={materiales}
+              materiales={materialesFiltrados}
               onEditar={handleEditarMaterial}
               onEliminar={handleEliminarMaterial}
+              onTransferir={filtroUbicacion !== "TODAS" ? setMaterialATransferir : undefined}
+              onCodigoGenerado={(materialId, codigo) => {
+                setMateriales((prev) =>
+                  prev.map((m) => (m.id === materialId ? { ...m, codigo } : m))
+                );
+              }}
+              onEliminarMasivo={async (ids) => {
+                console.log("IDs a eliminar:", ids);
+                const docsToDelete = materiales
+                  .filter((m) => ids.includes(m.id))
+                  .map((m) => m.documentId || "")
+                  .filter(Boolean);
+                console.log("DocumentIds a eliminar:", docsToDelete);
+                await deleteMaterialsMasivo(docsToDelete);
+                // Actualizar estado local en lugar de recargar
+                setMateriales((prev) => prev.filter((m) => !ids.includes(m.id)));
+              }}
             />
           )}
         </div>
@@ -499,6 +598,20 @@ export default function InventarioPage() {
                 setModalHerramientaOpen(true);
               }}
               onDelete={(h) => handleEliminarHerramienta(h.id)}
+              onCodigoGenerado={(herramientaId, codigo) => {
+                setHerramientas((prev) =>
+                  prev.map((h) => (h.id === herramientaId ? { ...h, codigo } : h))
+                );
+              }}
+              onEliminarMasivo={async (ids) => {
+                const docsToDelete = herramientas
+                  .filter((h) => ids.includes(h.id))
+                  .map((h) => h.documentId || "")
+                  .filter(Boolean);
+                await deleteHerramientasMasivo(docsToDelete);
+                // Actualizar estado local en lugar de recargar
+                setHerramientas((prev) => prev.filter((h) => !ids.includes(h.id)));
+              }}
             />
           )}
         </div>
@@ -567,6 +680,25 @@ export default function InventarioPage() {
         open={importarMaterialesOpen}
         onClose={() => setImportarMaterialesOpen(false)}
         onImported={cargarDatos}
+      />
+
+      {/* Modal de transferir material a otra ubicación */}
+      <TransferirMaterialModal
+        open={materialATransferir !== null}
+        material={
+          materialATransferir
+            ? {
+                materialId: materialATransferir.id,
+                materialNombre: materialATransferir.nombre,
+                unidad: materialATransferir.unidad,
+                stockActual: materialATransferir.stockActual,
+              }
+            : null
+        }
+        otrasObras={obras.filter((o) => String(o.id) !== filtroUbicacion).map((o) => ({ id: o.id, nombre: o.nombre }))}
+        ocultarNodoComoDestino={filtroUbicacion === "NODO"}
+        onClose={() => setMaterialATransferir(null)}
+        onSubmit={handleTransferirMaterial}
       />
 
       {/* Modal de detalle factura */}

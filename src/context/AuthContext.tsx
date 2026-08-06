@@ -36,6 +36,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Escuchar expiración de sesión detectada por el interceptor de axios
+  // (401 en una ruta protegida) para cerrar sesión y redirigir a /login.
+  useEffect(() => {
+    function handleSessionExpired() {
+      setUser(null);
+      setToken(null);
+
+      if (!window.location.pathname.startsWith('/login')) {
+        router.push('/login?expired=1');
+      }
+    }
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('auth:session-expired', handleSessionExpired);
+    };
+  }, [router]);
+
   /**
    * Redireccionar según el rol del usuario
    */

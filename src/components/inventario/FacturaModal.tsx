@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Modal, Input, DatePicker, Select, Button, Table, InputNumber, Divider, Popconfirm } from "antd";
-import { Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Edit, Barcode } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import api from "@/lib/api";
@@ -55,6 +55,8 @@ export default function FacturaModal({
   const [agregarMaterialOpen, setAgregarMaterialOpen] = useState(false);
   const [materialesActualizados, setMaterialesActualizados] = useState<MaterialCatalogo[]>(materiales);
   const [lineaSeleccionada, setLineaSeleccionada] = useState<string | null>(null);
+  const [codigoEscaneado, setCodigoEscaneado] = useState("");
+  const inputEscanerRef = useRef<any>(null);
 
   // Proveedores
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -73,8 +75,19 @@ export default function FacturaModal({
       .finally(() => setCargandoProveedores(false));
   }, [open]);
 
+  // Enfocar el input de escaneo al abrir para permitir escanear de inmediato
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => inputEscanerRef.current?.focus(), 200);
+    return () => clearTimeout(timer);
+  }, [open]);
+
   // Rellenar campos al editar o cargar próximo número al crear
   useEffect(() => {
+    if (open) {
+      // Sincroniza con el catálogo más reciente (ej: códigos de barra generados después del primer montaje)
+      setMaterialesActualizados(materiales);
+    }
     if (open && facturaEditar) {
       setNumero(facturaEditar.numero);
       setProveedorId(facturaEditar.proveedorId);
@@ -114,7 +127,7 @@ export default function FacturaModal({
         .then((res) => setNumero(res.data.data.numero))
         .catch(() => setNumero(""));
     }
-  }, [open, facturaEditar, obras]);
+  }, [open, facturaEditar, obras, materiales]);
 
   // Auto-completar proyecto cuando se selecciona una obra
   useEffect(() => {
@@ -199,6 +212,51 @@ export default function FacturaModal({
     };
     setLineas((prev) => [...prev, nuevaLinea]);
   }, []);
+
+  const handleEscanearCodigo = useCallback(
+    (valorRaw: string) => {
+      const valor = valorRaw.trim();
+      if (!valor) return;
+
+      const material = materialesActualizados.find(
+        (m) => m.codigo && m.codigo.toLowerCase() === valor.toLowerCase()
+      );
+
+      if (!material) {
+        toast.error(
+          `Ningún material tiene el código "${valor}". Genera su código de barras desde Stock de Materiales.`
+        );
+        setCodigoEscaneado("");
+        return;
+      }
+
+      setLineas((prev) => {
+        const existente = prev.find((l) => l.materialId === material.id);
+        if (existente) {
+          const nuevaCantidad = (existente.cantidad || 0) + 1;
+          return prev.map((l) =>
+            l.id === existente.id
+              ? { ...l, cantidad: nuevaCantidad, subtotal: nuevaCantidad * (l.precioUnitario || 0) }
+              : l
+          );
+        }
+        const nuevaLinea: LineaEditando = {
+          id: Math.random().toString(36).slice(2, 9),
+          materialId: material.id,
+          materialNombre: material.nombre,
+          unidad: material.unidad,
+          cantidad: 1,
+          precioUnitario: material.precioPromedio || 0,
+          subtotal: material.precioPromedio || 0,
+        };
+        return [...prev, nuevaLinea];
+      });
+
+      toast.success(`${material.nombre} agregado`);
+      setCodigoEscaneado("");
+    },
+    [materialesActualizados]
+  );
 
   const handleMaterialCreado = (material: MaterialCatalogo) => {
     setMaterialesActualizados((prev) => [...prev, material]);
@@ -341,16 +399,7 @@ export default function FacturaModal({
         toast.error("Proveedor es requerido");
         return;
       }
-      if (!obraId) {
-        console.log("❌ Error: obraId vacío", obraId);
-        toast.error("Obra es requerida");
-        return;
-      }
-      if (!proyectoId) {
-        console.log("❌ Error: proyectoId vacío", proyectoId);
-        toast.error("Proyecto es requerido");
-        return;
-      }
+      // Obra es opcional: sin obra, la compra queda como stock general de Nodo
       if (lineas.length === 0) {
         console.log("❌ Error: Sin líneas");
         toast.error("Debe agregar al menos un ítem");
@@ -502,7 +551,7 @@ export default function FacturaModal({
               <Select
                 value={obraId}
                 onChange={setObraId}
-                placeholder="Selecciona obra"
+                placeholder="Sin obra (stock general de Nodo)"
                 options={obras.map((o) => ({ value: o.id, label: o.nombre }))}
                 allowClear
                 showSearch
@@ -511,6 +560,9 @@ export default function FacturaModal({
                 }
                 className="w-full"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Dejalo vacío si la compra es para el inventario general, sin asignar a una obra.
+              </p>
             </div>
           )}
           <div>
@@ -528,6 +580,25 @@ export default function FacturaModal({
         {/* Ítems */}
         <div className="mt-4">
           <h3 className="mb-3 font-semibold text-gray-900">Ítems de Factura</h3>
+
+          <div className="mb-3">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Escanear código de barras
+            </label>
+            <Input
+              ref={inputEscanerRef}
+              prefix={<Barcode size={16} className="text-gray-400" />}
+              placeholder="Escanea o escribe el código y presiona Enter (ej: MAT-000003)"
+              value={codigoEscaneado}
+              onChange={(e) => setCodigoEscaneado(e.target.value)}
+              onPressEnter={() => handleEscanearCodigo(codigoEscaneado)}
+              className="max-w-md"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              O agrega manualmente con el botón &quot;Agregar ítem&quot; y selecciona el material de la lista.
+            </p>
+          </div>
+
           <Table
             columns={columnas}
             dataSource={lineas.map((l) => ({ ...l, key: l.id }))}

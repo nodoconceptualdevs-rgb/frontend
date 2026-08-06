@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import HitoEditor from "@/components/admin/HitoEditor";
 import AdminHeader from "@/components/admin/AdminHeader";
 import ProyectoInfoForm from "@/components/proyectos/ProyectoInfoForm";
 import TokenNFCCard from "@/components/proyectos/TokenNFCCard";
+import ObraVinculadaCard from "@/components/proyectos/ObraVinculadaCard";
 import SortableHitoItem from "@/components/proyectos/SortableHitoItem";
 import { getProyectoById, updateProyecto, regenerarTokenNFC } from "@/services/proyectos";
 import { getClientes, getGerentes } from "@/services/usuarios";
@@ -52,33 +53,34 @@ export default function EditarProyectoPage() {
   const [clientes, setClientes] = useState<Usuario[]>([]);
   const [gerentes, setGerentes] = useState<Usuario[]>([]);
 
+  const cargarProyecto = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getProyectoById(Number(params.id));
+
+      if (!data || !data.data) {
+        alerts.error('Proyecto no encontrado');
+        router.push('/admin/proyectos');
+        return;
+      }
+
+      setProyecto(data.data);
+      // Ordenar hitos por el campo 'orden' al cargar
+      setHitos(sortHitosByOrden(data.data.hitos || []));
+      console.log('Proyecto cargado:', data.data);
+    } catch (error) {
+      console.error('Error cargando proyecto:', error);
+      alerts.error('Error al cargar el proyecto');
+      router.push('/admin/proyectos');
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id, router]);
+
   // Cargar datos del proyecto
   useEffect(() => {
-    async function cargarProyecto() {
-      try {
-        setLoading(true);
-        const data = await getProyectoById(Number(params.id));
-        
-        if (!data || !data.data) {
-          alerts.error('Proyecto no encontrado');
-          router.push('/admin/proyectos');
-          return;
-        }
-
-        setProyecto(data.data);
-        // Ordenar hitos por el campo 'orden' al cargar
-        setHitos(sortHitosByOrden(data.data.hitos || []));
-        console.log('Proyecto cargado:', data.data);
-      } catch (error) {
-        console.error('Error cargando proyecto:', error);
-        alerts.error('Error al cargar el proyecto');
-        router.push('/admin/proyectos');
-      } finally {
-        setLoading(false);
-      }
-    }
     cargarProyecto();
-  }, [params.id, router]);
+  }, [cargarProyecto]);
 
   // Cargar usuarios para selectores
   useEffect(() => {
@@ -420,6 +422,14 @@ export default function EditarProyectoPage() {
             <TokenNFCCard
               tokenNfc={proyecto.token_nfc}
               onRegenerar={handleRegenerarToken}
+            />
+
+            <ObraVinculadaCard
+              proyectoId={proyecto.id}
+              obraVinculada={proyecto.obras?.[0]}
+              basePath="/admin/obras"
+              nuevaObraPath="/admin/obras/nueva"
+              onCambio={cargarProyecto}
             />
           </div>
         )}

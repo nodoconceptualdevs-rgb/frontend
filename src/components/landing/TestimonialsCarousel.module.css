@@ -94,29 +94,34 @@
   .testimonialsBg {
     border-radius: 0;
     padding: 0 0 18px 0;
-    width: 100vw;
-    margin-left: -50vw;
-    margin-right: -50vw;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    left: auto;
+    right: auto;
+    overflow-x: hidden;
   }
-  
+
   .mySwiper {
     padding-left: 1rem;
     padding-right: 1rem;
+    width: 100%;
+    max-width: 100%;
   }
-  
+
   .card {
-    min-width: calc(100vw - 3rem);
-    max-width: calc(100vw - 3rem);
+    min-width: calc(100% - 2rem);
+    max-width: calc(100% - 2rem);
     min-height: auto;
     padding: 32px 24px 24px 24px;
     justify-content: flex-start;
     gap: 16px;
   }
-  
+
   .text {
     margin-bottom: 16px;
   }
-  
+
   .userRow {
     margin-top: 0;
   }

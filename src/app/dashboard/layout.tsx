@@ -33,6 +33,11 @@ export default function ClientDashboardLayout({
           label: "Mi Proyecto",
         },
         {
+          key: "/dashboard/obras",
+          icon: <BuildOutlined />,
+          label: "Obras",
+        },
+        {
           key: "/dashboard/gerente-cursos",
           icon: <VideoCameraOutlined />,
           label: "Cursos",

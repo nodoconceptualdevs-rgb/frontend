@@ -28,6 +28,7 @@ export default function ObrasTable({ obras }: Props) {
       dataIndex: "proyectoNombre",
       key: "proyectoNombre",
       width: 150,
+      render: (text: string | undefined) => text || <span className="text-gray-400 italic">Sin proyecto</span>,
     },
     {
       title: "Capataz",
@@ -41,7 +42,7 @@ export default function ObrasTable({ obras }: Props) {
       dataIndex: "estado",
       key: "estado",
       render: (estado: string) => <ObraStatusTag estado={estado as any} />,
-      width: 100,
+      width: 140,
     },
     {
       title: "Presupuesto",

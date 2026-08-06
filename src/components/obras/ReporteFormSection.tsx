@@ -511,7 +511,14 @@ export default function ReporteFormSection({
         .fila-input .ant-select,
         .fila-herramienta .ant-select {
           width: 100% !important;
-          min-width: 280px;
+          min-width: 0;
+        }
+
+        @media (min-width: 1025px) {
+          .fila-input .ant-select,
+          .fila-herramienta .ant-select {
+            min-width: 280px;
+          }
         }
 
         .fila-input .ant-select-selector,
@@ -676,6 +683,22 @@ export default function ReporteFormSection({
             grid-template-columns: 1fr 1fr 1fr !important;
           }
         }
+
+        /* ============ MONTO A EJECUTAR / SUBTOTALES RESPONSIVE ============ */
+        @media (max-width: 640px) {
+          .monto-ejecutar-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .subtotal-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .subtotal-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
       `}</style>
 
       {/* Header compacto */}
@@ -708,7 +731,7 @@ export default function ReporteFormSection({
 
         {/* Fotos del avance */}
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <span className="label-small flex items-center gap-2">
               <Image size={14} />
               Fotos del Avance
@@ -933,7 +956,7 @@ export default function ReporteFormSection({
 
               {/* Monto Ejecutado + Progreso */}
               {!completada ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                <div className="monto-ejecutar-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                   {/* Input Monto */}
                   <div>
                     <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -1346,6 +1369,7 @@ export default function ReporteFormSection({
 
                 {/* Subtotal - Siempre visible */}
                 <div
+                    className="subtotal-grid"
                     style={{
                       marginTop: "12px",
                       paddingTop: "12px",

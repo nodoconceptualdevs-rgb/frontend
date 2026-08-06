@@ -17,3 +17,5 @@ export { default as ValuacionesTab } from "./ValuacionesTab";
 export { default as AnaliticaTab } from "./AnaliticaTab";
 export { default as InventarioTab } from "./InventarioTab";
 export { default as ImportarPartidasModal } from "./ImportarPartidasModal";
+export { default as HistorialTab } from "./HistorialTab";
+export { default as TransferirMaterialModal } from "./TransferirMaterialModal";

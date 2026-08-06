@@ -1,46 +1,28 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
-import { Input, InputNumber, Select, DatePicker, Modal } from "antd";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import AdminHeader from "@/components/admin/AdminHeader";
-import {
-  createObra,
-  getProyectosDisponiblesParaObra,
-} from "@/services/obras";
-import { getGerentes } from "@/services/usuarios";
-import UserSelector from "@/components/proyectos/UserSelector";
+import { Input, InputNumber, Select, DatePicker } from "antd";
+import { createObra, getProyectosDisponiblesParaObra } from "@/services/obras";
 import type { ObraFormValues, EstadoObra } from "@/types/obras";
 import { ESTADO_OBRA_LABEL } from "@/types/obras";
+import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 
-function NuevaObraPageContent() {
+function NuevaObraGerentePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const proyectoIdPrefill = searchParams.get("proyectoId");
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [proyectos, setProyectos] = useState<{ id: number; nombre: string }[]>(
-    []
-  );
-  const [gerentesDisponibles, setGerentesDisponibles] = useState<
-    { id: number; username: string; email: string; name?: string }[]
-  >([]);
-  const [loadingGerentes, setLoadingGerentes] = useState(true);
-
-  // Gerentes confirmados en el formulario
-  const [gerentesIds, setGerentesIds] = useState<number[]>([]);
-  // Modal de asignación de gerentes
-  const [modalGerentesOpen, setModalGerentesOpen] = useState(false);
-  // Selección temporal dentro del modal (se confirma al guardar)
-  const [gerentesModalSeleccion, setGerentesModalSeleccion] = useState<number[]>(
     []
   );
 
   const [form, setForm] = useState<Partial<ObraFormValues>>({
     nombre: "",
     proyectoId: proyectoIdPrefill ? Number(proyectoIdPrefill) : undefined,
-    capatazId: undefined,
     estado: "PREPARACION" as EstadoObra,
     fechaInicio: dayjs().toISOString(),
     fechaFinPlanificada: dayjs().add(30, "days").toISOString(),
@@ -49,22 +31,12 @@ function NuevaObraPageContent() {
   });
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [pr, ger] = await Promise.all([
-          getProyectosDisponiblesParaObra(),
-          getGerentes(),
-        ]);
-        setProyectos(pr);
-        setGerentesDisponibles(Array.isArray(ger) ? ger : []);
-      } catch (error) {
-        console.error("Error cargando datos:", error);
-        toast.error("Error al cargar datos");
-      } finally {
-        setLoadingGerentes(false);
-      }
-    };
-    cargarDatos();
+    getProyectosDisponiblesParaObra()
+      .then(setProyectos)
+      .catch((error) => {
+        console.error("Error cargando proyectos:", error);
+        toast.error("Error al cargar proyectos");
+      });
   }, []);
 
   const handleSubmit = async () => {
@@ -80,13 +52,13 @@ function NuevaObraPageContent() {
     try {
       setLoading(true);
       const nueva = await createObra({
-        ...form,
-        // Proyecto es totalmente opcional: null si no se selecciona
+        ...(form as ObraFormValues),
+        // Proyecto totalmente opcional (se envía null si no se selecciona)
         proyectoId: form.proyectoId ?? undefined,
-        gerentesIds,
-      } as ObraFormValues);
+        gerentesIds: user?.id ? [user.id] : [],
+      });
       toast.success("Obra creada exitosamente");
-      router.push(`/admin/obras/${nueva.id}`);
+      router.push(`/dashboard/obras/${nueva.id}`);
     } catch (error) {
       console.error("Error creando obra:", error);
       toast.error("Error al crear la obra");
@@ -95,28 +67,16 @@ function NuevaObraPageContent() {
     }
   };
 
-  const abrirModalGerentes = () => {
-    setGerentesModalSeleccion(gerentesIds);
-    setModalGerentesOpen(true);
-  };
-
-  const guardarGerentes = () => {
-    setGerentesIds(gerentesModalSeleccion);
-    setModalGerentesOpen(false);
-    toast.success(
-      `${gerentesModalSeleccion.length} gerente(s) asignado(s)`
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminHeader
-        titulo="Nueva Obra"
-        subtitulo="Crea una obra y asigna sus gerentes y presupuesto"
-        mostrarVolver
-      />
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Nueva Obra</h1>
+          <p className="text-gray-600">
+            Crea una obra y vincúlala a un proyecto cuando quieras
+          </p>
+        </div>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6">
           {/* Nombre | Proyecto */}
           <div className="grid md:grid-cols-2 gap-6">
@@ -156,7 +116,7 @@ function NuevaObraPageContent() {
             </div>
           </div>
 
-          {/* Estado | Gerentes */}
+          {/* Estado */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -173,29 +133,6 @@ function NuevaObraPageContent() {
                 size="large"
                 style={{ width: "100%" }}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Gerentes
-              </label>
-              <button
-                type="button"
-                onClick={abrirModalGerentes}
-                className="w-full h-10 px-4 bg-white border-2 border-gray-300 rounded-lg hover:border-red-500 hover:bg-red-50 transition flex items-center justify-between"
-              >
-                <span className="text-gray-700 font-medium flex items-center gap-2">
-                  <span aria-hidden>👥</span>
-                  Asignar Gerentes
-                </span>
-                <span className="text-sm font-semibold text-red-600">
-                  {gerentesIds.length} asignado(s)
-                </span>
-              </button>
-              <p className="text-xs text-gray-500 mt-1">
-                {gerentesIds.length === 0
-                  ? "Ningún gerente asignado todavía"
-                  : `${gerentesIds.length} gerente(s) con acceso a esta obra`}
-              </p>
             </div>
           </div>
 
@@ -301,7 +238,7 @@ function NuevaObraPageContent() {
                     estado inicial
                   </li>
                   <li>
-                    • Los <strong>gerentes asignados</strong> tendrán acceso
+                    • Quedarás asignado como <strong>gerente</strong> con acceso
                     para gestionarla
                   </li>
                   <li>
@@ -336,56 +273,15 @@ function NuevaObraPageContent() {
             </button>
           </div>
         </div>
-      </main>
-
-      {/* Modal Asignar Gerentes */}
-      <Modal
-        title={
-          <span className="flex items-center gap-2 text-lg font-bold">
-            <span aria-hidden>👥</span> Asignar Gerentes
-          </span>
-        }
-        open={modalGerentesOpen}
-        onCancel={() => setModalGerentesOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
-        <div className="pt-2 space-y-6">
-          <UserSelector
-            label="Gerentes con acceso a esta obra"
-            availableUsers={gerentesDisponibles}
-            selectedUsers={gerentesModalSeleccion}
-            onSelectionChange={setGerentesModalSeleccion}
-            loading={loadingGerentes}
-            placeholder="Buscar gerentes..."
-          />
-
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => setModalGerentesOpen(false)}
-              className="flex-1 px-6 py-2.5 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={guardarGerentes}
-              className="flex-1 px-6 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow"
-            >
-              Guardar
-            </button>
-          </div>
-        </div>
-      </Modal>
+      </div>
     </div>
   );
 }
 
-export default function NuevaObraPage() {
+export default function NuevaObraGerentePage() {
   return (
     <Suspense fallback={null}>
-      <NuevaObraPageContent />
+      <NuevaObraGerentePageContent />
     </Suspense>
   );
 }

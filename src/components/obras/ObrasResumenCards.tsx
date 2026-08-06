@@ -45,7 +45,7 @@ interface Props {
 
 export default function ObrasResumenCards({ resumen }: Props) {
   return (
-    <div className="px-6 grid grid-cols-6 gap-4">
+    <div className="px-4 sm:px-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       <StatCard
         label="Total Obras"
         value={resumen.totalObras}

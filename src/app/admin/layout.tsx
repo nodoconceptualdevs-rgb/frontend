@@ -9,6 +9,7 @@ import {
   BarChartOutlined,
   ShoppingCartOutlined,
   BuildOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
@@ -38,6 +39,11 @@ export default function AdminLayout({
         key: "/admin/obras",
         icon: <BuildOutlined />,
         label: "Obras",
+      },
+      {
+        key: "/admin/historial",
+        icon: <HistoryOutlined />,
+        label: "Historial",
       },
       {
         key: "/admin/cursos",

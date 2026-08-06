@@ -130,7 +130,7 @@ export async function regenerarTokenNFC(id: number): Promise<RegenerarTokenRespo
  * Obtener un proyecto por ID con todas sus relaciones
  */
 export async function getProyectoById(id: number): Promise<ProyectoResponse> {
-  const res = await api.get(`/proyectos/${id}?populate[gerente_proyecto]=*&populate[cliente]=*&populate[hitos][populate][contenido][populate]=*`);
+  const res = await api.get(`/proyectos/${id}?populate[gerente_proyecto]=*&populate[cliente]=*&populate[obras]=*&populate[hitos][populate][contenido][populate]=*`);
   return res.data as ProyectoResponse;
 }
 

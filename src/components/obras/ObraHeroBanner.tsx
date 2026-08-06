@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Calendar, TrendingUp, DollarSign, FileText, Pencil, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, TrendingUp, DollarSign, FileText, Pencil, Check, X, Link2, Unlink, Users } from "lucide-react";
 import dayjs from "dayjs";
 import type { Obra, EstadoObra, ValuacionFinal } from "@/types/obras";
 import { ESTADO_OBRA_LABEL } from "@/types/obras";
@@ -64,9 +64,16 @@ interface Props {
   onTabChange: (key: string) => void;
   onEstadoChange: (estado: EstadoObra) => void;
   onPresupuestoChange?: (monto: number) => Promise<void>;
+  onVincularProyecto: () => void;
+  onDesvincularProyecto: () => void;
+  gerentesCount?: number;
+  onGestionarEquipo?: () => void;
+  /** Pestañas a mostrar; por defecto las 6 completas (uso admin). El
+   * llamador filtra esta lista según los permisos del usuario. */
+  tabs?: { key: string; label: string }[];
 }
 
-export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange, onEstadoChange, onPresupuestoChange }: Props) {
+export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange, onEstadoChange, onPresupuestoChange, onVincularProyecto, onDesvincularProyecto, gerentesCount = 0, onGestionarEquipo, tabs = TABS }: Props) {
   const router = useRouter();
   const estadoStyle = ESTADO_STYLE[obra.estado];
   const pct = valuacion ? Math.round(valuacion.porcentajeEjecucion) : 0;
@@ -83,6 +90,36 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
       inputRef.current.select();
     }
   }, [editingPresupuesto]);
+
+  // Flechas para desplazar la barra de pestañas cuando no caben todas
+  // (el scroll táctil funciona igual, pero en mouse/trackpad sin barra
+  // visible no había forma de llegar a las pestañas ocultas).
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const actualizarEstadoScroll = () => {
+    const el = tabScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+
+  useEffect(() => {
+    actualizarEstadoScroll();
+    const el = tabScrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", actualizarEstadoScroll);
+    window.addEventListener("resize", actualizarEstadoScroll);
+    return () => {
+      el.removeEventListener("scroll", actualizarEstadoScroll);
+      window.removeEventListener("resize", actualizarEstadoScroll);
+    };
+  }, [tabs]);
+
+  const desplazarTabs = (delta: number) => {
+    tabScrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  };
 
   const handleStartEdit = () => {
     setPresupuestoInput(String(obra.presupuestoTotal));
@@ -130,9 +167,9 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
         style={{ background: "radial-gradient(circle, #f59e0b 0%, transparent 70%)" }}
       />
 
-      <div className="relative px-6 pt-5 pb-0">
+      <div className="relative px-4 sm:px-6 pt-5 pb-0">
         {/* Back + estado */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-medium transition-colors group"
@@ -142,7 +179,7 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
           </button>
 
           {/* Estado selector inline */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {ESTADOS.map((e) => {
               const s = ESTADO_STYLE[e];
               const active = obra.estado === e;
@@ -166,15 +203,33 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
         </div>
 
         {/* Obra identity */}
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="font-mono text-[11px] font-bold text-amber-400 tracking-[0.15em] uppercase">
               Obra #{obra.id}
             </span>
             <span className="text-slate-700 text-sm">·</span>
-            <span className="text-[11px] text-slate-500 font-medium truncate max-w-xs">
-              {obra.proyectoNombre}
-            </span>
+            {obra.proyectoNombre ? (
+              <span className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                <span className="truncate max-w-xs">{obra.proyectoNombre}</span>
+                <button
+                  onClick={onDesvincularProyecto}
+                  className="text-slate-500 hover:text-red-400 transition-colors"
+                  title="Desvincular proyecto"
+                >
+                  <Unlink size={11} />
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={onVincularProyecto}
+                className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 font-medium transition-colors"
+              >
+                <Link2 size={11} />
+                Sin proyecto vinculado — Vincular
+              </button>
+            )}
           </div>
           <h1 className="text-white text-xl font-bold leading-snug line-clamp-2 max-w-2xl">
             {obra.nombre}
@@ -197,10 +252,26 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
               </>
             )}
           </div>
+          </div>
+
+          {/* Equipo y Permisos */}
+          {onGestionarEquipo && (
+            <button
+              onClick={onGestionarEquipo}
+              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 hover:border-amber-400/40 transition-all"
+              title="Gestionar equipo y permisos"
+            >
+              <Users size={14} className="text-amber-400" />
+              <span>Equipo y Permisos</span>
+              <span className="font-mono text-[11px] text-slate-400">
+                ({gerentesCount} {gerentesCount === 1 ? "gerente" : "gerentes"})
+              </span>
+            </button>
+          )}
         </div>
 
         {/* KPI strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mb-5">
           {/* Presupuesto — editable */}
           <div className="flex items-center gap-3 bg-white/5 hover:bg-white/8 border border-white/10 rounded-xl px-4 py-3 transition-colors min-w-0 group">
             <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/20">
@@ -257,28 +328,55 @@ export default function ObraHeroBanner({ obra, valuacion, activeTab, onTabChange
         </div>
 
         {/* ── Tab bar ─────────────────────────────────────────────── */}
-        <div className="flex items-end gap-0 -mb-px overflow-x-auto scrollbar-none">
-          {TABS.map((tab) => {
-            const active = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => onTabChange(tab.key)}
-                className={`
-                  relative flex-shrink-0 px-4 py-2.5 text-[13px] font-semibold transition-all
-                  whitespace-nowrap border-b-2
-                  ${active
-                    ? "text-white border-amber-400"
-                    : "text-slate-500 border-transparent hover:text-slate-300 hover:border-slate-600"}
-                `}
-              >
-                {active && (
-                  <span className="absolute inset-x-2 top-1 bottom-0 rounded-t-md bg-white/5 -z-0" />
-                )}
-                <span className="relative z-10">{tab.label}</span>
-              </button>
-            );
-          })}
+        <div className="relative">
+          {canScrollLeft && (
+            <button
+              type="button"
+              onClick={() => desplazarTabs(-120)}
+              aria-label="Ver pestañas anteriores"
+              className="absolute left-0 top-0 bottom-0 z-20 flex items-center pr-4 pl-0.5 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent"
+            >
+              <ChevronLeft size={16} className="text-slate-300" />
+            </button>
+          )}
+
+          <div
+            ref={tabScrollRef}
+            className="flex items-end gap-0 -mb-px overflow-x-auto hide-scrollbar"
+          >
+            {tabs.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => onTabChange(tab.key)}
+                  className={`
+                    relative flex-shrink-0 px-4 py-2.5 text-[13px] font-semibold transition-all
+                    whitespace-nowrap border-b-2
+                    ${active
+                      ? "text-white border-amber-400"
+                      : "text-slate-500 border-transparent hover:text-slate-300 hover:border-slate-600"}
+                  `}
+                >
+                  {active && (
+                    <span className="absolute inset-x-2 top-1 bottom-0 rounded-t-md bg-white/5 -z-0" />
+                  )}
+                  <span className="relative z-10">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {canScrollRight && (
+            <button
+              type="button"
+              onClick={() => desplazarTabs(120)}
+              aria-label="Ver más pestañas"
+              className="absolute right-0 top-0 bottom-0 z-20 flex items-center pl-4 pr-0.5 bg-gradient-to-l from-slate-900 via-slate-900/90 to-transparent"
+            >
+              <ChevronRight size={16} className="text-slate-300" />
+            </button>
+          )}
         </div>
       </div>
     </div>

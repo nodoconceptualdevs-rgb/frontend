@@ -44,6 +44,10 @@ const PUBLIC_ROUTES = [
   "/email-auth/send-confirmation",
 
   "/email-auth/confirm-email",
+
+  // No usa el JWT de sesión para autorizar (recibe su propio "jwt" en el body
+  // y puede responder 401 por motivos ajenos a la sesión actual del usuario)
+  "/proyectos/auth-nfc",
 ];
 
 // Función para obtener el token de múltiples fuentes
@@ -103,20 +107,34 @@ api.interceptors.response.use(
 
   (error) => {
     if (error.response?.status === 401) {
-      console.warn(
-        "⚠️ Error 401: Token inválido o expirado - limpiando sesión",
+      const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+        error.config?.url?.includes(route),
       );
 
-      // Limpiar token inválido automáticamente (previene el loop de 401)
-      if (typeof window !== "undefined") {
-        const hadToken = localStorage.getItem("token");
+      // Solo se trata como expiración de sesión si la ruta requiere el JWT
+      // de sesión (evita loguear afuera al usuario por 401 de rutas ajenas
+      // a su token, como auth-nfc).
+      if (!isPublicRoute && typeof window !== "undefined") {
+        const hadToken = getAuthToken();
         if (hadToken) {
-          console.info("🗑️ Eliminando token inválido del localStorage");
+          console.warn(
+            "⚠️ Error 401: Token inválido o expirado - cerrando sesión",
+          );
+
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           localStorage.removeItem("userId");
           localStorage.removeItem("role");
           localStorage.removeItem("name");
+
+          Cookies.remove("token");
+          Cookies.remove("userId");
+          Cookies.remove("role");
+
+          // Notificar a la app (AuthContext) para limpiar el estado en
+          // memoria y redirigir a /login, ya que este módulo no tiene
+          // acceso al router ni al contexto de React.
+          window.dispatchEvent(new Event("auth:session-expired"));
         }
       }
     }
