@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import LoginForm from "../../../components/LoginForm";
 import styles from "./loginPage.module.css";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +10,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useAuth();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') {
+      setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+    }
+  }, [searchParams]);
 
   interface LoginFormData {
     email: string;

@@ -170,9 +170,9 @@ export default function AnaliticaTab({ obra, valuacion, valuaciones, materiales 
     <div className="space-y-8 pb-10">
 
       {/* ── 1. KPIs ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:grid-cols-6">
         {/* % Ejecución */}
-        <div className="col-span-3 lg:col-span-2 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="sm:col-span-3 lg:col-span-2 rounded-xl border border-gray-200 bg-white p-5">
           <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Avance de Obra</p>
           <div className="flex items-end gap-3 mb-3">
             <span className="text-4xl font-black text-gray-900">{porcEjecucion}%</span>
@@ -243,7 +243,7 @@ export default function AnaliticaTab({ obra, valuacion, valuaciones, materiales 
           </div>
         ) : (
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div>
                 <p className="text-base font-bold text-blue-900">
                   Valuación #{ultimaValuacion.numero}
@@ -534,6 +534,7 @@ export default function AnaliticaTab({ obra, valuacion, valuaciones, materiales 
             size="small"
             bordered
             pagination={false}
+            scroll={{ x: 500 }}
             dataSource={manoObraTotal.map((p) => ({ ...p, key: p.id }))}
             columns={[
               { title: "Nombre", dataIndex: "nombre", key: "nombre" },
@@ -556,7 +557,7 @@ export default function AnaliticaTab({ obra, valuacion, valuaciones, materiales 
               },
             ]}
             footer={() => (
-              <div className="flex justify-between text-sm font-bold text-gray-800">
+              <div className="flex flex-wrap justify-between gap-2 text-sm font-bold text-gray-800">
                 <span>
                   Total horas: {manoObraTotal.reduce((s, p) => s + p.horas, 0)}h
                 </span>

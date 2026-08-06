@@ -836,3 +836,27 @@ body.dark-theme .text-gray-400 {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ========== IMPRESIÓN DE CÓDIGOS DE BARRA ========== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #barcode-print-area,
+  #barcode-print-area * {
+    visibility: visible;
+  }
+
+  #barcode-print-area {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .barcode-label {
+    break-inside: avoid;
+  }
+}

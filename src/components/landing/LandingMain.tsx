@@ -76,10 +76,12 @@ export default function LandingMain() {
         <TeamCarousel />
       </div>
 
-      <div className={styles.containerPadding}>
-        <SectionTitle text="Nuestros Cursos" alignRight={false} />
+      <div className={styles.coursesSectionWrapper}>
+        <div className={styles.containerPadding}>
+          <SectionTitle text="Nuestros Cursos" alignRight={false} />
+        </div>
+        <CoursesCarousel />
       </div>
-      <CoursesCarousel />
 
       <div className={styles.backgroundWhite} style={{ marginBottom: "6rem" }}>
         <div className={styles.containerPadding}>

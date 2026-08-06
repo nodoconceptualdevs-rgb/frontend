@@ -1,14 +1,24 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Table, Button, Space, Popconfirm } from "antd";
-import { TrendingUp, Edit2, Trash2 } from "lucide-react";
+import { TrendingUp, Edit2, Trash2, Barcode, FileDown, ArrowRightLeft } from "lucide-react";
+import BulkActionsBar from "@/components/BulkActionsBar";
+import ImprimirCodigosBarraModal from "./ImprimirCodigosBarraModal";
+import { generarCodigoMaterial } from "@/services/inventario";
+import { generarPdfCodigosBarra } from "@/lib/barcodePdf";
+import toast from "react-hot-toast";
 import type { MaterialConEstado } from "@/types/inventario";
 
 interface MaterialesTableProps {
   materiales: MaterialConEstado[];
   onEditar?: (material: MaterialConEstado) => void;
   onEliminar?: (id: number) => Promise<void>;
+  onEliminarMasivo?: (ids: number[]) => Promise<void>;
+  onCodigoGenerado?: (materialId: number, codigo: string) => void;
+  /** Cuando se pasa, aparece un botón de transferir por fila (pensado para
+   * cuando la tabla está filtrada a una ubicación específica: obra o Nodo). */
+  onTransferir?: (material: MaterialConEstado) => void;
 }
 
 function HistorialExpandable({ material }: { material: MaterialConEstado }) {
@@ -62,8 +72,107 @@ function HistorialExpandable({ material }: { material: MaterialConEstado }) {
   );
 }
 
-export default function MaterialesTable({ materiales, onEditar, onEliminar }: MaterialesTableProps) {
+export default function MaterialesTable({ materiales, onEditar, onEliminar, onEliminarMasivo, onCodigoGenerado, onTransferir }: MaterialesTableProps) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [materialesParaImprimir, setMaterialesParaImprimir] = useState<MaterialConEstado[] | null>(null);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+
+  const handleDescargarPdf = async (seleccionados: MaterialConEstado[]) => {
+    if (seleccionados.length === 0) return;
+    setGenerandoPdf(true);
+    try {
+      const conCodigo = await Promise.all(
+        seleccionados.map(async (m) => {
+          if (m.codigo) return { nombre: m.nombre, codigo: m.codigo };
+          try {
+            const actualizado = await generarCodigoMaterial(m.id);
+            if (actualizado.codigo) {
+              onCodigoGenerado?.(m.id, actualizado.codigo);
+              return { nombre: m.nombre, codigo: actualizado.codigo };
+            }
+          } catch {
+            // se filtra abajo si no se pudo generar
+          }
+          return null;
+        })
+      );
+
+      const materialesListos = conCodigo.filter(
+        (m): m is { nombre: string; codigo: string } => m !== null
+      );
+
+      if (materialesListos.length === 0) {
+        toast.error("No se pudo generar el código de ningún material seleccionado");
+        return;
+      }
+      if (materialesListos.length < seleccionados.length) {
+        toast.error(
+          `${seleccionados.length - materialesListos.length} material(es) no se pudieron incluir`
+        );
+      }
+
+      generarPdfCodigosBarra(materialesListos);
+      toast.success(`PDF generado con ${materialesListos.length} código(s) de barra`);
+    } catch {
+      toast.error("Error al generar el PDF");
+    } finally {
+      setGenerandoPdf(false);
+    }
+  };
+
+  const toggleSelectId = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === materiales.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(materiales.map((m) => m.id));
+    }
+  };
+
+  const handleEliminarMasivo = async () => {
+    if (!onEliminarMasivo || selectedIds.length === 0) return;
+    setLoadingDelete(true);
+    try {
+      await onEliminarMasivo(selectedIds);
+      setSelectedIds([]);
+      toast.success(`${selectedIds.length} material(es) eliminado(s)`);
+    } catch (error) {
+      console.error("Error eliminando materiales:", error);
+      toast.error("Error al eliminar materiales");
+    } finally {
+      setLoadingDelete(false);
+    }
+  };
+
   const columns = [
+    {
+      title: (
+        <input
+          type="checkbox"
+          checked={selectedIds.length === materiales.length && materiales.length > 0}
+          indeterminate={selectedIds.length > 0 && selectedIds.length < materiales.length}
+          onChange={toggleSelectAll}
+          className="w-4 h-4 cursor-pointer"
+        />
+      ),
+      key: "checkbox",
+      width: 45,
+      align: "center" as const,
+      render: (_: unknown, record: MaterialConEstado) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(record.id)}
+          onChange={() => toggleSelectId(record.id)}
+          className="w-4 h-4 cursor-pointer"
+        />
+      ),
+    },
     {
       title: "Material",
       dataIndex: "nombre",
@@ -151,9 +260,26 @@ export default function MaterialesTable({ materiales, onEditar, onEliminar }: Ma
     {
       title: "Acciones",
       key: "acciones",
-      width: 120,
+      width: 140,
       render: (_: unknown, record: MaterialConEstado) => (
         <Space size="small">
+          <Button
+            type="text"
+            size="small"
+            icon={<Barcode size={16} />}
+            onClick={() => setMaterialesParaImprimir([record])}
+            title="Imprimir código de barra"
+          />
+          {onTransferir && (
+            <Button
+              type="text"
+              size="small"
+              icon={<ArrowRightLeft size={16} />}
+              disabled={record.stockActual <= 0}
+              onClick={() => onTransferir(record)}
+              title="Transferir a una obra u otra ubicación"
+            />
+          )}
           {onEditar && (
             <Button
               type="text"
@@ -165,12 +291,12 @@ export default function MaterialesTable({ materiales, onEditar, onEliminar }: Ma
           )}
           {onEliminar && (
             <Popconfirm
-              title="Eliminar material"
-              description="¿Está seguro de que desea eliminar este material?"
-              onConfirm={() => onEliminar(record.id)}
-              okText="Eliminar"
-              okType="danger"
+              title="¿Eliminar este material?"
+              description="Se eliminará del catálogo junto con su historial de precios."
+              okText="Sí, eliminar"
               cancelText="Cancelar"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => onEliminar(record.id)}
             >
               <Button
                 type="text"
@@ -187,19 +313,75 @@ export default function MaterialesTable({ materiales, onEditar, onEliminar }: Ma
   ];
 
   return (
-    <Table
-      columns={columns}
-      dataSource={materiales.map((m) => ({ ...m, key: m.id }))}
-      pagination={{ pageSize: 15 }}
-      size="small"
-      bordered
-      className="bg-white rounded-lg"
-      expandable={{
-        expandedRowRender: (record: MaterialConEstado) => (
-          <HistorialExpandable material={record} />
-        ),
-        expandedRowClassName: () => "bg-gray-50",
-      }}
-    />
+    <>
+      <div className={selectedIds.length > 0 ? "pb-24" : ""}>
+        <Table
+          columns={columns}
+          dataSource={materiales.map((m) => ({ ...m, key: m.id }))}
+          pagination={{ pageSize: 15 }}
+          size="small"
+          bordered
+          className="bg-white rounded-lg"
+          rowClassName={(record: MaterialConEstado) =>
+            selectedIds.includes(record.id) ? "bg-blue-50" : ""
+          }
+          expandable={{
+            expandedRowRender: (record: MaterialConEstado) => (
+              <HistorialExpandable material={record} />
+            ),
+            expandedRowClassName: () => "bg-gray-50",
+          }}
+        />
+      </div>
+
+      {onEliminarMasivo && (
+        <BulkActionsBar
+          selectedCount={selectedIds.length}
+          totalCount={materiales.length}
+          onSelectAll={() => setSelectedIds(materiales.map((m) => m.id))}
+          onClearSelection={() => setSelectedIds([])}
+          onDeleteSelected={() => {}}
+          onConfirmDelete={handleEliminarMasivo}
+          isLoading={loadingDelete}
+          itemLabel="material(es)"
+          extraActions={
+            <>
+              <Button
+                icon={<Barcode size={16} />}
+                onClick={() =>
+                  setMaterialesParaImprimir(materiales.filter((m) => selectedIds.includes(m.id)))
+                }
+              >
+                Imprimir códigos
+              </Button>
+              <Button
+                icon={<FileDown size={16} />}
+                loading={generandoPdf}
+                onClick={() =>
+                  handleDescargarPdf(materiales.filter((m) => selectedIds.includes(m.id)))
+                }
+              >
+                Descargar PDF
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      <ImprimirCodigosBarraModal
+        items={(materialesParaImprimir || []).map((m) => ({
+          id: m.id,
+          nombre: m.nombre,
+          codigo: m.codigo,
+          unidad: m.unidad,
+          cantidadSugerida: m.stockActual,
+        }))}
+        open={materialesParaImprimir !== null}
+        onClose={() => setMaterialesParaImprimir(null)}
+        onCodigoGenerado={onCodigoGenerado}
+        generarCodigo={(id) => generarCodigoMaterial(id).then((m) => m.codigo)}
+        itemLabel="material"
+      />
+    </>
   );
 }

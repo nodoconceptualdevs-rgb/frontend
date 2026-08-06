@@ -11,7 +11,7 @@ interface Props {
   partidas: Partida[];
   valuaciones: ValuacionDoc[];
   obraNombre?: string;
-  onConcretar: () => Promise<void>;
+  onConcretar?: () => Promise<void>;
   onVerReporte: (reporte: ReporteDiario) => void;
 }
 
@@ -64,6 +64,7 @@ export default function ValuacionesTab({
   const totalCiclo = resumenCiclo.reduce((s, r) => s + r.montoEjec, 0);
 
   const handleConcretar = async () => {
+    if (!onConcretar) return;
     try {
       setConcretando(true);
       await onConcretar();
@@ -134,7 +135,7 @@ export default function ValuacionesTab({
         </table>
 
         {/* Resumen rápido */}
-        <div style={{ display: "flex", gap: 12, marginTop: 12, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 12, marginTop: 12, justifyContent: "flex-end", flexWrap: "wrap" }}>
           {[
             { label: "Presupuesto Base", value: valuacion.totalPresupuesto, bg: "#dce6f1", color: "#1e3a5f" },
             { label: "Presupuesto Modificado", value: valuacion.presupuestoModificado, bg: "#1e3a5f", color: "#fff" },
@@ -247,8 +248,8 @@ export default function ValuacionesTab({
 
       {/* ── CICLO ACTUAL ──────────────────────────────────────── */}
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div className="px-5 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="px-5 py-4 bg-gray-50 border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
             <Clock size={15} className="text-amber-500" />
             <span className="font-semibold text-gray-800">Ciclo Actual</span>
             {reportesPendientes.length > 0 && (
@@ -257,7 +258,7 @@ export default function ValuacionesTab({
               </Tag>
             )}
           </div>
-          {reportesPendientes.length > 0 && (
+          {reportesPendientes.length > 0 && onConcretar && (
             <Button type="primary" loading={concretando} onClick={handleConcretar} icon={<CheckCircle2 size={15} />}>
               Concretar Valuación
             </Button>
@@ -277,7 +278,7 @@ export default function ValuacionesTab({
               {resumenCiclo.map((item) => (
                 <div
                   key={item.partidaId}
-                  className={`flex items-center gap-4 px-4 py-3 rounded-lg border text-sm ${
+                  className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 rounded-lg border text-sm ${
                     item.esExtra ? "bg-green-50 border-green-200"
                     : item.diff > 0.001 ? "bg-blue-50 border-blue-200"
                     : item.diff < -0.001 ? "bg-red-50 border-red-200"
@@ -374,7 +375,7 @@ export default function ValuacionesTab({
                             {isExpanded && (
                               <tr style={{ background: "#f9fafb" }}>
                                 <td colSpan={10} style={{ padding: "8px", borderBottom: "1px solid #ddd" }}>
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {(r.personal?.length || 0) > 0 && (
                                       <div>
                                         <p style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#374151" }}>PERSONAL ({r.personal?.length})</p>
@@ -500,6 +501,7 @@ export default function ValuacionesTab({
             pagination={false}
             size="small"
             bordered
+            scroll={{ x: 700 }}
             rowClassName={() => "hover:bg-gray-50 transition-colors cursor-pointer"}
           />
         )}

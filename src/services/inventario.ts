@@ -85,6 +85,10 @@ function mapHerramienta(raw: any): Herramienta {
     nombre: raw.nombre,
     descripcion: raw.descripcion ?? undefined,
     categoria: raw.categoria,
+    serie: raw.serie ?? undefined,
+    marca: raw.marca ?? undefined,
+    unidad: raw.unidad ?? undefined,
+    ubicacionDeposito: raw.ubicacionDeposito ?? undefined,
     cantidad: raw.cantidad ?? 1,
     fechaAdquisicion: raw.fechaAdquisicion ?? undefined,
     estado: raw.estado,
@@ -121,14 +125,13 @@ export async function getFacturasByObra(obraId: number): Promise<FacturaCompra[]
 
 export async function createFactura(values: FacturaFormValues): Promise<FacturaCompra> {
   // Validaciones
-  if (!values.obraId) throw new Error("Obra es requerida");
   if (!values.proveedorNombre) throw new Error("Proveedor es requerido");
   if (!values.items || values.items.length === 0) throw new Error("Debe agregar al menos un ítem");
 
-  // Si no viene proyectoId, obtenerlo desde la obra (puede quedar sin proyecto)
+  // Sin obra: la compra queda como stock general de Nodo, sin proyecto asociado
   let proyectoId = values.proyectoId;
   let proyectoNombre = values.proyectoNombre;
-  if (!proyectoId) {
+  if (values.obraId && !proyectoId) {
     const obraRes = await api.get(`/obras?filters[id][$eq]=${values.obraId}&populate[proyecto]=*`);
     const obraData = (obraRes.data.data as any[])?.find((o) => o.id === values.obraId);
     proyectoId = obraData?.proyecto?.id ?? undefined;
@@ -163,9 +166,6 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
     proveedorRut: values.proveedorRut,
     fecha: values.fecha,
     fechaRecepcion: values.fechaRecepcion,
-    proyectoId,
-    proyectoNombre,
-    obraId: values.obraId,
     impuesto: values.impuesto,
     notas: values.notas,
     subtotal,
@@ -178,7 +178,17 @@ export async function createFactura(values: FacturaFormValues): Promise<FacturaC
     payload.proveedor = values.proveedorId;
   }
 
-  const res = await api.post(`/obras/${values.obraId}/factura-compras`, { data: payload });
+  // Con obra: queda vinculada a esa obra y a su proyecto (endpoint anidado).
+  // Sin obra: compra directa al inventario general de Nodo (endpoint plano).
+  if (values.obraId) {
+    payload.proyectoId = proyectoId;
+    payload.proyectoNombre = proyectoNombre;
+    payload.obraId = values.obraId;
+    const res = await api.post(`/obras/${values.obraId}/factura-compras`, { data: payload });
+    return mapFactura(res.data.data);
+  }
+
+  const res = await api.post(`/factura-compras`, { data: payload });
   return mapFactura(res.data.data);
 }
 
@@ -257,8 +267,19 @@ export async function deleteMaterial(documentId: string): Promise<void> {
   await api.delete(`/material-catalogos/${documentId}`);
 }
 
+export async function deleteMaterialsMasivo(documentIds: string[]): Promise<void> {
+  await Promise.all(
+    documentIds.map(docId => api.delete(`/material-catalogos/${docId}`))
+  );
+}
+
 export async function decrementarStock(materialId: number, cantidad: number): Promise<void> {
   await api.post(`/material-catalogos/${materialId}/decrementar`, { cantidad });
+}
+
+export async function generarCodigoMaterial(materialId: number): Promise<MaterialCatalogo> {
+  const res = await api.patch(`/material-catalogos/${materialId}/generar-codigo`);
+  return mapMaterial(res.data.data);
 }
 
 // ─── Resumen ─────────────────────────────────────────────────────────────────
@@ -266,6 +287,23 @@ export async function decrementarStock(materialId: number, cantidad: number): Pr
 export async function getResumenInventario(): Promise<InventarioResumen> {
   const res = await api.get("/inventario/resumen");
   return res.data.data as InventarioResumen;
+}
+
+export interface DistribucionFila {
+  materialId: number;
+  obraId: number | null; // null = Inventario General de Nodo
+  obraNombre: string | null;
+  cantidad: number;
+}
+
+export interface DistribucionInventario {
+  obras: { id: number; nombre: string }[];
+  filas: DistribucionFila[];
+}
+
+export async function getDistribucionInventario(): Promise<DistribucionInventario> {
+  const res = await api.get("/inventario/distribucion");
+  return res.data.data as DistribucionInventario;
 }
 
 // ─── Herramientas ────────────────────────────────────────────────────────────
@@ -286,10 +324,10 @@ export async function createHerramienta(values: HerramientaFormValues): Promise<
 }
 
 export async function updateHerramienta(
-  id: number,
+  documentId: string,
   values: Partial<HerramientaFormValues>
 ): Promise<Herramienta> {
-  const res = await api.put(`/herramientas/${id}`, { data: values });
+  const res = await api.put(`/herramientas/${documentId}`, { data: values });
   return mapHerramienta(res.data.data);
 }
 
@@ -302,8 +340,19 @@ export async function updateEstadoHerramienta(
   return mapHerramienta(res.data.data);
 }
 
+export async function generarCodigoHerramienta(id: number): Promise<Herramienta> {
+  const res = await api.patch(`/herramientas/${id}/generar-codigo`);
+  return mapHerramienta(res.data.data);
+}
+
 export async function deleteHerramienta(documentId: string): Promise<void> {
   await api.delete(`/herramientas/${documentId}`);
+}
+
+export async function deleteHerramientasMasivo(documentIds: string[]): Promise<void> {
+  await Promise.all(
+    documentIds.map(docId => api.delete(`/herramientas/${docId}`))
+  );
 }
 
 // ─── Categorías de Materiales ────────────────────────────────────────────────
@@ -369,4 +418,25 @@ export async function createCategoriaHerramienta(nombre: string): Promise<{ id: 
 
 export async function deleteCategoriaHerramienta(documentId: string): Promise<void> {
   await api.delete(`/categoria-herramientas/${documentId}`);
+}
+
+// ─── Ubicaciones en Depósito ───────────────────────────────────────────────────
+
+export async function getUbicacionesDeposito(): Promise<{ id: number; documentId: string; nombre: string }[]> {
+  const res = await api.get("/ubicacion-depositos?sort=nombre:asc");
+  return (res.data.data as any[]).map((r) => ({
+    id: r.id,
+    documentId: r.documentId,
+    nombre: r.nombre,
+  }));
+}
+
+export async function createUbicacionDeposito(nombre: string): Promise<{ id: number; documentId: string; nombre: string }> {
+  const res = await api.post("/ubicacion-depositos", { data: { nombre } });
+  const d = res.data.data;
+  return { id: d.id, documentId: d.documentId, nombre: d.nombre };
+}
+
+export async function deleteUbicacionDeposito(documentId: string): Promise<void> {
+  await api.delete(`/ubicacion-depositos/${documentId}`);
 }

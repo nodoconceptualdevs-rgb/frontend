@@ -53,42 +53,53 @@
 
 @media (max-width: 768px) {
   .barStatsContainer {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    padding: 1.5rem 0.5rem;
-    margin: 0;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1.5rem 1rem;
+    margin: 1rem 0;
     border-radius: 1.5rem;
   }
-  
+
   .statBox {
-    padding: 0 0.4rem;
+    padding: 0.75rem 0.5rem;
     position: relative;
   }
-  
+
   .statValue {
-    font-size: 1.6rem;
+    font-size: clamp(1.4rem, 4vw, 2rem);
     line-height: 1;
   }
-  
+
   .statPlus {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
   }
-  
+
   .statLabel {
-    font-size: 0.6rem;
-    margin-top: 0.25rem;
+    font-size: clamp(0.65rem, 2vw, 0.85rem);
+    margin-top: 0.5rem;
     line-height: 1.15;
     opacity: 0.85;
     font-weight: 400;
   }
-  
+
   .divider {
-    display: block;
-    width: 1px;
-    height: 60%;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .barStatsContainer {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .statValue {
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+  }
+
+  .statLabel {
+    font-size: clamp(0.6rem, 1.5vw, 0.75rem);
   }
 }

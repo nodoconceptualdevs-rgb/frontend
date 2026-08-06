@@ -79,8 +79,8 @@ function mapStrapiObra(item: any): Obra {
       email: g.email,
       name: g.name,
     })),
-    capatazId: undefined,
-    capatazNombre: undefined,
+    capatazId: item.capataz?.id ?? undefined,
+    capatazNombre: item.capataz?.nombre ?? undefined,
     estado: item.estado,
     fechaInicio: item.fecha_inicio,
     fechaFinPlanificada: item.fecha_fin_planificada,
@@ -98,7 +98,7 @@ function mapStrapiObra(item: any): Obra {
 
 export async function getObras(): Promise<Obra[]> {
   try {
-    const res = await api.get('/obras?populate[proyecto]=*');
+    const res = await api.get('/obras?populate[proyecto]=*&populate[gerentes]=true');
     return res.data.data.map(mapStrapiObra);
   } catch (error) {
     console.error('Error fetching obras:', error);
@@ -108,7 +108,7 @@ export async function getObras(): Promise<Obra[]> {
 
 export async function getObra(id: number): Promise<Obra> {
   try {
-    const res = await api.get(`/obras?filters[id][$eq]=${id}&populate[proyecto]=*&pagination[pageSize]=1`);
+    const res = await api.get(`/obras?filters[id][$eq]=${id}&populate[proyecto]=*&populate[gerentes]=true&pagination[pageSize]=1`);
     const items: any[] = res.data.data ?? [];
     // Explicitly match by id in case Strapi v5 filter is not applied
     const item = items.find((o: any) => o.id === id) ?? items[0];
@@ -156,6 +156,7 @@ export async function updateObra(
         ...(values.fechaFinPlanificada && { fecha_fin_planificada: values.fechaFinPlanificada }),
         ...(values.presupuestoTotal !== undefined && { presupuesto_total: values.presupuestoTotal }),
         ...(values.notas !== undefined && { notas: values.notas }),
+        ...(values.capatazId !== undefined && { capataz: values.capatazId }),
       }
     });
     return mapStrapiObra(res.data.data);
@@ -266,6 +267,20 @@ export async function deletePartida(
     await api.delete(`/obras/${obraId}/partidas/${partidaId}`);
   } catch (error) {
     console.error('Error deleting partida:', error);
+    throw error;
+  }
+}
+
+export async function deletePartidasMasivo(
+  obraId: number,
+  partidaIds: number[]
+): Promise<void> {
+  try {
+    await Promise.all(
+      partidaIds.map(id => api.delete(`/obras/${obraId}/partidas/${id}`))
+    );
+  } catch (error) {
+    console.error('Error deleting partidas:', error);
     throw error;
   }
 }
@@ -585,7 +600,11 @@ export async function getMaterialesDisponibles(): Promise<MaterialDisponible[]> 
 export async function getProyectosDisponiblesParaObra(
   proyectoActualId?: number
 ): Promise<{ id: number; nombre: string }[]> {
-  const res = await api.get('/proyectos?populate[obras]=*');
+  // Solo necesitamos saber si el proyecto ya tiene obras (para filtrar los
+  // disponibles). Poblar obras con `*` provoca un 400 "Invalid key proyecto
+  // at obras.proyecto" por la relación circular obra->proyecto, así que
+  // limitamos el populate al id de las obras.
+  const res = await api.get('/proyectos?populate[obras][fields][0]=id');
   const proyectos: any[] = res.data.data ?? [];
   return proyectos
     .filter((p) => (p.obras ?? []).length === 0 || p.id === proyectoActualId)
@@ -642,5 +661,163 @@ export async function actualizarGerentesObra(
     console.error('Error actualizando gerentes de obra:', error);
     throw error;
   }
+}
+
+// ─── Equipo y Permisos por Obra ────────────────────────────────────────────────
+
+export interface PermisoModulo {
+  read?: boolean;
+  create?: boolean;
+  update?: boolean;
+  delete?: boolean;
+}
+
+export interface PermisosGerente {
+  partidas: PermisoModulo;
+  reportes: PermisoModulo;
+  personal: PermisoModulo;
+  valuaciones: PermisoModulo;
+  analitica: PermisoModulo;
+  inventario: PermisoModulo;
+  historial: PermisoModulo;
+}
+
+export interface GerenteConPermisos {
+  id: number;
+  username: string;
+  email: string;
+  permisos: PermisosGerente;
+}
+
+export async function getGerentesConPermisos(obraId: number): Promise<GerenteConPermisos[]> {
+  try {
+    const res = await api.get(`/obras/${obraId}/gerentes-con-permisos`);
+    return res.data.gerentes ?? [];
+  } catch (error) {
+    console.error('Error obteniendo gerentes con permisos:', error);
+    throw error;
+  }
+}
+
+export async function guardarPermisosGerente(
+  obraId: number,
+  gerenteId: number,
+  permisos: PermisosGerente
+): Promise<void> {
+  try {
+    await api.post(`/obras/${obraId}/gerente-permisos`, { gerenteId, permisos });
+  } catch (error) {
+    console.error('Error guardando permisos de gerente:', error);
+    throw error;
+  }
+}
+
+export async function getMisPermisos(obraId: number): Promise<PermisosGerente> {
+  const permisosVacios: PermisosGerente = {
+    partidas: { read: false, create: false, update: false, delete: false },
+    reportes: { read: false, create: false },
+    personal: { read: false, create: false, update: false, delete: false },
+    valuaciones: { read: false, create: false },
+    analitica: { read: false },
+    inventario: { read: false, create: false, update: false, delete: false },
+    historial: { read: false },
+  };
+
+  try {
+    const res = await api.get(`/obras/${obraId}/mis-permisos`);
+    return res.data.permisos ?? permisosVacios;
+  } catch (error) {
+    console.error('Error obteniendo mis permisos:', error);
+    return permisosVacios;
+  }
+}
+
+export interface HistorialEvento {
+  id: number;
+  obraNombre: string | null;
+  usuarioNombre: string | null;
+  usuarioRol: string | null;
+  modulo: string;
+  accion: string;
+  descripcion: string;
+  cambios: Record<string, { anterior: unknown; nuevo: unknown }> | null;
+  createdAt: string;
+}
+
+export async function getHistorialObra(obraId: number): Promise<HistorialEvento[]> {
+  try {
+    const res = await api.get(`/obras/${obraId}/historial`);
+    return res.data.data ?? [];
+  } catch (error) {
+    console.error('Error obteniendo historial de la obra:', error);
+    return [];
+  }
+}
+
+export async function getHistorialGlobal(): Promise<HistorialEvento[]> {
+  try {
+    const res = await api.get(`/historial`);
+    return res.data.data ?? [];
+  } catch (error) {
+    console.error('Error obteniendo historial global:', error);
+    return [];
+  }
+}
+
+// ─── Transferencias de Material entre obras / Inventario de Nodo ─────────────
+
+export interface TransferenciaMaterial {
+  id: number;
+  materialId: number;
+  materialNombre: string;
+  unidad: string;
+  cantidad: number;
+  obraOrigenId: number | null;
+  obraOrigenNombre: string | null;
+  obraDestinoId: number | null;
+  obraDestinoNombre: string | null;
+  usuarioNombre: string | null;
+  nota: string | null;
+  createdAt: string;
+}
+
+export interface TransferenciaMaterialInput {
+  materialId: number;
+  cantidad: number;
+  obraOrigenId?: number;
+  obraDestinoId?: number;
+  nota?: string;
+}
+
+function mapTransferencia(raw: any): TransferenciaMaterial {
+  return {
+    id: raw.id,
+    materialId: raw.material?.id ?? raw.materialId,
+    materialNombre: raw.materialNombre,
+    unidad: raw.unidad,
+    cantidad: raw.cantidad,
+    obraOrigenId: raw.obraOrigen?.id ?? raw.obraOrigenId ?? null,
+    obraOrigenNombre: raw.obraOrigenNombre ?? null,
+    obraDestinoId: raw.obraDestino?.id ?? raw.obraDestinoId ?? null,
+    obraDestinoNombre: raw.obraDestinoNombre ?? null,
+    usuarioNombre: raw.usuarioNombre ?? null,
+    nota: raw.nota ?? null,
+    createdAt: raw.createdAt,
+  };
+}
+
+export async function getTransferenciasObra(obraId: number): Promise<TransferenciaMaterial[]> {
+  try {
+    const res = await api.get(`/obras/${obraId}/transferencias`);
+    return (res.data.data as any[]).map(mapTransferencia);
+  } catch (error) {
+    console.error('Error obteniendo transferencias de la obra:', error);
+    return [];
+  }
+}
+
+export async function crearTransferenciaMaterial(input: TransferenciaMaterialInput): Promise<TransferenciaMaterial> {
+  const res = await api.post('/transferencias-material', { data: input });
+  return mapTransferencia(res.data.data);
 }
 

@@ -171,7 +171,7 @@ export interface ObraFormValues {
   nombre: string;
   proyectoId?: number;
   gerentesIds?: number[];
-  capatazId?: number;
+  capatazId?: number | null;
   estado: EstadoObra;
   fechaInicio: string;
   fechaFinPlanificada: string;

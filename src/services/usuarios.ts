@@ -89,22 +89,24 @@ export async function getGerentes() {
     const res = await api.get("/users?populate=role", {
       headers: getAuthHeaders(),
     });
-    
+
     const usuarios: any[] = Array.isArray(res.data) ? res.data : [];
-    
+
+    console.log('Usuarios del servidor:', usuarios.map(u => ({ id: u.id, documentId: u.documentId, username: u.username })));
+
     // Filtrar usuarios que tengan rol de gerente
     const gerentes = usuarios.filter((user: any) => {
       const roleType = user.role?.type?.toLowerCase() || '';
       const roleName = user.role?.name?.toLowerCase() || '';
-      
+
       // Buscar roles que contengan 'gerente', 'manager' o 'project manager'
-      return roleType.includes('gerente') || 
+      return roleType.includes('gerente') ||
              roleType.includes('manager') ||
-             roleName.includes('gerente') || 
+             roleName.includes('gerente') ||
              roleName.includes('manager');
     });
-    
-    console.log('Gerentes encontrados:', gerentes.length, 'de', usuarios.length);
+
+    console.log('Gerentes encontrados:', gerentes.length, 'de', usuarios.length, gerentes.map(g => ({ id: g.id, documentId: g.documentId, username: g.username })));
     return gerentes;
   } catch (error) {
     console.error('Error obteniendo gerentes:', error);

@@ -34,7 +34,7 @@ export default function NuevoProyectoPage() {
     fecha_fin_planificada: "",
     presupuesto_total: "",
     es_publico: true,
-    obra_opcion: "nueva" as ObraOpcion,
+    obra_opcion: "ninguna" as ObraOpcion,
     obra_existente_id: "",
   });
 

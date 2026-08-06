@@ -9,6 +9,7 @@
   justify-content: center;
   margin-top: clamp(1.5rem, 4vw, 2.5rem);
   margin-bottom: clamp(1rem, 3vw, 2rem);
+  padding: 0 clamp(1rem, 3vw, 2rem);
 }
 
 .desktopBarStats {
@@ -67,7 +68,7 @@
   .quienesSomosRight {
     justify-content: center;
   }
-  
+
   .quienesSomosText {
     text-align: center;
     margin-right: 0;
@@ -78,5 +79,9 @@
     border-radius: 0;
     box-shadow: none;
     padding-top: clamp(2rem, 4vw, 3rem);
+  }
+
+  .coursesSectionWrapper {
+    display: none;
   }
 }

@@ -471,7 +471,7 @@ export default function ImportarPartidasModal({
       {step === "preview" && (
         <div className="space-y-3">
           {/* Resumen */}
-          <div className="flex gap-3 text-sm">
+          <div className="flex flex-wrap gap-3 text-sm">
             {countOk > 0 && (
               <span className="flex items-center gap-1">
                 <Tag color="success">OK</Tag>
@@ -495,6 +495,7 @@ export default function ImportarPartidasModal({
           <Table
             size="small"
             bordered
+            scroll={{ x: 700 }}
             pagination={{ pageSize: 15, showSizeChanger: false }}
             dataSource={parsedRows}
             columns={columns}

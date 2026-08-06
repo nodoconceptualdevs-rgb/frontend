@@ -5,7 +5,7 @@ import type { Personal } from "@/types/obras";
 
 interface Props {
   personal: Personal[];
-  onEditar: (p: Personal) => void;
+  onEditar?: (p: Personal) => void;
 }
 
 export default function PersonalTable({ personal, onEditar }: Props) {
@@ -30,19 +30,23 @@ export default function PersonalTable({ personal, onEditar }: Props) {
       width: 140,
       align: "right" as const,
     },
-    {
-      title: "Acciones",
-      key: "acciones",
-      width: 70,
-      render: (_, record: Personal) => (
-        <Button
-          type="text"
-          size="small"
-          icon={<Edit2 size={16} />}
-          onClick={() => onEditar(record)}
-        />
-      ),
-    },
+    ...(onEditar
+      ? [
+          {
+            title: "Acciones",
+            key: "acciones",
+            width: 70,
+            render: (_: unknown, record: Personal) => (
+              <Button
+                type="text"
+                size="small"
+                icon={<Edit2 size={16} />}
+                onClick={() => onEditar(record)}
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -53,6 +57,7 @@ export default function PersonalTable({ personal, onEditar }: Props) {
         rowKey="id"
         size="small"
         bordered
+        scroll={{ x: 500 }}
         pagination={{ pageSize: 10 }}
       />
     </div>

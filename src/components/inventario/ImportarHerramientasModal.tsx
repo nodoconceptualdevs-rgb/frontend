@@ -5,8 +5,9 @@ import { Modal, Button, Upload, Progress, Table, Tag, Tooltip, Alert } from "ant
 import { Download, AlertCircle, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
-import { createHerramienta, getCategorias, getUnidades } from "@/services/inventario";
+import { createHerramienta, getCategoriasHerramienta } from "@/services/inventario";
 import { parseSpanishNumber } from "@/lib/excelParsers";
+import type { Herramienta } from "@/types/inventario";
 
 interface Props {
   open: boolean;
@@ -16,13 +17,47 @@ interface Props {
 
 interface ParsedRow {
   key: string;
-  codigo: string;
   nombre: string;
   descripcion: string;
   categoria: string;
+  serie: string;
+  marca: string;
+  unidad: string;
+  ubicacionDeposito: string;
   cantidad: number;
+  estado: Herramienta["estado"];
   status: "ok" | "warn" | "error";
   errors: string[];
+}
+
+const ESTADO_KEYWORDS: Array<[string, Herramienta["estado"]]> = [
+  ["mantenimiento", "MANTENIMIENTO"],
+  ["descart", "DESCARTADA"],
+  ["baja", "DESCARTADA"],
+  ["en uso", "EN_USO"],
+  ["uso", "EN_USO"],
+  ["bueno", "DISPONIBLE"],
+  ["disponible", "DISPONIBLE"],
+];
+
+function normalizar(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+function detectarEstado(valor: string): Herramienta["estado"] {
+  const normalizado = normalizar(valor);
+  if (!normalizado) return "DISPONIBLE";
+  const match = ESTADO_KEYWORDS.find(([kw]) => normalizado.includes(kw));
+  return match ? match[1] : "DISPONIBLE";
+}
+
+function encontrarColumna(headerRow: unknown[], patrones: string[]): number {
+  return headerRow.findIndex(
+    (h) => typeof h === "string" && patrones.some((p) => normalizar(h).includes(p))
+  );
 }
 
 export default function ImportarHerramientasModal({ open, onClose, onImported }: Props) {
@@ -30,16 +65,17 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, errors: [] as string[] });
-  const [categorias, setCategorias] = useState<string[]>([]);
 
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
-      ["Código", "Nombre", "Descripción", "Categoría", "Cantidad"],
-      ["HER-001", "Taladro Eléctrico DeWalt", "Taladro de impacto 13mm", "Herramientas Eléctricas", "2"],
-      ["HER-002", "Nivel Láser", "Nivel láser de cruz con trípode", "Medición", "1"],
+      ["Serie/Placa", "Categoría", "Descripción", "Marca", "Unidad", "Cantidad", "Estado", "Ubicación en Depósito"],
+      ["s/n 25067440182", "Herramienta eléctrica", "Taladro inalámbrico", "WADFOW", "pieza", "1", "Bueno", "Carpintería"],
+      ["UWFCP518", "Herramienta eléctrica", "Cargador", "WADFOW", "pieza", "1", "Bueno", "Carpintería"],
     ]);
-    ws["!cols"] = [{ wch: 12 }, { wch: 30 }, { wch: 35 }, { wch: 20 }, { wch: 10 }];
+    ws["!cols"] = [
+      { wch: 18 }, { wch: 20 }, { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 },
+    ];
     XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
     XLSX.writeFile(wb, "plantilla_herramientas.xlsx");
   };
@@ -53,17 +89,20 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as unknown[][];
 
-        // Obtener categorías disponibles
-        const cats = await getCategorias();
-        const categoriasSet = new Set(cats.map((c: any) => c.nombre.toLowerCase()));
+        // Obtener categorías disponibles de herramientas
+        const cats = await getCategoriasHerramienta();
+        const categoriasSet = new Set(cats.map((c) => c.nombre.toLowerCase()));
 
-        // Detectar encabezados
+        // Detectar fila de encabezados
         let headerRowIndex = -1;
-        const keywords = ["código", "codigo", "nombre", "descripción", "descripcion", "categoría", "categoria", "cantidad"];
+        const keywords = [
+          "nombre", "descripcion", "categoria", "cantidad",
+          "serie", "placa", "marca", "unidad", "estado", "ubicacion", "deposito",
+        ];
         for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
           const row = rawRows[i];
-          const matches = row.filter((cell) =>
-            typeof cell === "string" && keywords.some((kw) => cell.toLowerCase().includes(kw))
+          const matches = row.filter(
+            (cell) => typeof cell === "string" && keywords.some((kw) => normalizar(cell).includes(kw))
           ).length;
           if (matches >= 2) {
             headerRowIndex = i;
@@ -77,17 +116,15 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
         }
 
         const headerRow = rawRows[headerRowIndex];
-        const codigoCol = headerRow.findIndex((h) =>
-          typeof h === "string" && (h.toLowerCase().includes("código") || h.toLowerCase().includes("codigo"))
-        );
-        const nombreCol = headerRow.findIndex((h) => typeof h === "string" && h.toLowerCase().includes("nombre"));
-        const descripcionCol = headerRow.findIndex((h) =>
-          typeof h === "string" && (h.toLowerCase().includes("descripción") || h.toLowerCase().includes("descripcion"))
-        );
-        const categoriaCol = headerRow.findIndex((h) =>
-          typeof h === "string" && (h.toLowerCase().includes("categoría") || h.toLowerCase().includes("categoria"))
-        );
-        const cantidadCol = headerRow.findIndex((h) => typeof h === "string" && h.toLowerCase().includes("cantidad"));
+        const nombreCol = encontrarColumna(headerRow, ["nombre"]);
+        const descripcionCol = encontrarColumna(headerRow, ["descripcion"]);
+        const categoriaCol = encontrarColumna(headerRow, ["categoria"]);
+        const cantidadCol = encontrarColumna(headerRow, ["cantidad"]);
+        const serieCol = encontrarColumna(headerRow, ["serie", "placa"]);
+        const marcaCol = encontrarColumna(headerRow, ["marca"]);
+        const unidadCol = encontrarColumna(headerRow, ["unidad"]);
+        const estadoCol = encontrarColumna(headerRow, ["estado"]);
+        const ubicacionCol = encontrarColumna(headerRow, ["ubicacion", "deposito"]);
 
         const parsed: ParsedRow[] = [];
 
@@ -95,23 +132,26 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
           const row = rawRows[i];
           if (!row || row.every((cell) => !cell)) continue;
 
-          const rawCodigo = String(row[codigoCol] || "").trim();
-          const rawNombre = String(row[nombreCol] || "").trim();
-          const rawDescripcion = String(row[descripcionCol] || "").trim();
-          const rawCategoria = String(row[categoriaCol] || "").trim();
-          const rawCantidad = row[cantidadCol];
+          const rawNombre = nombreCol !== -1 ? String(row[nombreCol] || "").trim() : "";
+          const rawDescripcionCol = descripcionCol !== -1 ? String(row[descripcionCol] || "").trim() : "";
 
-          if (!rawNombre) continue;
+          // Si no hay columna "Nombre", se usa la Descripción como nombre identificador
+          // (formato de planilla real: solo trae una columna de descripción).
+          const nombre = rawNombre || rawDescripcionCol;
+          const descripcion = rawNombre ? rawDescripcionCol : "";
 
-          const codigo = rawCodigo || `HER-${parsed.length + 1}`;
-          const nombre = rawNombre;
-          const descripcion = rawDescripcion;
-          const categoria = rawCategoria;
+          const categoria = categoriaCol !== -1 ? String(row[categoriaCol] || "").trim() : "";
+          const serie = serieCol !== -1 ? String(row[serieCol] || "").trim() : "";
+          const marca = marcaCol !== -1 ? String(row[marcaCol] || "").trim() : "";
+          const unidad = unidadCol !== -1 ? String(row[unidadCol] || "").trim() : "";
+          const ubicacionDeposito = ubicacionCol !== -1 ? String(row[ubicacionCol] || "").trim() : "";
+          const rawCantidad = cantidadCol !== -1 ? (row[cantidadCol] as string | number | undefined) : undefined;
           const cantidad = parseSpanishNumber(rawCantidad) || 1;
+          const estado = estadoCol !== -1 ? detectarEstado(String(row[estadoCol] || "")) : "DISPONIBLE";
+
+          if (!nombre) continue;
 
           const errors: string[] = [];
-
-          if (!nombre) errors.push("Nombre requerido");
           if (!categoria) errors.push("Categoría requerida");
           if (isNaN(cantidad) || cantidad < 1) errors.push("Cantidad debe ser ≥ 1");
           if (categoria && !categoriasSet.has(categoria.toLowerCase())) errors.push(`Categoría no existe: ${categoria}`);
@@ -119,15 +159,24 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
           const status = errors.length > 0 ? "error" : "ok";
 
           parsed.push({
-            key: `${codigo}-${nombre}`,
-            codigo,
+            key: `${i}-${nombre}`,
             nombre,
             descripcion,
             categoria,
+            serie,
+            marca,
+            unidad,
+            ubicacionDeposito,
             cantidad: isNaN(cantidad) || cantidad < 1 ? 1 : Math.floor(cantidad),
+            estado,
             status,
             errors,
           });
+        }
+
+        if (parsed.length === 0) {
+          toast.error("No se detectaron filas válidas (verifica que tenga columna Nombre o Descripción)");
+          return;
         }
 
         setParsedRows(parsed);
@@ -161,11 +210,14 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
     for (const row of selected) {
       try {
         await createHerramienta({
-          codigo: row.codigo,
           nombre: row.nombre,
           descripcion: row.descripcion || undefined,
           categoria: row.categoria,
-          estado: "DISPONIBLE",
+          serie: row.serie || undefined,
+          marca: row.marca || undefined,
+          unidad: row.unidad || undefined,
+          ubicacionDeposito: row.ubicacionDeposito || undefined,
+          estado: row.estado,
           cantidad: row.cantidad,
         });
         setImportProgress((prev) => ({ ...prev, current: prev.current + 1 }));
@@ -174,7 +226,7 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
         setImportProgress((prev) => ({
           ...prev,
           current: prev.current + 1,
-          errors: [...prev.errors, row.codigo],
+          errors: [...prev.errors, row.nombre],
         }));
       }
     }
@@ -196,7 +248,7 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
       title: "Estado",
       dataIndex: "status",
       key: "status",
-      width: 100,
+      width: 90,
       render: (status: string, record: ParsedRow) => {
         const icon = status === "ok" ? <CheckCircle size={16} /> : <AlertCircle size={16} />;
         const color = status === "ok" ? "green" : status === "warn" ? "orange" : "red";
@@ -210,35 +262,48 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
       },
     },
     {
-      title: "Código",
-      dataIndex: "codigo",
-      key: "codigo",
-      width: 120,
-    },
-    {
       title: "Nombre",
       dataIndex: "nombre",
       key: "nombre",
+      width: 220,
       render: (text: string) => text.substring(0, 35) + (text.length > 35 ? "..." : ""),
-    },
-    {
-      title: "Descripción",
-      dataIndex: "descripcion",
-      key: "descripcion",
-      render: (text: string) => text.substring(0, 25) + (text.length > 25 ? "..." : ""),
     },
     {
       title: "Categoría",
       dataIndex: "categoria",
       key: "categoria",
-      width: 120,
+      width: 130,
+    },
+    {
+      title: "Marca",
+      dataIndex: "marca",
+      key: "marca",
+      width: 100,
+    },
+    {
+      title: "Serie/Placa",
+      dataIndex: "serie",
+      key: "serie",
+      width: 130,
+    },
+    {
+      title: "Unidad",
+      dataIndex: "unidad",
+      key: "unidad",
+      width: 90,
     },
     {
       title: "Cantidad",
       dataIndex: "cantidad",
       key: "cantidad",
       align: "right" as const,
-      width: 100,
+      width: 90,
+    },
+    {
+      title: "Ubicación",
+      dataIndex: "ubicacionDeposito",
+      key: "ubicacionDeposito",
+      width: 140,
     },
   ];
 
@@ -252,7 +317,7 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
       }
       open={open}
       onCancel={handleClose}
-      width={step === "preview" ? 1100 : 600}
+      width={step === "preview" ? 1200 : 600}
       footer={null}
       destroyOnHidden
     >
@@ -265,6 +330,10 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
             <p className="text-base">📁 Arrastra un archivo Excel aquí</p>
             <p className="text-sm text-gray-500">o haz clic para seleccionar</p>
           </Upload.Dragger>
+          <p className="text-xs text-gray-500">
+            Acepta planillas con columnas Serie/Placa, Categoría, Descripción (o Nombre), Marca, Unidad,
+            Cantidad, Estado y Ubicación en Depósito. El código de barra se genera automáticamente al importar.
+          </p>
           <div className="flex justify-between">
             <Button onClick={downloadTemplate} type="default" icon={<Download size={16} />}>
               Descargar Plantilla
@@ -286,7 +355,7 @@ export default function ImportarHerramientasModal({ open, onClose, onImported }:
               selectedRowKeys: selectedKeys,
               onChange: setSelectedKeys,
             }}
-            scroll={{ x: 1000 }}
+            scroll={{ x: 1100 }}
           />
           <div className="text-xs text-gray-500">
             {parsedRows.filter((p) => p.status === "ok").length} listas,{" "}

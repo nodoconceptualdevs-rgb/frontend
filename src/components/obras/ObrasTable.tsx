@@ -42,7 +42,7 @@ export default function ObrasTable({ obras }: Props) {
       dataIndex: "estado",
       key: "estado",
       render: (estado: string) => <ObraStatusTag estado={estado as any} />,
-      width: 100,
+      width: 140,
     },
     {
       title: "Presupuesto",

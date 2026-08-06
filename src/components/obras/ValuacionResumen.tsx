@@ -75,7 +75,7 @@ export default function ValuacionResumen({ valuacion }: Props) {
   return (
     <div className="space-y-6">
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
           <p className="text-xs text-gray-600 uppercase">Presupuesto Total</p>
           <p className="text-2xl font-bold text-purple-600">
@@ -124,7 +124,7 @@ export default function ValuacionResumen({ valuacion }: Props) {
       </div>
 
       {/* Información temporal */}
-      <div className="grid grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div>
           <p className="text-xs text-gray-600 uppercase">% Ejecución</p>
           <p className="text-xl font-bold text-gray-900">
@@ -161,8 +161,9 @@ export default function ValuacionResumen({ valuacion }: Props) {
           size="small"
           bordered
           pagination={false}
+          scroll={{ x: 600 }}
           footer={() => (
-            <div className="flex justify-end gap-8 font-semibold">
+            <div className="flex flex-wrap justify-end gap-4 sm:gap-8 font-semibold">
               <span>
                 Total Presup.: $
                 {totalPresupuestado.toLocaleString("es-CO", {
@@ -193,7 +194,7 @@ export default function ValuacionResumen({ valuacion }: Props) {
       </div>
 
       {/* Estadísticas finales */}
-      <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div>
           <p className="text-xs text-gray-600 uppercase">Total Registros Personal</p>
           <p className="text-xl font-bold text-gray-900">

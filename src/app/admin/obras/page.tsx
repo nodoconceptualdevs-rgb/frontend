@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { Select, Spin, Empty } from "antd";
+import Link from "next/link";
+import { Select, Spin, Empty, Button } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { getObras } from "@/services/obras";
 import { calcularResumenObras } from "@/lib/obras";
@@ -104,44 +106,56 @@ export default function ObrasPage() {
       {resumen && <ObrasResumenCards resumen={resumen} />}
 
       {/* Filtros */}
-      <div className="px-6 py-4 bg-white rounded-lg border border-gray-200 flex gap-4">
-        <div className="flex-1">
-          <label className="block text-xs font-semibold text-gray-700 mb-2">
-            Estado
-          </label>
-          <Select
-            value={filtroEstado}
-            onChange={setFiltroEstado}
-            options={[
-              { label: "Todas", value: "TODAS" },
-              { label: ESTADO_OBRA_LABEL.PREPARACION, value: "PREPARACION" },
-              { label: ESTADO_OBRA_LABEL.EN_CURSO, value: "EN CURSO" },
-              { label: ESTADO_OBRA_LABEL.PAUSADA, value: "PAUSADA" },
-              { label: ESTADO_OBRA_LABEL.COMPLETADA, value: "COMPLETADA" },
-            ]}
-            style={{ width: "100%" }}
-          />
+      <div className="px-6 py-4 bg-white rounded-lg border border-gray-200 flex gap-4 items-end justify-between">
+        <div className="flex gap-4 flex-1">
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">
+              Estado
+            </label>
+            <Select
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              options={[
+                { label: "Todas", value: "TODAS" },
+                { label: ESTADO_OBRA_LABEL.PREPARACION, value: "PREPARACION" },
+                { label: ESTADO_OBRA_LABEL.EN_CURSO, value: "EN CURSO" },
+                { label: ESTADO_OBRA_LABEL.PAUSADA, value: "PAUSADA" },
+                { label: ESTADO_OBRA_LABEL.COMPLETADA, value: "COMPLETADA" },
+              ]}
+              style={{ width: "100%" }}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">
+              Proyecto
+            </label>
+            <Select
+              value={filtroProyectoId}
+              onChange={setFiltroProyectoId}
+              placeholder="Todos los proyectos"
+              allowClear
+              options={[
+                { label: "Todos los proyectos", value: undefined },
+                { label: "Sin proyecto", value: "SIN_PROYECTO" },
+                ...proyectosUnicos.map((p) => ({
+                  label: p.nombre,
+                  value: p.id,
+                })),
+              ]}
+              style={{ width: "100%" }}
+            />
+          </div>
         </div>
-        <div className="flex-1">
-          <label className="block text-xs font-semibold text-gray-700 mb-2">
-            Proyecto
-          </label>
-          <Select
-            value={filtroProyectoId}
-            onChange={setFiltroProyectoId}
-            placeholder="Todos los proyectos"
-            allowClear
-            options={[
-              { label: "Todos los proyectos", value: undefined },
-              { label: "Sin proyecto", value: "SIN_PROYECTO" },
-              ...proyectosUnicos.map((p) => ({
-                label: p.nombre,
-                value: p.id,
-              })),
-            ]}
-            style={{ width: "100%" }}
-          />
-        </div>
+        <Link href="/admin/obras/nueva">
+          <Button
+            type="primary"
+            danger
+            icon={<PlusOutlined />}
+            className="w-full md:w-auto whitespace-nowrap"
+          >
+            Nueva Obra
+          </Button>
+        </Link>
       </div>
 
       {/* Tabla */}

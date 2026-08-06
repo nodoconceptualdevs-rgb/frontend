@@ -161,6 +161,10 @@ export interface Herramienta {
   nombre: string;
   descripcion?: string;
   categoria: string; // "Mano de obra", "Equipo pesado", etc.
+  serie?: string; // número de serie o placa de inventario
+  marca?: string;
+  unidad?: string; // "pieza", "unidad", etc.
+  ubicacionDeposito?: string; // ubicación física dentro del depósito
   fechaAdquisicion?: string; // ISO
   estado: "DISPONIBLE" | "EN_USO" | "MANTENIMIENTO" | "DESCARTADA";
   cantidad?: number; // Cantidad disponible de esta herramienta
@@ -176,6 +180,10 @@ export interface HerramientaFormValues {
   nombre: string;
   descripcion?: string;
   categoria: string;
+  serie?: string;
+  marca?: string;
+  unidad?: string;
+  ubicacionDeposito?: string;
   fechaAdquisicion?: string;
   estado: Herramienta["estado"];
   cantidad?: number;

@@ -10,6 +10,10 @@ import {
   getCategoriasHerramienta,
   createCategoriaHerramienta,
   deleteCategoriaHerramienta,
+  getUnidades,
+  getUbicacionesDeposito,
+  createUbicacionDeposito,
+  deleteUbicacionDeposito,
 } from "@/services/inventario";
 
 interface HerramientaModalProps {
@@ -24,22 +28,32 @@ export default function HerramientaModal({ open, herramienta, onClose, onSubmit 
   const [loading, setLoading] = useState(false);
 
   const [categorias, setCategorias] = useState<{ id: number; documentId: string; nombre: string }[]>([]);
+  const [unidades, setUnidades] = useState<{ id: number; documentId: string; nombre: string; abreviatura: string }[]>([]);
+  const [ubicaciones, setUbicaciones] = useState<{ id: number; documentId: string; nombre: string }[]>([]);
   const [cargando, setCargando] = useState(false);
   const [nuevaCat, setNuevaCat] = useState("");
   const [guardandoCat, setGuardandoCat] = useState(false);
+  const [nuevaUbicacion, setNuevaUbicacion] = useState("");
+  const [guardandoUbicacion, setGuardandoUbicacion] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setCargando(true);
-    getCategoriasHerramienta()
-      .then((cats) => {
+    Promise.all([getCategoriasHerramienta(), getUnidades(), getUbicacionesDeposito()])
+      .then(([cats, unids, ubics]) => {
         setCategorias(cats);
+        setUnidades(unids);
+        setUbicaciones(ubics);
         // Setear valores si es edición
         if (herramienta) {
           form.setFieldsValue({
             nombre: herramienta.nombre,
             descripcion: herramienta.descripcion,
             categoria: herramienta.categoria,
+            serie: herramienta.serie,
+            marca: herramienta.marca,
+            unidad: herramienta.unidad,
+            ubicacionDeposito: herramienta.ubicacionDeposito,
             fechaAdquisicion: herramienta.fechaAdquisicion ? dayjs(herramienta.fechaAdquisicion) : undefined,
             cantidad: herramienta.cantidad || 1,
             estado: herramienta.estado,
@@ -49,7 +63,7 @@ export default function HerramientaModal({ open, herramienta, onClose, onSubmit 
           form.setFieldsValue({ estado: "DISPONIBLE", cantidad: 1 });
         }
       })
-      .catch(() => toast.error("Error al cargar categorías"))
+      .catch(() => toast.error("Error al cargar categorías, unidades o ubicaciones"))
       .finally(() => setCargando(false));
   }, [open, herramienta, form]);
 
@@ -99,13 +113,42 @@ export default function HerramientaModal({ open, herramienta, onClose, onSubmit 
     }
   };
 
+  const handleAgregarUbicacion = async () => {
+    if (!nuevaUbicacion.trim()) return;
+    try {
+      setGuardandoUbicacion(true);
+      const nueva = await createUbicacionDeposito(nuevaUbicacion.trim());
+      setUbicaciones((prev) => [...prev, nueva]);
+      form.setFieldValue("ubicacionDeposito", nueva.nombre);
+      setNuevaUbicacion("");
+      toast.success("Ubicación creada");
+    } catch {
+      toast.error("Error al crear ubicación");
+    } finally {
+      setGuardandoUbicacion(false);
+    }
+  };
+
+  const handleEliminarUbicacion = async (documentId: string, nombre: string) => {
+    try {
+      await deleteUbicacionDeposito(documentId);
+      setUbicaciones((prev) => prev.filter((u) => u.documentId !== documentId));
+      if (form.getFieldValue("ubicacionDeposito") === nombre) {
+        form.setFieldValue("ubicacionDeposito", undefined);
+      }
+      toast.success("Ubicación eliminada");
+    } catch {
+      toast.error("Error al eliminar ubicación");
+    }
+  };
+
   return (
     <Modal
       title={herramienta ? "Editar Herramienta" : "Agregar Herramienta"}
       open={open}
       onCancel={onClose}
       footer={null}
-      width={500}
+      width={760}
     >
       <Spin spinning={cargando}>
         <Form
@@ -126,9 +169,10 @@ export default function HerramientaModal({ open, herramienta, onClose, onSubmit 
           </Form.Item>
 
           <Form.Item label="Descripción" name="descripcion">
-            <Input.TextArea placeholder="Descripción de la herramienta" rows={3} />
+            <Input.TextArea placeholder="Descripción de la herramienta" rows={2} />
           </Form.Item>
 
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
           <Form.Item label="Categoría" name="categoria" rules={[{ required: true, message: "La categoría es requerida" }]}>
             <Select
               placeholder="Seleccionar categoría"
@@ -186,6 +230,83 @@ export default function HerramientaModal({ open, herramienta, onClose, onSubmit 
             />
           </Form.Item>
 
+          <Form.Item label="Serie / Placa" name="serie">
+            <Input placeholder="Ej: s/n 25067440182" />
+          </Form.Item>
+
+          <Form.Item label="Marca" name="marca">
+            <Input placeholder="Ej: WADFOW" />
+          </Form.Item>
+
+          <Form.Item label="Unidad" name="unidad">
+            <Select
+              placeholder="Seleccionar unidad"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              options={unidades.map((u) => ({ value: u.nombre, label: u.nombre }))}
+            />
+          </Form.Item>
+
+          <Form.Item label="Ubicación en Depósito" name="ubicacionDeposito">
+            <Select
+              placeholder="Seleccionar ubicación"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              options={ubicaciones.map((u) => ({ value: u.nombre, label: u.nombre }))}
+              optionRender={(option) => {
+                const ubic = ubicaciones.find((u) => u.nombre === option.value);
+                return (
+                  <div className="flex items-center justify-between group">
+                    <span>{option.label}</span>
+                    <Popconfirm
+                      title="¿Eliminar esta ubicación?"
+                      okText="Sí"
+                      cancelText="No"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={(e) => { e?.stopPropagation(); if (ubic) handleEliminarUbicacion(ubic.documentId, ubic.nombre); }}
+                      onPopupClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity ml-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </Popconfirm>
+                  </div>
+                );
+              }}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: "6px 0" }} />
+                  <div className="flex gap-2 px-2 pb-2">
+                    <Input
+                      size="small"
+                      placeholder="Nueva ubicación"
+                      value={nuevaUbicacion}
+                      onChange={(e) => setNuevaUbicacion(e.target.value)}
+                      onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") handleAgregarUbicacion(); }}
+                    />
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<Plus size={14} />}
+                      loading={guardandoUbicacion}
+                      onClick={handleAgregarUbicacion}
+                    />
+                  </div>
+                </>
+              )}
+            />
+          </Form.Item>
+
           <Form.Item label="Fecha de Adquisición" name="fechaAdquisicion">
             <DatePicker
               style={{ width: "100%" }}
@@ -208,6 +329,7 @@ export default function HerramientaModal({ open, herramienta, onClose, onSubmit 
               ]}
             />
           </Form.Item>
+          </div>
 
           <div className="flex gap-3 mt-2">
             <Button onClick={onClose} style={{ width: "50%" }}>Cancelar</Button>
