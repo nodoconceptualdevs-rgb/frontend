@@ -1,11 +1,11 @@
-/* Ocultar botón en tablets y móviles - mismo breakpoint que hamburguesa */
-@media (max-width: 1200px) {
+﻿/* Ocultar botÃ³n en tablets y mÃ³viles - mismo breakpoint que hamburguesa */
+@media (max-width: 1450px) {
   .buttonSection {
     display: none !important;
   }
 }
 
-/* Ajustes para móviles */
+/* Ajustes para mÃ³viles */
 @media (max-width: 768px) {
   .menuContainer {
     height: auto !important;
@@ -145,7 +145,7 @@
   box-shadow: 0px 0px 9px 0px rgba(112, 112, 112, 0.75);
   height: 10vh;
   position: relative;
-  z-index: 1000; /* Asegurar que esté por encima del login */
+  z-index: 1000; /* Asegurar que estÃ© por encima del login */
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -183,7 +183,7 @@ body.dark-theme .menuContainer {
 }
 
 /* Desktop - menuLinks visible por defecto */
-@media (min-width: 1201px) {
+@media (min-width: 1451px) {
   .menuLinks {
     display: flex !important;
   }
@@ -286,8 +286,8 @@ body.dark-theme .menuContainer {
   background: #e0e0e0 !important;
 }
 
-/* Activar menú hamburguesa en tablets */
-@media (min-width: 769px) and (max-width: 1200px) {
+/* Activar menÃº hamburguesa en tablets */
+@media (min-width: 769px) and (max-width: 1450px) {
   .menuContainer {
     border-radius: 0.75rem !important;
     height: auto !important;
@@ -416,7 +416,7 @@ body.dark-theme .menuContainer {
   border-bottom-color: #444444 !important;
 }
 
-@media (min-width: 769px) and (max-width: 1200px) {
+@media (min-width: 769px) and (max-width: 1450px) {
   :global(body.dark-theme) .menuLinks {
     background: #2a2a2a !important;
   }
@@ -433,12 +433,12 @@ body.dark-theme .menuContainer {
   color: #d4af6a !important;
 }
 
-/* Botón de login/register dentro del menú hamburguesa - oculto en desktop */
+/* BotÃ³n de login/register dentro del menÃº hamburguesa - oculto en desktop */
 .mobileButtonItem {
   display: none !important;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1450px) {
   .mobileButtonItem {
     display: list-item !important;
     width: 100%;
@@ -482,8 +482,8 @@ body.dark-theme .menuContainer {
   }
 }
 
-/* Ajustes para tablets (768px - 1200px) */
-@media (min-width: 769px) and (max-width: 1200px) {
+/* Ajustes para tablets (768px - 1450px) */
+@media (min-width: 769px) and (max-width: 1450px) {
   .menuLinks {
     padding: 1.5em 2.5em;
     gap: 1.2em;

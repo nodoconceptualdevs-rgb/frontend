@@ -35,19 +35,8 @@ body.dark-theme .bgContainer {
   height: 100%;
 }
 
-.centeredBox > * {
-  box-shadow: 0 8px 32px rgba(0,0,0,0.10);
-  min-width: 370px;
-  max-width: 440px;
-  width: 100%;
-}
-
 @media (max-width: 600px) {
   .bgContainer {
     padding: 8px;
-  }
-  .centeredBox > * {
-    min-width: 0;
-    max-width: 100%;
   }
 }
