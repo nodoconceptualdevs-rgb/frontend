@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback, Fragment } from "react";
-import { Spin, Empty, Button, Modal, DatePicker, Image as AntImage, Select } from "antd";
+import { Spin, Empty, Button, Modal, DatePicker, Image as AntImage, Select, Popconfirm } from "antd";
 import dayjs from "dayjs";
-import { Plus, FileUp } from "lucide-react";
+import { Plus, FileUp, Pencil, Trash2 } from "lucide-react";
+import styles from "./ObraDetalleView.module.css";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ObraHeroBanner from "@/components/obras/ObraHeroBanner";
@@ -22,6 +23,7 @@ import {
   deletePartida,
   deletePartidasMasivo,
   createReporte,
+  updateReporte,
   deleteReporte,
   createPersonal,
   updatePersonal,
@@ -110,6 +112,7 @@ export default function ObraDetalleView() {
   const [partidaExtraDefaults, setPartidaExtraDefaults] = useState<import("@/types/obras").PartidaFormValues | null>(null);
   const [personalModalOpen, setPersonalModalOpen] = useState(false);
   const [reporteModalOpen, setReporteModalOpen] = useState(false);
+  const [reporteEditando, setReporteEditando] = useState<ReporteDiario | null>(null);
   const [personalEditable, setPersonalEditable] = useState<Personal | null>(null);
   const [activeTab, setActiveTab] = useState("partidas");
 
@@ -155,9 +158,9 @@ export default function ObraDetalleView() {
     [isAdmin, permisos]
   );
 
-  const cargarDatos = useCallback(async () => {
+  const cargarDatos = useCallback(async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
 
       const [obraResult, materialesResult, herramientasResult] = await Promise.allSettled([
         getObra(obraId),
@@ -251,7 +254,7 @@ export default function ObraDetalleView() {
       console.error("Error cargando obra:", error);
       toast.error("Error al cargar la obra");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [obraId, puede]);
 
@@ -284,7 +287,7 @@ export default function ObraDetalleView() {
       await updateObra(obra.documentId, { presupuestoTotal: monto });
       toast.success("Presupuesto actualizado");
     } catch (error) {
-      await cargarDatos();
+      await cargarDatos({ silent: true });
       toast.error("Error al actualizar el presupuesto");
     }
   };
@@ -299,7 +302,7 @@ export default function ObraDetalleView() {
       await updateObra(obra.documentId, { capatazId });
       toast.success(capatazId ? "Capataz asignado" : "Capataz removido");
     } catch (error) {
-      await cargarDatos();
+      await cargarDatos({ silent: true });
       toast.error("Error al asignar el capataz");
     }
   };
@@ -315,7 +318,7 @@ export default function ObraDetalleView() {
       await desvincularProyectoDeObra(obra.documentId);
       toast.success("Proyecto desvinculado");
       setDesvincularModalOpen(false);
-      await cargarDatos();
+      await cargarDatos({ silent: true });
     } catch (error) {
       console.error("Error desvinculando proyecto:", error);
       toast.error("Error al desvincular el proyecto");
@@ -336,7 +339,7 @@ export default function ObraDetalleView() {
       setPartidaModalOpen(false);
       setEditingPartida(null);
       setPartidaExtraDefaults(null);
-      await cargarDatos();
+      await cargarDatos({ silent: true });
     } catch (error) {
       console.error("Error guardando partida:", error);
       toast.error("Error al guardar la partida");
@@ -360,7 +363,7 @@ export default function ObraDetalleView() {
   const handleEliminarPartida = async (partidaId: number) => {
     try {
       await deletePartida(obraId, partidaId);
-      await cargarDatos();
+      await cargarDatos({ silent: true });
       toast.success("Partida eliminada");
     } catch (error) {
       console.error("Error eliminando partida:", error);
@@ -369,28 +372,35 @@ export default function ObraDetalleView() {
   };
 
   const handleEliminarReporte = async (reporteId: number) => {
-    Modal.confirm({
-      title: "Eliminar Reporte",
-      content: "¿Está seguro de que desea eliminar este reporte?",
-      okText: "Eliminar",
-      okType: "danger",
-      onOk: async () => {
-        try {
-          await deleteReporte(obraId, reporteId);
-          await cargarDatos();
-          toast.success("Reporte eliminado");
-        } catch (error) {
-          console.error("Error eliminando reporte:", error);
-          toast.error("Error al eliminar el reporte");
-        }
-      },
-    });
+    const reporte = obra?.reportes.find((r) => r.id === reporteId);
+    try {
+      await deleteReporte(obraId, reporteId, reporte?.materiales || []);
+      await cargarDatos({ silent: true });
+      toast.success("Reporte eliminado");
+    } catch (error) {
+      console.error("Error eliminando reporte:", error);
+      toast.error("Error al eliminar el reporte");
+    }
+  };
+
+  const handleEditarReporte = async (values: ReporteFormValues) => {
+    if (!reporteEditando) return;
+    try {
+      await updateReporte(obraId, reporteEditando.id, values, reporteEditando);
+      await cargarDatos({ silent: true });
+      setReporteModalOpen(false);
+      setReporteEditando(null);
+      toast.success("Reporte actualizado");
+    } catch (error: any) {
+      console.error("Error actualizando reporte:", error);
+      toast.error(error?.response?.data?.error?.message || "Error al actualizar el reporte");
+    }
   };
 
   const handleGuardarReporte = async (values: ReporteFormValues) => {
     try {
       await createReporte(values);
-      await cargarDatos();
+      await cargarDatos({ silent: true });
       setActiveTab("reportes");
       toast.success("Reporte registrado");
     } catch (error) {
@@ -410,7 +420,7 @@ export default function ObraDetalleView() {
       }
       setPersonalModalOpen(false);
       setPersonalEditable(null);
-      await cargarDatos();
+      await cargarDatos({ silent: true });
     } catch (error) {
       console.error("Error guardando personal:", error);
       toast.error("Error al guardar el personal");
@@ -421,7 +431,7 @@ export default function ObraDetalleView() {
     if (!obra) return;
     try {
       await createValuacion(obraId, obra, valuaciones, {});
-      await cargarDatos();
+      await cargarDatos({ silent: true });
       toast.success("Valuación concretada");
     } catch (error: any) {
       console.error("Error concretando valuación:", error);
@@ -434,7 +444,7 @@ export default function ObraDetalleView() {
       await createFactura(values);
       toast.success("Factura creada");
       setFacturaModalOpen(false);
-      await cargarDatos();
+      await cargarDatos({ silent: true });
     } catch (error) {
       console.error("Error creando factura:", error);
       toast.error("Error al crear la factura");
@@ -456,7 +466,7 @@ export default function ObraDetalleView() {
   const handleTransferirMaterial = async (input: Omit<TransferenciaMaterialInput, "obraOrigenId">) => {
     try {
       await crearTransferenciaMaterial({ ...input, obraOrigenId: obraId });
-      await cargarDatos();
+      await cargarDatos({ silent: true });
       toast.success("Material transferido");
     } catch (error: any) {
       console.error("Error transfiriendo material:", error);
@@ -562,7 +572,7 @@ export default function ObraDetalleView() {
               <Button
                 type="primary"
                 icon={<Plus size={18} />}
-                onClick={() => setReporteModalOpen(true)}
+                onClick={() => { setReporteEditando(null); setReporteModalOpen(true); }}
               >
                 Nuevo Reporte
               </Button>
@@ -617,10 +627,13 @@ export default function ObraDetalleView() {
                         <table style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", fontSize: 12, background: "#f9fafb" }}>
                           <thead>
                             <tr style={{ background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}>
-                              <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>▼</th>
+                              <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>â–¼</th>
                               {["#", "Código", "Descripción", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
                                 <th key={i} style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: i > 1 ? "right" : "left", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
                               ))}
+                              {puede("reportes", "create") && (
+                                <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 70 }}></th>
+                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -649,7 +662,7 @@ export default function ObraDetalleView() {
                                     <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, width: 28 }}>
                                       {hasDetail && (
                                         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 3, background: isExpanded ? "#1e293b" : "#f1f5f9", border: "1px solid #cbd5e1", fontSize: 8, color: isExpanded ? "#f8fafc" : "#64748b", transition: "all .15s" }}>
-                                          {isExpanded ? "▼" : "▶"}
+                                          {isExpanded ? "â–¼" : "â–¶"}
                                         </span>
                                       )}
                                     </td>
@@ -662,10 +675,36 @@ export default function ObraDetalleView() {
                                     {cell(<strong style={{ color: "#2563eb" }}>${r.costoManoObra.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                                     {cell(<strong style={{ color: "#06b6d4" }}>${r.costoMateriales.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                                     {cell(<strong style={{ color: "#374151", fontWeight: 700 }}>${(r.costoManoObra + r.costoMateriales + costoSegunAvance).toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>, "right", true)}
+                                    {puede("reportes", "create") && (
+                                      <td style={{ border: "1px solid #e5e7eb", padding: "3px 5px", background: rowBg, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                        <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                                          <Button
+                                            type="text"
+                                            size="small"
+                                            icon={<Pencil size={14} />}
+                                            onClick={() => { setReporteEditando(r); setReporteModalOpen(true); }}
+                                          />
+                                          <Popconfirm
+                                            title="Eliminar reporte"
+                                            description="¿Está seguro?"
+                                            onConfirm={() => handleEliminarReporte(r.id)}
+                                            okText="Sí"
+                                            cancelText="No"
+                                          >
+                                            <Button
+                                              type="text"
+                                              size="small"
+                                              danger
+                                              icon={<Trash2 size={14} />}
+                                            />
+                                          </Popconfirm>
+                                        </div>
+                                      </td>
+                                    )}
                                   </tr>
                                   {hasDetail && isExpanded && (
                                     <tr>
-                                      <td colSpan={10} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+                                      <td colSpan={puede("reportes", "create") ? 11 : 10} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
                                         {r.observaciones && (
                                           <div style={{ padding: "6px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
                                             <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", marginRight: 6 }}>OBS:</span>
@@ -674,7 +713,7 @@ export default function ObraDetalleView() {
                                         )}
                                         {(r.imagenes?.length || 0) > 0 && (
                                           <div style={{ padding: "10px 16px", borderBottom: ((r.personal?.length || 0) + (r.materiales?.length || 0)) > 0 ? "1px solid #e5e7eb" : "none", background: "#fff" }}>
-                                            <p style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em", marginBottom: 8 }}>FOTOS DEL AVANCE · {r.imagenes?.length}</p>
+                                            <p style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em", marginBottom: 8 }}>FOTOS DEL AVANCE Â· {r.imagenes?.length}</p>
                                             <AntImage.PreviewGroup>
                                               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                                                 {r.imagenes?.map((img: any, i: number) => (
@@ -690,7 +729,7 @@ export default function ObraDetalleView() {
                                           <div style={{ display: "grid", gridTemplateColumns: (r.personal?.length || 0) > 0 && (r.materiales?.length || 0) > 0 ? "1fr 1fr" : "1fr", gap: 0 }}>
                                             {(r.personal?.length || 0) > 0 && (
                                               <div style={{ padding: "10px 16px", borderRight: (r.materiales?.length || 0) > 0 ? "1px solid #e5e7eb" : "none" }}>
-                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#1e40af", letterSpacing: "0.1em", marginBottom: 8 }}>PERSONAL · {r.personal?.length}</p>
+                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#1e40af", letterSpacing: "0.1em", marginBottom: 8 }}>PERSONAL Â· {r.personal?.length}</p>
                                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                                   <thead><tr>
                                                     {["TRABAJADOR","HRS","SUBTOTAL"].map((h, i) => (
@@ -711,7 +750,7 @@ export default function ObraDetalleView() {
                                             )}
                                             {(r.materiales?.length || 0) > 0 && (
                                               <div style={{ padding: "10px 16px" }}>
-                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#065f46", letterSpacing: "0.1em", marginBottom: 8 }}>MATERIALES · {r.materiales?.length}</p>
+                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#065f46", letterSpacing: "0.1em", marginBottom: 8 }}>MATERIALES Â· {r.materiales?.length}</p>
                                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                                   <thead><tr>
                                                     {["MATERIAL","CANT.","SUBTOTAL"].map((h, i) => (
@@ -765,10 +804,10 @@ export default function ObraDetalleView() {
             />
           </div>
 
+          {/* Reportes ya incluidos en una valuación: no editables ni eliminables */}
           <ReportesTable
             reportes={reportesFiltrados}
             obra={obra}
-            onEliminar={puede("reportes", "create") ? handleEliminarReporte : undefined}
           />
         </div>
       ),
@@ -940,24 +979,33 @@ export default function ObraDetalleView() {
       />
 
       <Modal
-        title="Nuevo Reporte Diario"
+        title={reporteEditando ? "Editar Reporte" : "Nuevo Reporte Diario"}
         open={reporteModalOpen}
-        onCancel={() => setReporteModalOpen(false)}
+        onCancel={() => { setReporteModalOpen(false); setReporteEditando(null); }}
         width="90vw"
-        style={{ maxWidth: "1400px" }}
+        style={{ maxWidth: "920px" }}
+        centered
+        classNames={{ body: styles.reporteModalBody }}
         footer={null}
+        destroyOnHidden
       >
         {obra && (
           <ReporteFormSection
-            key={obra.id}
+            key={`${obra.id}-${reporteEditando?.id ?? "new"}`}
             obra={obra}
             personal={personal}
             materiales={materiales}
             herramientas={herramientas}
+            reporteEditar={reporteEditando}
             onSubmit={async (values) => {
-              await handleGuardarReporte(values);
-              setReporteModalOpen(false);
+              if (reporteEditando) {
+                await handleEditarReporte(values);
+              } else {
+                await handleGuardarReporte(values);
+                setReporteModalOpen(false);
+              }
             }}
+            onCancel={() => { setReporteModalOpen(false); setReporteEditando(null); }}
           />
         )}
       </Modal>
