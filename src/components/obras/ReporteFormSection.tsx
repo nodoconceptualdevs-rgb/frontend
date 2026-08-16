@@ -908,17 +908,24 @@ export default function ReporteFormSection({
           const costoPartida = calcularCostoPartida(partida);
           const isActive = activeTabPartida === partida.id;
           const pd = obra.partidas.find(p => p.id === partida.partidaId);
-          const montoPresup = pd ? pd.cantidadPresupuestada * pd.precioUnitario : 0;
-          // Si estamos editando este mismo reporte y sigue en su partida original, su propio
-          // aporte anterior ya está contado en montoEjecutado — hay que descontarlo para saber
+          const precioUnit = pd?.precioUnitario ?? 0;
+          const cantidadPresupuestada = pd?.cantidadPresupuestada ?? 0;
+          // Obras extra sin cantidad presupuestada fija: no hay tope, se ejecuta la cantidad que sea.
+          const esExtraSinLimite = !!pd && (pd.esExtra || cantidadPresupuestada <= 0);
+          const montoPresup = cantidadPresupuestada * precioUnit;
+          // Si estamos editando este mismo reporte y sigue en su partida original, su propia
+          // cantidad anterior ya está contada en cantidadEjecutada — hay que descontarla para saber
           // cuánto queda realmente disponible (el backend hace lo mismo al guardar).
           const esLineaOriginalDeEdicion = !!reporteEditar && partida.partidaId === reporteEditar.partidaId;
-          const montoEjec = esLineaOriginalDeEdicion
-            ? Math.max(0, (pd?.montoEjecutado ?? 0) - reporteEditar!.montoAplicado)
-            : (pd?.montoEjecutado ?? 0);
-          const montoDisp = Math.max(0, montoPresup - montoEjec);
+          const cantidadEjecutadaOriginal = esLineaOriginalDeEdicion && precioUnit > 0
+            ? reporteEditar!.montoAplicado / precioUnit
+            : 0;
+          const cantidadEjec = Math.max(0, (pd?.cantidadEjecutada ?? 0) - cantidadEjecutadaOriginal);
+          const montoEjec = cantidadEjec * precioUnit;
+          const cantidadDisp = esExtraSinLimite ? Infinity : Math.max(0, cantidadPresupuestada - cantidadEjec);
+          const montoDisp = esExtraSinLimite ? Infinity : Math.max(0, montoPresup - montoEjec);
           const pct = montoPresup > 0 ? Math.round((montoEjec / montoPresup) * 100) : 0;
-          const completada = pct >= 100;
+          const completada = !esExtraSinLimite && pct >= 100;
           const statusColor = completada ? "#ef4444" : pct >= 80 ? "#f97316" : "#22c55e";
 
           return (
@@ -1020,25 +1027,32 @@ export default function ReporteFormSection({
               {/* Monto Ejecutado + Progreso */}
               {!pd ? null : !completada ? (
                 <div className="monto-ejecutar-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
-                  {/* Input Monto / Porcentaje */}
+                  {/* Input Cantidad / Monto */}
                   <div>
-                    {montoPresup > 0 ? (
+                    {precioUnit > 0 ? (
                       <>
                         <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          % a ejecutar
+                          Cantidad a ejecutar{pd?.unidad ? ` (${pd.unidad})` : ""}
                         </label>
+                        {!esExtraSinLimite && (
+                          <div style={{ fontSize: "10px", color: "#94a3b8", marginBottom: "6px" }}>
+                            Disponible: {Number(cantidadDisp.toFixed(2))} de {Number(cantidadPresupuestada.toFixed(2))} {pd?.unidad}
+                          </div>
+                        )}
                         <InputNumber
-                          value={partida.montoAplicado > 0 ? Number(((partida.montoAplicado / montoPresup) * 100).toFixed(2)) : undefined}
+                          value={partida.montoAplicado > 0 ? Number((partida.montoAplicado / precioUnit).toFixed(2)) : undefined}
                           onChange={(v) => {
-                            const pctNuevo = v ?? 0;
-                            const monto = Math.min((pctNuevo / 100) * montoPresup, montoDisp);
-                            handleUpdatePartida(partida.id, "montoAplicado", monto);
+                            const cantidadNueva = v ?? 0;
+                            const cantidadClamped = esExtraSinLimite
+                              ? cantidadNueva
+                              : Math.min(cantidadNueva, cantidadDisp);
+                            handleUpdatePartida(partida.id, "montoAplicado", cantidadClamped * precioUnit);
                           }}
                           min={0}
-                          max={Math.max(0, 100 - pct)}
+                          max={esExtraSinLimite ? undefined : cantidadDisp}
                           step={1}
                           size="middle"
-                          suffix="%"
+                          suffix={pd?.unidad}
                           style={{
                             width: "100%",
                             fontSize: "13px",
@@ -1049,6 +1063,7 @@ export default function ReporteFormSection({
                         {partida.montoAplicado > 0 && (
                           <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>
                             ≈ ${partida.montoAplicado.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                            {montoPresup > 0 && ` (${((partida.montoAplicado / montoPresup) * 100).toFixed(0)}%)`}
                           </div>
                         )}
                       </>

@@ -627,8 +627,8 @@ export default function ObraDetalleView() {
                         <table style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", fontSize: 12, background: "#f9fafb" }}>
                           <thead>
                             <tr style={{ background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}>
-                              <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>â–¼</th>
-                              {["#", "Código", "Descripción", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
+                              <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>▼</th>
+                              {["#", "Código", "Descripción", "Cantidad", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
                                 <th key={i} style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: i > 1 ? "right" : "left", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
                               ))}
                               {puede("reportes", "create") && (
@@ -639,7 +639,7 @@ export default function ObraDetalleView() {
                           <tbody>
                             {reportes.map((r, idx) => {
                               const isExpanded = expandedReportesPendientes.has(r.id);
-                              const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0;
+                              const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0 || !!r.observaciones;
                               const rowBg = idx % 2 === 0 ? "#fff" : "#f9fafb";
                               const cell = (content: React.ReactNode, align = "right", bold = false) => (
                                 <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: align as any, background: rowBg, whiteSpace: "nowrap", fontWeight: bold ? 600 : 400 }}>{content}</td>
@@ -648,6 +648,9 @@ export default function ObraDetalleView() {
                               const partida = obra?.partidas?.find((p) => p.id === r.partidaId);
                               const costoPresupuestadoPartida = partida ? partida.cantidadPresupuestada * partida.precioUnitario : 0;
                               const costoSegunAvance = (costoPresupuestadoPartida * r.avanceLogrado) / 100;
+                              const cantidadEjecutada = partida && partida.precioUnitario > 0
+                                ? r.montoAplicado / partida.precioUnitario
+                                : 0;
 
                               const toggleRow = () => {
                                 if (!hasDetail) return;
@@ -662,13 +665,14 @@ export default function ObraDetalleView() {
                                     <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, width: 28 }}>
                                       {hasDetail && (
                                         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 3, background: isExpanded ? "#1e293b" : "#f1f5f9", border: "1px solid #cbd5e1", fontSize: 8, color: isExpanded ? "#f8fafc" : "#64748b", transition: "all .15s" }}>
-                                          {isExpanded ? "â–¼" : "â–¶"}
+                                          {isExpanded ? "▼" : "▶"}
                                         </span>
                                       )}
                                     </td>
                                     <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontWeight: 700 }}>{idx + 1}</td>
                                     {cell(r.partidaCodigo, "center")}
                                     {cell(r.partidaDescripcion, "left")}
+                                    {cell(<span style={{ fontWeight: 600, color: "#0f766e" }}>{cantidadEjecutada.toLocaleString("es-CO", { maximumFractionDigits: 2 })} {partida?.unidad || ""}</span>)}
                                     {cell(<span style={{ fontWeight: 600, color: "#7c3aed" }}>{r.avanceLogrado}%</span>)}
                                     {cell(<strong style={{ color: "#059669" }}>${costoSegunAvance.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                                     {cell(<span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>{r.personal?.length || 0}P</span>)}
@@ -704,7 +708,7 @@ export default function ObraDetalleView() {
                                   </tr>
                                   {hasDetail && isExpanded && (
                                     <tr>
-                                      <td colSpan={puede("reportes", "create") ? 11 : 10} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+                                      <td colSpan={puede("reportes", "create") ? 12 : 11} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
                                         {r.observaciones && (
                                           <div style={{ padding: "6px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
                                             <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", marginRight: 6 }}>OBS:</span>
@@ -713,7 +717,7 @@ export default function ObraDetalleView() {
                                         )}
                                         {(r.imagenes?.length || 0) > 0 && (
                                           <div style={{ padding: "10px 16px", borderBottom: ((r.personal?.length || 0) + (r.materiales?.length || 0)) > 0 ? "1px solid #e5e7eb" : "none", background: "#fff" }}>
-                                            <p style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em", marginBottom: 8 }}>FOTOS DEL AVANCE Â· {r.imagenes?.length}</p>
+                                            <p style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em", marginBottom: 8 }}>FOTOS DEL AVANCE · {r.imagenes?.length}</p>
                                             <AntImage.PreviewGroup>
                                               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                                                 {r.imagenes?.map((img: any, i: number) => (
@@ -729,7 +733,7 @@ export default function ObraDetalleView() {
                                           <div style={{ display: "grid", gridTemplateColumns: (r.personal?.length || 0) > 0 && (r.materiales?.length || 0) > 0 ? "1fr 1fr" : "1fr", gap: 0 }}>
                                             {(r.personal?.length || 0) > 0 && (
                                               <div style={{ padding: "10px 16px", borderRight: (r.materiales?.length || 0) > 0 ? "1px solid #e5e7eb" : "none" }}>
-                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#1e40af", letterSpacing: "0.1em", marginBottom: 8 }}>PERSONAL Â· {r.personal?.length}</p>
+                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#1e40af", letterSpacing: "0.1em", marginBottom: 8 }}>PERSONAL · {r.personal?.length}</p>
                                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                                   <thead><tr>
                                                     {["TRABAJADOR","HRS","SUBTOTAL"].map((h, i) => (
@@ -750,7 +754,7 @@ export default function ObraDetalleView() {
                                             )}
                                             {(r.materiales?.length || 0) > 0 && (
                                               <div style={{ padding: "10px 16px" }}>
-                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#065f46", letterSpacing: "0.1em", marginBottom: 8 }}>MATERIALES Â· {r.materiales?.length}</p>
+                                                <p style={{ fontSize: 9, fontWeight: 700, color: "#065f46", letterSpacing: "0.1em", marginBottom: 8 }}>MATERIALES · {r.materiales?.length}</p>
                                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                                   <thead><tr>
                                                     {["MATERIAL","CANT.","SUBTOTAL"].map((h, i) => (

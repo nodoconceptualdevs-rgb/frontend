@@ -215,7 +215,7 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                 <thead>
                   <tr style={{ background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}>
                     <th style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: "center", fontWeight: 700, fontSize: 10, width: 30 }}>▼</th>
-                    {["#", "Código", "Descripción", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
+                    {["#", "Código", "Descripción", "Cantidad", "Avance", "Costo Presupuestado", "Personal", "Costo MO", "Costo Mat.", "TOTAL"].map((h, i) => (
                       <th key={i} style={{ border: "1px solid #e5e7eb", padding: "5px 6px", textAlign: i > 1 ? "right" : "left", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -230,15 +230,19 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
 
                     // Calcular costo presupuestado según avance
                     let costoSegunAvance = 0;
+                    let cantidadEjecutada = 0;
+                    let unidadPartida = "";
                     if (obra && obra.partidas) {
                       const partida = obra.partidas.find((p) => p.id === r.partidaId);
                       if (partida) {
                         const costoPresupuestadoPartida = partida.cantidadPresupuestada * partida.precioUnitario;
                         costoSegunAvance = costoPresupuestadoPartida > 0 ? (costoPresupuestadoPartida * r.avanceLogrado) / 100 : 0;
+                        cantidadEjecutada = partida.precioUnitario > 0 ? r.montoAplicado / partida.precioUnitario : 0;
+                        unidadPartida = partida.unidad;
                       }
                     }
 
-                    const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0;
+                    const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0 || !!r.observaciones;
 
                     return (
                       <React.Fragment key={r.id}>
@@ -253,6 +257,7 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                           <td style={{ border: "1px solid #e5e7eb", padding: "5px 7px", textAlign: "center", background: rowBg, fontWeight: 700 }}>{idx + 1}</td>
                           {cell(r.partidaCodigo, "center")}
                           {cell(r.partidaDescripcion, "left")}
+                          {cell(<span style={{ fontWeight: 600, color: "#0f766e" }}>{cantidadEjecutada.toLocaleString("es-CO", { maximumFractionDigits: 2 })} {unidadPartida}</span>)}
                           {cell(<span style={{ fontWeight: 600, color: "#7c3aed" }}>{r.avanceLogrado}%</span>)}
                           {cell(<strong style={{ color: "#059669" }}>${costoSegunAvance.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong>)}
                           {cell(<span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>{r.personal?.length || 0}P</span>)}
@@ -267,7 +272,7 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                         </tr>
                         {hasDetail && isExpanded && (
                           <tr>
-                            <td colSpan={onEliminar ? 11 : 10} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+                            <td colSpan={onEliminar ? 12 : 11} style={{ padding: 0, background: "#f8fafc", borderLeft: "3px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
                               {r.observaciones && (
                                 <div style={{ padding: "6px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
                                   <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", marginRight: 6 }}>OBS:</span>
