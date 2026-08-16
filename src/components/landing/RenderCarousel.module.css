@@ -139,10 +139,17 @@ body.dark-theme .description {
     padding: 1.5rem 1rem;
   }
   .left3d, .rightText {
+    /* En columna, el flex-basis de 420px (pensado como ancho para la fila de
+       escritorio) pasaría a ser el alto mínimo de cada bloque, dejando un
+       hueco enorme entre la imagen y el texto. Que se ajusten a su contenido. */
+    flex: 0 1 auto;
     max-width: 100%;
     min-width: 0;
     padding-left: 0;
     padding-right: 0;
+  }
+  .rightText {
+    justify-content: flex-start;
   }
   .threeWrapper {
     height: clamp(220px, 60vw, 350px);
