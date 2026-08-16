@@ -17,6 +17,7 @@ import type {
   MaterialDisponible,
   Personal,
   ReporteFormValues,
+  ReporteDiario,
 } from "@/types/obras";
 import type { Herramienta } from "@/types/inventario";
 import dayjs from "dayjs";
@@ -29,7 +30,9 @@ interface Props {
   personal: Personal[];
   materiales: MaterialDisponible[];
   herramientas: Herramienta[];
+  reporteEditar?: ReporteDiario | null;
   onSubmit: (values: ReporteFormValues) => Promise<void>;
+  onCancel?: () => void;
 }
 
 interface LineaPartida {
@@ -56,17 +59,58 @@ export default function ReporteFormSection({
   personal,
   materiales,
   herramientas,
+  reporteEditar,
   onSubmit,
+  onCancel,
 }: Props) {
+  const lineaInicial: LineaPartida | null = reporteEditar
+    ? {
+        id: uuidLocal(),
+        partidaId: reporteEditar.partidaId,
+        montoAplicado: reporteEditar.montoAplicado,
+        personal: reporteEditar.personal.map((p) => ({
+          id: uuidLocal(),
+          personalId: p.personalId,
+          horasTrabajadas: p.horasTrabajadas,
+        })),
+        materiales: reporteEditar.materiales.map((m) => ({
+          id: uuidLocal(),
+          materialId: m.materialId,
+          cantidad: m.cantidad,
+          precioUnitario: m.precioUnitario,
+        })),
+        herramientas: [],
+      }
+    : null;
+
   const [loading, setLoading] = useState(false);
-  const [fecha, setFecha] = useState<string>(dayjs().toISOString());
-  const [observaciones, setObservaciones] = useState<string>("");
+  const [fecha, setFecha] = useState<string>(reporteEditar ? reporteEditar.fecha : dayjs().toISOString());
+  const [observaciones, setObservaciones] = useState<string>(reporteEditar?.observaciones || "");
   const [imagenesArchivos, setImagenesArchivos] = useState<File[]>([]);
   const [previewImagenes, setPreviewImagenes] = useState<string[]>([]);
-  const [imagenesFromLibrary, setImagenesFromLibrary] = useState<MediaFile[]>([]);
+  const [imagenesFromLibrary, setImagenesFromLibrary] = useState<MediaFile[]>(
+    (reporteEditar?.imagenes || []).map((img) => ({
+      id: img.id,
+      name: img.name,
+      alternativeText: null,
+      caption: null,
+      width: null,
+      height: null,
+      formats: null,
+      hash: "",
+      ext: "",
+      mime: img.mime,
+      size: img.size,
+      url: img.url,
+      previewUrl: null,
+      provider: "local",
+      createdAt: "",
+      updatedAt: "",
+    }))
+  );
   const [bibliotecaOpen, setBibliotecaOpen] = useState(false);
-  const [partidasLineas, setPartidasLineas] = useState<LineaPartida[]>([]);
-  const [activeTabPartida, setActiveTabPartida] = useState<string | null>(null);
+  const [partidasLineas, setPartidasLineas] = useState<LineaPartida[]>(lineaInicial ? [lineaInicial] : []);
+  const [activeTabPartida, setActiveTabPartida] = useState<string | null>(lineaInicial?.id ?? null);
   const [tabKeys, setTabKeys] = useState<Record<string, string>>({});
 
   const handleAgregarPartida = () => {
@@ -313,14 +357,16 @@ export default function ReporteFormSection({
         await onSubmit(values);
       }
 
-      setFecha(dayjs().toISOString());
-      setObservaciones("");
-      setImagenesArchivos([]);
-      setPreviewImagenes([]);
-      setImagenesFromLibrary([]);
-      setPartidasLineas([]);
-      setActiveTabPartida(null);
-      toast.success("Reportes guardados exitosamente");
+      if (!reporteEditar) {
+        setFecha(dayjs().toISOString());
+        setObservaciones("");
+        setImagenesArchivos([]);
+        setPreviewImagenes([]);
+        setImagenesFromLibrary([]);
+        setPartidasLineas([]);
+        setActiveTabPartida(null);
+      }
+      toast.success(reporteEditar ? "Reporte actualizado" : "Reportes guardados exitosamente");
     } finally {
       setLoading(false);
     }
@@ -863,7 +909,13 @@ export default function ReporteFormSection({
           const isActive = activeTabPartida === partida.id;
           const pd = obra.partidas.find(p => p.id === partida.partidaId);
           const montoPresup = pd ? pd.cantidadPresupuestada * pd.precioUnitario : 0;
-          const montoEjec = pd?.montoEjecutado ?? 0;
+          // Si estamos editando este mismo reporte y sigue en su partida original, su propio
+          // aporte anterior ya está contado en montoEjecutado — hay que descontarlo para saber
+          // cuánto queda realmente disponible (el backend hace lo mismo al guardar).
+          const esLineaOriginalDeEdicion = !!reporteEditar && partida.partidaId === reporteEditar.partidaId;
+          const montoEjec = esLineaOriginalDeEdicion
+            ? Math.max(0, (pd?.montoEjecutado ?? 0) - reporteEditar!.montoAplicado)
+            : (pd?.montoEjecutado ?? 0);
           const montoDisp = Math.max(0, montoPresup - montoEjec);
           const pct = montoPresup > 0 ? Math.round((montoEjec / montoPresup) * 100) : 0;
           const completada = pct >= 100;
@@ -915,13 +967,15 @@ export default function ReporteFormSection({
                     PARTIDA {idx + 1}
                   </div>
                 </div>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<Trash2 size={16} />}
-                  style={{ color: "#ef4444" }}
-                  onClick={() => handleEliminarPartida(partida.id)}
-                />
+                {!reporteEditar && (
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<Trash2 size={16} />}
+                    style={{ color: "#ef4444" }}
+                    onClick={() => handleEliminarPartida(partida.id)}
+                  />
+                )}
               </div>
 
               {/* Selector de Partida */}
@@ -932,14 +986,22 @@ export default function ReporteFormSection({
                 <Select
                   placeholder="Seleccionar partida..."
                   value={partida.partidaId}
-                  onChange={(v) => handleUpdatePartida(partida.id, "partidaId", v)}
-                  options={obra.partidas.map((p) => ({
-                    label: (p.avancePorcentaje ?? 0) >= 100
-                      ? `${p.codigo} - ${p.descripcion} ✓`
-                      : `${p.codigo} - ${p.descripcion}`,
-                    value: p.id,
-                    disabled: (p.avancePorcentaje ?? 0) >= 100,
-                  }))}
+                  onChange={(v) => handleUpdatePartida(partida.id, "partidaId", v ?? undefined)}
+                  allowClear
+                  onClear={() => handleUpdatePartida(partida.id, "montoAplicado", 0)}
+                  options={obra.partidas.map((p) => {
+                    // Al editar, la partida original no debe contarse a sí misma como "completada"
+                    const avanceEfectivo = reporteEditar && p.id === reporteEditar.partidaId
+                      ? Math.max(0, (p.avancePorcentaje ?? 0) - reporteEditar.avanceLogrado)
+                      : (p.avancePorcentaje ?? 0);
+                    return {
+                      label: avanceEfectivo >= 100
+                        ? `${p.codigo} - ${p.descripcion} ✓`
+                        : `${p.codigo} - ${p.descripcion}`,
+                      value: p.id,
+                      disabled: avanceEfectivo >= 100,
+                    };
+                  })}
                   showSearch
                   optionFilterProp="label"
                   filterOption={(input, option) =>
@@ -947,6 +1009,7 @@ export default function ReporteFormSection({
                   }
                   size="middle"
                   style={{
+                    width: "100%",
                     fontSize: "13px",
                     fontWeight: 500,
                   }}
@@ -955,30 +1018,63 @@ export default function ReporteFormSection({
               </div>
 
               {/* Monto Ejecutado + Progreso */}
-              {!completada ? (
+              {!pd ? null : !completada ? (
                 <div className="monto-ejecutar-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
-                  {/* Input Monto */}
+                  {/* Input Monto / Porcentaje */}
                   <div>
-                    <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      Monto a ejecutar
-                    </label>
-                    <InputNumber
-                      value={partida.montoAplicado || undefined}
-                      onChange={(v) => handleUpdatePartida(partida.id, "montoAplicado", v ?? 0)}
-                      min={0}
-                      max={montoDisp || undefined}
-                      step={1000}
-                      size="middle"
-                      prefix="$"
-                      formatter={(v) => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
-                      parser={(v) => v ? parseFloat(v.replace(/,/g, "")) : 0}
-                      style={{
-                        width: "100%",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        borderColor: statusColor,
-                      }}
-                    />
+                    {montoPresup > 0 ? (
+                      <>
+                        <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          % a ejecutar
+                        </label>
+                        <InputNumber
+                          value={partida.montoAplicado > 0 ? Number(((partida.montoAplicado / montoPresup) * 100).toFixed(2)) : undefined}
+                          onChange={(v) => {
+                            const pctNuevo = v ?? 0;
+                            const monto = Math.min((pctNuevo / 100) * montoPresup, montoDisp);
+                            handleUpdatePartida(partida.id, "montoAplicado", monto);
+                          }}
+                          min={0}
+                          max={Math.max(0, 100 - pct)}
+                          step={1}
+                          size="middle"
+                          suffix="%"
+                          style={{
+                            width: "100%",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            borderColor: statusColor,
+                          }}
+                        />
+                        {partida.montoAplicado > 0 && (
+                          <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>
+                            ≈ ${partida.montoAplicado.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#4b5563", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Monto a ejecutar
+                        </label>
+                        <InputNumber
+                          value={partida.montoAplicado || undefined}
+                          onChange={(v) => handleUpdatePartida(partida.id, "montoAplicado", v ?? 0)}
+                          min={0}
+                          step={1000}
+                          size="middle"
+                          prefix="$"
+                          formatter={(v) => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+                          parser={(v) => v ? parseFloat(v.replace(/,/g, "")) : 0}
+                          style={{
+                            width: "100%",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            borderColor: statusColor,
+                          }}
+                        />
+                      </>
+                    )}
                   </div>
 
                   {/* Resumen Montos */}
@@ -1429,32 +1525,34 @@ export default function ReporteFormSection({
           );
         })}
 
-        {/* Botón agregar partida */}
-        {partidasLineas.length === 0 ? (
-          <div className="text-center py-6">
+        {/* Botón agregar partida (no aplica al editar un reporte existente) */}
+        {!reporteEditar && (
+          partidasLineas.length === 0 ? (
+            <div className="text-center py-6">
+              <Button
+                type="primary"
+                size="large"
+                icon={<Plus size={18} />}
+                onClick={handleAgregarPartida}
+                className="mb-2"
+              >
+                Agregar Primera Partida
+              </Button>
+              <p className="text-xs text-gray-400">Comienza a registrar trabajo</p>
+            </div>
+          ) : (
             <Button
-              type="primary"
-              size="large"
-              icon={<Plus size={18} />}
+              type="dashed"
+              block
+              size="small"
+              icon={<Plus size={14} />}
               onClick={handleAgregarPartida}
-              className="mb-2"
+              className="mt-2"
+              style={{ fontSize: "12px" }}
             >
-              Agregar Primera Partida
+              Agregar Partida
             </Button>
-            <p className="text-xs text-gray-400">Comienza a registrar trabajo</p>
-          </div>
-        ) : (
-          <Button
-            type="dashed"
-            block
-            size="small"
-            icon={<Plus size={14} />}
-            onClick={handleAgregarPartida}
-            className="mt-2"
-            style={{ fontSize: "12px" }}
-          >
-            Agregar Partida
-          </Button>
+          )
         )}
       </div>
 
@@ -1475,7 +1573,7 @@ export default function ReporteFormSection({
         )}
 
         <div className="flex justify-end gap-2">
-          <Button size="small">Cancelar</Button>
+          <Button size="small" onClick={onCancel}>Cancelar</Button>
           <Button
             type="primary"
             size="small"
@@ -1483,7 +1581,7 @@ export default function ReporteFormSection({
             onClick={handleSubmit}
             style={{ fontSize: "12px" }}
           >
-            Guardar Reporte
+            {reporteEditar ? "Guardar Cambios" : "Guardar Reporte"}
           </Button>
         </div>
       </div>

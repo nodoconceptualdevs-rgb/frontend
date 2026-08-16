@@ -1,0 +1,112 @@
+/* Ajustes del modal en móvil: menos padding y más ancho útil */
+@media (max-width: 640px) {
+  .facturaModalRoot :global(.ant-modal) {
+    max-width: 100vw;
+    margin: 0;
+    top: 0;
+    padding-bottom: 0;
+  }
+
+  .facturaModalRoot :global(.ant-modal-content) {
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .facturaModalRoot :global(.ant-modal-body) {
+    padding: 12px;
+  }
+}
+
+/* ============ LISTA DE ÍTEMS (reemplaza la tabla antd, que no cabe en un teléfono) ============ */
+.lineasWrapper {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lineaHeader {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 90px 120px 110px 32px;
+  gap: 8px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.emptyLineas {
+  padding: 24px 8px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.lineaItem {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 90px 120px 110px 32px;
+  grid-template-areas: "material cantidad precio subtotal delete";
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.lineaItem:last-child {
+  border-bottom: none;
+}
+
+.cellMaterial { grid-area: material; display: flex; gap: 4px; min-width: 0; }
+.cellCantidad { grid-area: cantidad; }
+.cellPrecio { grid-area: precio; }
+.cellSubtotal { grid-area: subtotal; font-weight: 600; text-align: right; }
+.cellDelete { grid-area: delete; display: flex; justify-content: center; }
+
+.cellCantidad, .cellPrecio { width: 100%; }
+.cellCantidad :global(.ant-input-number),
+.cellPrecio :global(.ant-input-number) {
+  width: 100%;
+}
+
+.cellLabel {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .lineaHeader {
+    display: none;
+  }
+
+  .lineasWrapper {
+    border: none;
+  }
+
+  .lineaItem {
+    grid-template-columns: 1fr 1fr 1fr 36px;
+    grid-template-areas:
+      "material material material delete"
+      "cantidad precio subtotal subtotal";
+    row-gap: 8px;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #fafafa;
+  }
+
+  .cellSubtotal {
+    text-align: left;
+  }
+
+  .cellLabel {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+}

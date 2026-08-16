@@ -137,7 +137,7 @@ export default function Menu() {
         isVisible={showOverlay}
         onComplete={handleTransitionComplete}
       />
-      {open && typeof window !== "undefined" && window.innerWidth <= 1100 && (
+      {open && typeof window !== "undefined" && window.innerWidth <= 1450 && (
         <div
           style={{
             position: "fixed",

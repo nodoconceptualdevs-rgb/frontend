@@ -9,6 +9,7 @@ import {
   PartidaFormValues,
   ReporteDiario,
   ReporteFormValues,
+  LineaMaterial,
   Personal,
   PersonalFormValues,
   ObrasResumen,
@@ -29,7 +30,7 @@ import {
   calcularCostoMateriales,
 } from "@/lib/obras";
 import dayjs from "dayjs";
-import { decrementarStock } from "./inventario";
+import { decrementarStock, incrementarStock } from "./inventario";
 import { calcularEstadoStock } from "@/lib/inventario";
 
 // ─── Datos Semilla ────────────────────────────────────────────────────────────
@@ -428,11 +429,123 @@ export async function createReporte(values: ReporteFormValues): Promise<ReporteD
   }
 }
 
-export async function deleteReporte(obraId: number, reporteId: number): Promise<void> {
+export async function deleteReporte(
+  obraId: number,
+  reporteId: number,
+  materiales: LineaMaterial[] = []
+): Promise<void> {
   try {
     await api.delete(`/obras/${obraId}/reportes/${reporteId}`);
+
+    // Reponer el stock que este reporte había consumido
+    await Promise.all(
+      materiales.map((m) =>
+        incrementarStock(m.materialId, m.cantidad).catch((err) =>
+          console.error(`Error reponiendo stock de material ${m.materialId}:`, err)
+        )
+      )
+    );
   } catch (error) {
     console.error('Error deleting reporte:', error);
+    throw error;
+  }
+}
+
+export async function updateReporte(
+  obraId: number,
+  reporteId: number,
+  values: ReporteFormValues,
+  reporteAnterior: ReporteDiario
+): Promise<ReporteDiario> {
+  await ensurePersonalCache(obraId);
+  await ensureMaterialesCache();
+
+  // Resolve personal names/costs from cache
+  const personal = values.personal.map((lp) => {
+    const per = personalCache.find((p) => p.id === lp.personalId);
+    if (!per) throw new Error(`Personal ${lp.personalId} no encontrado`);
+    const subtotal = lp.horasTrabajadas * per.costoPorHora;
+    return {
+      id: uuidLocal(),
+      personalId: lp.personalId,
+      personalNombre: per.nombre,
+      cargo: per.cargo,
+      horasTrabajadas: lp.horasTrabajadas,
+      costoPorHora: per.costoPorHora,
+      subtotal,
+    };
+  });
+
+  // Resolve material names/units (el stock se reconcilia después de guardar)
+  const materiales = values.materiales.map((lm) => {
+    const material = materialesCache.find((m) => m.id === lm.materialId);
+    if (!material) throw new Error(`Material ${lm.materialId} no encontrado`);
+    const subtotal = lm.cantidad * lm.precioUnitario;
+    return {
+      id: uuidLocal(),
+      materialId: lm.materialId,
+      materialNombre: material.nombre,
+      unidad: material.unidad,
+      cantidad: lm.cantidad,
+      precioUnitario: lm.precioUnitario,
+      subtotal,
+    };
+  });
+
+  const costoManoObra = calcularCostoManoObra(personal);
+  const costoMateriales = calcularCostoMateriales(materiales);
+  const costoTotal = costoManoObra + costoMateriales;
+
+  try {
+    const formData = new FormData();
+
+    formData.append('data', JSON.stringify({
+      partidaId: values.partidaId,
+      fecha: values.fecha,
+      montoAplicado: values.montoAplicado,
+      observaciones: values.observaciones,
+      personal,
+      materiales,
+      costoManoObra,
+      costoMateriales,
+      costoTotal,
+      // Siempre explícito: en edición esta lista reemplaza por completo las
+      // imágenes existentes, así que no debe omitirse aunque quede vacía.
+      existingImageIds: values.existingImageIds || [],
+    }));
+
+    if (values.imagenesArchivos && values.imagenesArchivos.length > 0) {
+      values.imagenesArchivos.forEach((file) => {
+        formData.append('files.imagenes', file);
+      });
+    }
+
+    const res = await api.put(`/obras/${obraId}/reportes/${reporteId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Reconciliar stock: reponer lo que consumía el reporte anterior y
+    // volver a descontar según los materiales ya guardados en esta edición.
+    await Promise.all(
+      reporteAnterior.materiales.map((m) =>
+        incrementarStock(m.materialId, m.cantidad).catch((err) =>
+          console.error(`Error reponiendo stock de material ${m.materialId}:`, err)
+        )
+      )
+    );
+    await Promise.all(
+      materiales.map((m) =>
+        decrementarStock(m.materialId, m.cantidad).catch((err) =>
+          console.error(`Error descontando stock de material ${m.materialId}:`, err)
+        )
+      )
+    );
+
+    return mapStrapiReporte(res.data.data, obraId);
+  } catch (error) {
+    console.error('Error updating reporte:', error);
     throw error;
   }
 }

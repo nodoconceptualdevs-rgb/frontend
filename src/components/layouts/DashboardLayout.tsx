@@ -56,6 +56,19 @@ export default function DashboardLayout({ children, menuItems }: DashboardLayout
 
   return (
     <div className={styles.container}>
+      {/* Logo fijo en móvil (oculto cuando el sidebar está abierto, ya que este trae su propio logo) */}
+      {!mobileOpen && (
+        <div className={styles.mobileLogoWrapper}>
+          <Image
+            src="/isologo.svg"
+            alt="Nodo Conceptual"
+            width={32}
+            height={32}
+            className={styles.mobileLogo}
+          />
+        </div>
+      )}
+
       {/* Botón hamburguesa fijo en móvil */}
       <button
         className={styles.mobileMenuButton}

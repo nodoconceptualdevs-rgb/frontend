@@ -277,6 +277,10 @@ export async function decrementarStock(materialId: number, cantidad: number): Pr
   await api.post(`/material-catalogos/${materialId}/decrementar`, { cantidad });
 }
 
+export async function incrementarStock(materialId: number, cantidad: number): Promise<void> {
+  await api.post(`/material-catalogos/${materialId}/incrementar`, { cantidad });
+}
+
 export async function generarCodigoMaterial(materialId: number): Promise<MaterialCatalogo> {
   const res = await api.patch(`/material-catalogos/${materialId}/generar-codigo`);
   return mapMaterial(res.data.data);

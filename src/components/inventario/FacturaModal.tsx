@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Modal, Input, DatePicker, Select, Button, Table, InputNumber, Divider, Popconfirm } from "antd";
+import { Modal, Input, DatePicker, Select, Button, InputNumber, Divider, Popconfirm } from "antd";
 import { Plus, Trash2, Edit, Barcode } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import type { FacturaFormValues, LineaFacturaFormValues, MaterialCatalogo, FacturaCompra, Proveedor, ProveedorFormValues } from "@/types/inventario";
 import AgregarMaterialModal from "./AgregarMaterialModal";
 import { getProveedores, createProveedor, deleteProveedor } from "@/services/proveedores";
+import modalStyles from "./FacturaModal.module.css";
 
 interface FacturaModalProps {
   open: boolean;
@@ -302,94 +303,6 @@ export default function FacturaModal({
 
   const { subtotal, montoImpuesto, total } = calcularTotales();
 
-  const columnas = [
-    {
-      title: "Material",
-      dataIndex: "materialId",
-      key: "material",
-      width: 280,
-      render: (_: any, record: LineaEditando) => (
-        <div className="flex gap-1">
-          <Select
-            value={record.materialId || undefined}
-            onChange={(val) => handleActualizarLinea(record.id, "materialId", val)}
-            placeholder="Selecciona material"
-            options={materialesActualizados.map((m) => ({
-              value: m.id,
-              label: `${m.nombre} (${m.unidad})`,
-            }))}
-            className="flex-1"
-            size="small"
-          />
-          <Button
-            type="dashed"
-            size="small"
-            icon={<Plus size={14} />}
-            onClick={() => {
-              setLineaSeleccionada(record.id);
-              setAgregarMaterialOpen(true);
-            }}
-            title="Agregar nuevo material"
-          />
-        </div>
-      ),
-    },
-    {
-      title: "Cantidad",
-      dataIndex: "cantidad",
-      key: "cantidad",
-      width: 120,
-      render: (_: any, record: LineaEditando) => (
-        <InputNumber
-          value={record.cantidad}
-          onChange={(val) => handleActualizarLinea(record.id, "cantidad", val)}
-          size="small"
-          min={0}
-          step={0.01}
-        />
-      ),
-    },
-    {
-      title: "Precio Unitario",
-      dataIndex: "precioUnitario",
-      key: "precioUnitario",
-      width: 140,
-      render: (_: any, record: LineaEditando) => (
-        <InputNumber
-          value={record.precioUnitario}
-          onChange={(val) => handleActualizarLinea(record.id, "precioUnitario", val)}
-          size="small"
-          min={0}
-          step={0.01}
-          prefix="$"
-        />
-      ),
-    },
-    {
-      title: "Subtotal",
-      dataIndex: "subtotal",
-      key: "subtotal",
-      width: 120,
-      render: (_: any, record: LineaEditando) => (
-        <span className="font-semibold">${(record.subtotal || 0).toLocaleString("es-MX")}</span>
-      ),
-    },
-    {
-      title: "",
-      key: "action",
-      width: 50,
-      render: (_: any, record: LineaEditando) => (
-        <Button
-          type="text"
-          danger
-          size="small"
-          icon={<Trash2 size={14} />}
-          onClick={() => handleEliminarLinea(record.id)}
-        />
-      ),
-    },
-  ];
-
   const handleSubmit = async () => {
     try {
       console.log("🔵 handleSubmit iniciado", { proveedorNombre, obraId, proyectoId, lineasCount: lineas.length });
@@ -445,12 +358,13 @@ export default function FacturaModal({
       onCancel={() => { resetForm(); onClose(); }}
       width="90vw"
       style={{ maxWidth: "1600px" }}
+      rootClassName={modalStyles.facturaModalRoot}
       centered
       footer={null}
     >
       <div className="space-y-4">
         {/* Encabezado */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Número de Factura
@@ -463,7 +377,7 @@ export default function FacturaModal({
           </div>
 
           {/* Proveedor — Select dinámico con crear y eliminar */}
-          <div className="col-span-2 md:col-span-1">
+          <div className="sm:col-span-2 md:col-span-1">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Proveedor</label>
             <Select
               value={proveedorId}
@@ -599,14 +513,84 @@ export default function FacturaModal({
             </p>
           </div>
 
-          <Table
-            columns={columnas}
-            dataSource={lineas.map((l) => ({ ...l, key: l.id }))}
-            pagination={false}
-            size="small"
-            bordered
-            rowKey="id"
-          />
+          <div className={modalStyles.lineasWrapper}>
+            <div className={modalStyles.lineaHeader}>
+              <span>Material</span>
+              <span>Cantidad</span>
+              <span>Precio Unitario</span>
+              <span>Subtotal</span>
+              <span />
+            </div>
+            {lineas.length === 0 ? (
+              <div className={modalStyles.emptyLineas}>Sin ítems agregados todavía</div>
+            ) : (
+              lineas.map((linea) => (
+                <div key={linea.id} className={modalStyles.lineaItem}>
+                  <div className={modalStyles.cellMaterial}>
+                    <Select
+                      value={linea.materialId || undefined}
+                      onChange={(val) => handleActualizarLinea(linea.id, "materialId", val)}
+                      placeholder="Selecciona material"
+                      options={materialesActualizados.map((m) => ({
+                        value: m.id,
+                        label: `${m.nombre} (${m.unidad})`,
+                      }))}
+                      showSearch
+                      filterOption={(input, option) =>
+                        String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      }
+                      className="flex-1"
+                      size="small"
+                    />
+                    <Button
+                      type="dashed"
+                      size="small"
+                      icon={<Plus size={14} />}
+                      onClick={() => {
+                        setLineaSeleccionada(linea.id);
+                        setAgregarMaterialOpen(true);
+                      }}
+                      title="Agregar nuevo material"
+                    />
+                  </div>
+                  <div className={modalStyles.cellCantidad}>
+                    <span className={modalStyles.cellLabel}>Cantidad</span>
+                    <InputNumber
+                      value={linea.cantidad}
+                      onChange={(val) => handleActualizarLinea(linea.id, "cantidad", val)}
+                      size="small"
+                      min={0}
+                      step={0.01}
+                    />
+                  </div>
+                  <div className={modalStyles.cellPrecio}>
+                    <span className={modalStyles.cellLabel}>Precio Unitario</span>
+                    <InputNumber
+                      value={linea.precioUnitario}
+                      onChange={(val) => handleActualizarLinea(linea.id, "precioUnitario", val)}
+                      size="small"
+                      min={0}
+                      step={0.01}
+                      prefix="$"
+                    />
+                  </div>
+                  <div className={modalStyles.cellSubtotal}>
+                    <span className={modalStyles.cellLabel}>Subtotal</span>
+                    ${(linea.subtotal || 0).toLocaleString("es-MX")}
+                  </div>
+                  <div className={modalStyles.cellDelete}>
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<Trash2 size={14} />}
+                      onClick={() => handleEliminarLinea(linea.id)}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
           <div className="mt-3">
             <Button type="dashed" size="large" icon={<Plus size={16} />} onClick={handleAgregarLinea} className="w-full">
               Agregar ítem
