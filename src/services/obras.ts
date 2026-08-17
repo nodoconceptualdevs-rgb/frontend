@@ -335,6 +335,7 @@ function mapStrapiReporte(r: any, obraId: number): ReporteDiario {
     costoTotal: r.costoTotal ?? 0,
     creadoEn: r.createdAt || r.fecha,
     valuacionId: r.valuacionId ?? undefined,
+    loteId: r.loteId ?? undefined,
     imagenes: (r.imagenes || []).map((img: any) => ({ ...img, url: toAbsoluteUrl(img.url) })),
   };
 }
@@ -405,6 +406,7 @@ export async function createReporte(values: ReporteFormValues): Promise<ReporteD
       costoMateriales,
       costoTotal,
       existingImageIds: values.existingImageIds || [],
+      loteId: values.loteId,
     }));
 
     // Agregar imágenes si existen
@@ -447,6 +449,29 @@ export async function deleteReporte(
     );
   } catch (error) {
     console.error('Error deleting reporte:', error);
+    throw error;
+  }
+}
+
+// Elimina de una sola vez todas las partidas cargadas en un mismo "Nuevo Reporte"
+// (mismo loteId). El backend revierte avance de partida y presupuesto de cada una;
+// acá reponemos el stock de materiales con lo que el propio backend devuelve.
+export async function deleteLote(obraId: number, loteId: string): Promise<void> {
+  try {
+    const res = await api.delete<{ data: { loteId: string; eliminados: { id: number; materiales: LineaMaterial[] }[] } }>(
+      `/obras/${obraId}/reportes-lote/${loteId}`
+    );
+    const eliminados = res.data?.data?.eliminados || [];
+    const materialesTotales = eliminados.flatMap((r) => r.materiales || []);
+    await Promise.all(
+      materialesTotales.map((m) =>
+        incrementarStock(m.materialId, m.cantidad).catch((err) =>
+          console.error(`Error reponiendo stock de material ${m.materialId}:`, err)
+        )
+      )
+    );
+  } catch (error) {
+    console.error('Error deleting lote:', error);
     throw error;
   }
 }
@@ -679,6 +704,32 @@ export async function createValuacion(
     return mapStrapiValuacion(res.data.data, obraId);
   } catch (error) {
     console.error('Error creating valuacion:', error);
+    throw error;
+  }
+}
+
+// Elimina una valuación completa junto con todos los reportes que agrupaba.
+// El backend revierte el avance de partida y el presupuesto consumido de cada
+// reporte; acá reponemos el stock de los materiales que esos reportes habían
+// consumido, con los datos que el propio backend devuelve (no depende de que
+// el estado local ya los tenga cargados).
+export async function deleteValuacion(obraId: number, valuacionId: number): Promise<void> {
+  try {
+    const res = await api.delete<{ data: { id: number; reportesEliminados: { id: number; materiales: LineaMaterial[] }[] } }>(
+      `/obras/${obraId}/valuaciones/${valuacionId}`
+    );
+    const reportesEliminados = res.data?.data?.reportesEliminados || [];
+
+    const materiales = reportesEliminados.flatMap((r) => r.materiales || []);
+    await Promise.all(
+      materiales.map((m) =>
+        incrementarStock(m.materialId, m.cantidad).catch((err) =>
+          console.error(`Error reponiendo stock de material ${m.materialId}:`, err)
+        )
+      )
+    );
+  } catch (error) {
+    console.error('Error deleting valuacion:', error);
     throw error;
   }
 }

@@ -300,7 +300,12 @@ export default function ReporteFormSection({
       return;
     }
     if (partidasLineas.some((p) => !p.partidaId || p.montoAplicado <= 0)) {
-      toast.error("Todas las partidas deben tener partida seleccionada y monto > 0");
+      toast.error("Todas las partidas deben tener partida seleccionada y cantidad > 0");
+      return;
+    }
+    const partidasSeleccionadas = partidasLineas.map((p) => p.partidaId);
+    if (new Set(partidasSeleccionadas).size !== partidasSeleccionadas.length) {
+      toast.error("No puedes seleccionar la misma partida en más de una línea");
       return;
     }
 
@@ -329,6 +334,12 @@ export default function ReporteFormSection({
     try {
       setLoading(true);
 
+      // Comparte un mismo id entre todas las partidas de este envío, para poder
+      // mostrarlas y borrarlas juntas más adelante (aunque cada una se guarde
+      // como un reporte individual). Al editar no aplica: se preserva el lote
+      // original del reporte que se está modificando.
+      const loteId = reporteEditar ? undefined : uuidLocal();
+
       for (let i = 0; i < partidasLineas.length; i++) {
         const partida = partidasLineas[i];
         const values: ReporteFormValues = {
@@ -337,6 +348,7 @@ export default function ReporteFormSection({
           fecha,
           montoAplicado: partida.montoAplicado,
           observaciones: observaciones || undefined,
+          loteId,
           personal: partida.personal
             .map((p) => ({
               personalId: p.personalId!,
@@ -910,8 +922,10 @@ export default function ReporteFormSection({
           const pd = obra.partidas.find(p => p.id === partida.partidaId);
           const precioUnit = pd?.precioUnitario ?? 0;
           const cantidadPresupuestada = pd?.cantidadPresupuestada ?? 0;
-          // Obras extra sin cantidad presupuestada fija: no hay tope, se ejecuta la cantidad que sea.
-          const esExtraSinLimite = !!pd && (pd.esExtra || cantidadPresupuestada <= 0);
+          // "Extra" solo indica que la partida no estaba en el presupuesto original — si igual
+          // tiene una cantidad presupuestada cargada, se topea y se muestra igual que cualquier
+          // otra. Sin límite únicamente cuando de verdad no hay cantidad presupuestada (0).
+          const esExtraSinLimite = !!pd && cantidadPresupuestada <= 0;
           const montoPresup = cantidadPresupuestada * precioUnit;
           // Si estamos editando este mismo reporte y sigue en su partida original, su propia
           // cantidad anterior ya está contada en cantidadEjecutada — hay que descontarla para saber
@@ -1001,12 +1015,18 @@ export default function ReporteFormSection({
                     const avanceEfectivo = reporteEditar && p.id === reporteEditar.partidaId
                       ? Math.max(0, (p.avancePorcentaje ?? 0) - reporteEditar.avanceLogrado)
                       : (p.avancePorcentaje ?? 0);
+                    // Ya elegida en otra línea de este mismo reporte: no se puede repetir.
+                    const yaAgregadaEnOtraLinea = partidasLineas.some(
+                      (otra) => otra.id !== partida.id && otra.partidaId === p.id
+                    );
                     return {
-                      label: avanceEfectivo >= 100
+                      label: yaAgregadaEnOtraLinea
+                        ? `${p.codigo} - ${p.descripcion} (ya agregada)`
+                        : avanceEfectivo >= 100
                         ? `${p.codigo} - ${p.descripcion} ✓`
                         : `${p.codigo} - ${p.descripcion}`,
                       value: p.id,
-                      disabled: avanceEfectivo >= 100,
+                      disabled: avanceEfectivo >= 100 || yaAgregadaEnOtraLinea,
                     };
                   })}
                   showSearch

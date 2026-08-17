@@ -107,6 +107,7 @@ export interface ReporteDiario {
   costoTotal: number;
   creadoEn: string;
   valuacionId?: number;  // undefined = pendiente, número = concretado en esa valuación
+  loteId?: string;       // comparte id todas las partidas cargadas en un mismo "Nuevo Reporte"
   imagenes?: {
     id: number;
     name: string;
@@ -133,6 +134,7 @@ export interface ReporteFormValues {
   }[];
   imagenesArchivos?: File[];
   existingImageIds?: number[];
+  loteId?: string;
 }
 
 // ─── Precio Historial ────────────────────────────────────────────────────────
