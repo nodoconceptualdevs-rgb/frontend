@@ -25,9 +25,11 @@ import {
   createReporte,
   updateReporte,
   deleteReporte,
+  deleteLote,
   createPersonal,
   updatePersonal,
   createValuacion,
+  deleteValuacion,
   updateObra,
   desvincularProyectoDeObra,
   getMisPermisos,
@@ -383,6 +385,17 @@ export default function ObraDetalleView() {
     }
   };
 
+  const handleEliminarLote = async (loteId: string) => {
+    try {
+      await deleteLote(obraId, loteId);
+      await cargarDatos({ silent: true });
+      toast.success("Reporte eliminado");
+    } catch (error) {
+      console.error("Error eliminando lote de reportes:", error);
+      toast.error("Error al eliminar el reporte");
+    }
+  };
+
   const handleEditarReporte = async (values: ReporteFormValues) => {
     if (!reporteEditando) return;
     try {
@@ -436,6 +449,17 @@ export default function ObraDetalleView() {
     } catch (error: any) {
       console.error("Error concretando valuación:", error);
       toast.error(error.message || "Error al concretar la valuación");
+    }
+  };
+
+  const handleEliminarValuacion = async (valuacion: import("@/types/obras").ValuacionDoc) => {
+    try {
+      await deleteValuacion(obraId, valuacion.id);
+      await cargarDatos({ silent: true });
+      toast.success(`Valuación V${valuacion.numero} eliminada`);
+    } catch (error: any) {
+      console.error("Error eliminando valuación:", error);
+      toast.error(error?.response?.data?.error?.message || "Error al eliminar la valuación");
     }
   };
 
@@ -637,7 +661,49 @@ export default function ObraDetalleView() {
                             </tr>
                           </thead>
                           <tbody>
-                            {reportes.map((r, idx) => {
+                            {(() => {
+                              // Agrupa las partidas que se cargaron juntas en un mismo "Nuevo
+                              // Reporte" (mismo loteId), preservando el orden de llegada. Las
+                              // que no tienen loteId (datos viejos) quedan cada una en su propio
+                              // grupo de 1, sin cambios visuales para ellas.
+                              const porLote = new Map<string, typeof reportes>();
+                              const ordenLotes: string[] = [];
+                              for (const r of reportes) {
+                                const key = r.loteId || `solo-${r.id}`;
+                                if (!porLote.has(key)) {
+                                  porLote.set(key, []);
+                                  ordenLotes.push(key);
+                                }
+                                porLote.get(key)!.push(r);
+                              }
+                              let contador = 0;
+                              const colSpanTotal = puede("reportes", "create") ? 12 : 11;
+                              return ordenLotes.map((loteKey) => {
+                                const grupo = porLote.get(loteKey)!;
+                                return (
+                                  <Fragment key={loteKey}>
+                                    {grupo.length > 1 && (
+                                      <tr>
+                                        <td colSpan={colSpanTotal} style={{ border: "1px solid #e5e7eb", padding: "4px 8px", background: "#eef2f7", fontSize: 10, fontWeight: 700, color: "#475569" }}>
+                                          <div className="flex items-center justify-between">
+                                            <span>REPORTE · {grupo.length} PARTIDAS</span>
+                                            {puede("reportes", "create") && (
+                                              <Popconfirm
+                                                title="Eliminar reporte completo"
+                                                description={`Se eliminarán las ${grupo.length} partidas de este reporte.`}
+                                                onConfirm={() => handleEliminarLote(loteKey)}
+                                                okText="Sí"
+                                                cancelText="No"
+                                              >
+                                                <Button type="text" size="small" danger icon={<Trash2 size={12} />} style={{ height: 20 }} />
+                                              </Popconfirm>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                    {grupo.map((r) => {
+                              const idx = contador++;
                               const isExpanded = expandedReportesPendientes.has(r.id);
                               const hasDetail = (r.imagenes?.length || 0) + (r.personal?.length || 0) + (r.materiales?.length || 0) > 0 || !!r.observaciones;
                               const rowBg = idx % 2 === 0 ? "#fff" : "#f9fafb";
@@ -780,7 +846,11 @@ export default function ObraDetalleView() {
                                   )}
                                 </Fragment>
                               );
-                            })}
+                                    })}
+                                  </Fragment>
+                                );
+                              });
+                            })()}
                           </tbody>
                         </table>
                       </div>
@@ -790,6 +860,7 @@ export default function ObraDetalleView() {
               </div>
             );
           })()}
+          {/* Fin Reportes Pendientes */}
 
           <h4 className="font-semibold text-gray-800 mb-3">Reportes Valuados</h4>
           <div className="flex items-center gap-4 mb-4">
@@ -808,10 +879,12 @@ export default function ObraDetalleView() {
             />
           </div>
 
-          {/* Reportes ya incluidos en una valuación: no editables ni eliminables */}
+          {/* Reportes ya incluidos en una valuación: editables no, pero sí eliminables */}
           <ReportesTable
             reportes={reportesFiltrados}
             obra={obra}
+            onEliminar={puede("reportes", "create") ? handleEliminarReporte : undefined}
+            onEliminarLote={puede("reportes", "create") ? handleEliminarLote : undefined}
           />
         </div>
       ),
@@ -873,6 +946,7 @@ export default function ObraDetalleView() {
           valuaciones={valuaciones}
           obraNombre={obra.nombre}
           onConcretar={puede("valuaciones", "create") ? handleConcretarValuacion : undefined}
+          onEliminarValuacion={puede("valuaciones", "create") ? handleEliminarValuacion : undefined}
           onVerReporte={(r) => {
             setReporteSeleccionado(r);
             setReporteDetalleOpen(true);

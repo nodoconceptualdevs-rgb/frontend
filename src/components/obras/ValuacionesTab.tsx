@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Table, Button, Empty, Tag, Tooltip, Image as AntImage } from "antd";
-import { CheckCircle2, Clock, Calendar } from "lucide-react";
+import { Table, Button, Empty, Tag, Tooltip, Popconfirm, Image as AntImage } from "antd";
+import { CheckCircle2, Clock, Calendar, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import type { ValuacionDoc, ReporteDiario, Partida } from "@/types/obras";
 
@@ -12,6 +12,7 @@ interface Props {
   valuaciones: ValuacionDoc[];
   obraNombre?: string;
   onConcretar?: () => Promise<void>;
+  onEliminarValuacion?: (valuacion: ValuacionDoc) => Promise<void>;
   onVerReporte: (reporte: ReporteDiario) => void;
 }
 
@@ -23,9 +24,11 @@ export default function ValuacionesTab({
   partidas,
   valuaciones,
   onConcretar,
+  onEliminarValuacion,
   onVerReporte,
 }: Props) {
   const [concretando, setConcretando] = React.useState(false);
+  const [eliminandoId, setEliminandoId] = React.useState<number | null>(null);
   const [expandedReportes, setExpandedReportes] = React.useState<Set<number>>(new Set());
 
   // Resumen del ciclo actual agrupado por partida
@@ -70,6 +73,16 @@ export default function ValuacionesTab({
       await onConcretar();
     } finally {
       setConcretando(false);
+    }
+  };
+
+  const handleEliminarValuacion = async (valuacion: ValuacionDoc) => {
+    if (!onEliminarValuacion) return;
+    try {
+      setEliminandoId(valuacion.id);
+      await onEliminarValuacion(valuacion);
+    } finally {
+      setEliminandoId(null);
     }
   };
 
@@ -241,6 +254,29 @@ export default function ValuacionesTab({
           <span className="text-xs text-gray-300">—</span>
         ),
     },
+    ...(onEliminarValuacion
+      ? [
+          {
+            title: "",
+            key: "acciones",
+            width: 50,
+            render: (_: any, r: ValuacionDoc) => (
+              <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                <Popconfirm
+                  title={`Eliminar valuación V${r.numero}`}
+                  description="Se eliminarán también sus reportes, revirtiendo el avance de partidas y el stock de materiales consumido. Esta acción no se puede deshacer."
+                  onConfirm={() => handleEliminarValuacion(r)}
+                  okText="Sí, eliminar"
+                  cancelText="No"
+                  okButtonProps={{ danger: true, loading: eliminandoId === r.id }}
+                >
+                  <Button type="text" size="small" danger icon={<Trash2 size={14} />} />
+                </Popconfirm>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

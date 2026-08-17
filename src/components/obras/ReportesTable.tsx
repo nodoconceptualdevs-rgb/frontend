@@ -9,6 +9,7 @@ interface Props {
   obra?: Obra;
   onVerDetalle?: (reporte: ReporteDiario) => void;
   onEliminar?: (reporteId: number) => void;
+  onEliminarLote?: (loteId: string) => void;
 }
 
 interface ReporteFecha {
@@ -18,7 +19,7 @@ interface ReporteFecha {
   id: string;
 }
 
-export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar }: Props) {
+export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar, onEliminarLote }: Props) {
   const [expandedFechas, setExpandedFechas] = useState<Set<string>>(new Set());
   const [expandedReportes, setExpandedReportes] = useState<Set<number>>(new Set());
 
@@ -221,7 +222,47 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                   </tr>
                 </thead>
                 <tbody>
-                  {record.reportes.map((r, idx) => {
+                  {(() => {
+                    // Agrupa las partidas cargadas juntas en un mismo "Nuevo Reporte" (mismo
+                    // loteId), preservando el orden. Sin loteId (datos viejos) quedan solas.
+                    const porLote = new Map<string, ReporteDiario[]>();
+                    const ordenLotes: string[] = [];
+                    for (const r of record.reportes) {
+                      const key = r.loteId || `solo-${r.id}`;
+                      if (!porLote.has(key)) {
+                        porLote.set(key, []);
+                        ordenLotes.push(key);
+                      }
+                      porLote.get(key)!.push(r);
+                    }
+                    let contador = 0;
+                    const colSpanTotal = onEliminar ? 12 : 11;
+                    return ordenLotes.map((loteKey) => {
+                      const grupo = porLote.get(loteKey)!;
+                      return (
+                        <React.Fragment key={loteKey}>
+                          {grupo.length > 1 && (
+                            <tr>
+                              <td colSpan={colSpanTotal} style={{ border: "1px solid #e5e7eb", padding: "4px 8px", background: "#eef2f7", fontSize: 10, fontWeight: 700, color: "#475569" }}>
+                                <div className="flex items-center justify-between">
+                                  <span>REPORTE · {grupo.length} PARTIDAS</span>
+                                  {onEliminarLote && (
+                                    <Popconfirm
+                                      title="Eliminar reporte completo"
+                                      description={`Se eliminarán las ${grupo.length} partidas de este reporte.`}
+                                      onConfirm={() => onEliminarLote(loteKey)}
+                                      okText="Sí"
+                                      cancelText="No"
+                                    >
+                                      <Button type="text" size="small" danger icon={<Trash2 size={12} />} style={{ height: 20 }} />
+                                    </Popconfirm>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {grupo.map((r) => {
+                    const idx = contador++;
                     const isExpanded = expandedReportes.has(r.id);
                     const rowBg = idx % 2 === 0 ? "#fff" : "#f9fafb";
                     const cell = (content: React.ReactNode, align = "right", bold = false) => (
@@ -344,7 +385,11 @@ export default function ReportesTable({ reportes, obra, onVerDetalle, onEliminar
                         )}
                       </React.Fragment>
                     );
-                  })}
+                          })}
+                        </React.Fragment>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
